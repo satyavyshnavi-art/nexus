@@ -14,7 +14,26 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const settings = await getUserSettings(session.user.id);
+  // Fetch settings with error handling
+  let settings;
+  try {
+    settings = await getUserSettings(session.user.id);
+  } catch (error) {
+    console.error("Error fetching user settings:", error);
+    // Provide default settings if fetch fails
+    settings = {
+      id: session.user.id,
+      name: session.user.name ?? "",
+      email: session.user.email ?? "",
+      emailNotifications: true,
+      taskNotifications: true,
+      commentNotifications: true,
+      sprintNotifications: true,
+      dailyDigest: false,
+      theme: "system",
+      viewDensity: "comfortable",
+    };
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -44,8 +63,8 @@ export default async function SettingsPage() {
         <TabsContent value="account">
           <AccountSettings
             userId={session.user.id}
-            initialName={settings.name || ""}
-            initialEmail={settings.email}
+            initialName={settings.name ?? ""}
+            initialEmail={settings.email ?? ""}
           />
         </TabsContent>
 
@@ -53,11 +72,11 @@ export default async function SettingsPage() {
           <NotificationSettings
             userId={session.user.id}
             initialSettings={{
-              emailNotifications: settings.emailNotifications,
-              taskNotifications: settings.taskNotifications,
-              commentNotifications: settings.commentNotifications,
-              sprintNotifications: settings.sprintNotifications,
-              dailyDigest: settings.dailyDigest,
+              emailNotifications: settings.emailNotifications ?? true,
+              taskNotifications: settings.taskNotifications ?? true,
+              commentNotifications: settings.commentNotifications ?? true,
+              sprintNotifications: settings.sprintNotifications ?? true,
+              dailyDigest: settings.dailyDigest ?? false,
             }}
           />
         </TabsContent>
@@ -65,8 +84,8 @@ export default async function SettingsPage() {
         <TabsContent value="appearance">
           <AppearanceSettings
             userId={session.user.id}
-            initialTheme={settings.theme}
-            initialViewDensity={settings.viewDensity}
+            initialTheme={settings.theme ?? "system"}
+            initialViewDensity={settings.viewDensity ?? "comfortable"}
           />
         </TabsContent>
       </Tabs>

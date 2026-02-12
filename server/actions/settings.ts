@@ -49,7 +49,19 @@ export async function getUserSettings(userId: string) {
     throw new Error("User not found");
   }
 
-  return settings;
+  // Return with proper defaults for all fields
+  return {
+    id: settings.id,
+    name: settings.name ?? "",
+    email: settings.email,
+    emailNotifications: settings.emailNotifications ?? true,
+    taskNotifications: settings.taskNotifications ?? true,
+    commentNotifications: settings.commentNotifications ?? true,
+    sprintNotifications: settings.sprintNotifications ?? true,
+    dailyDigest: settings.dailyDigest ?? false,
+    theme: settings.theme ?? "system",
+    viewDensity: settings.viewDensity ?? "comfortable",
+  };
 }
 
 /**

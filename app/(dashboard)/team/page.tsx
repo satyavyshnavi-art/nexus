@@ -10,10 +10,24 @@ export default async function TeamPage() {
     redirect("/login");
   }
 
-  const [members, stats] = await Promise.all([
-    getTeamMembers(),
-    getTeamStats(),
-  ]);
+  // Fetch team data with error handling
+  let members: Awaited<ReturnType<typeof getTeamMembers>> = [];
+  let stats: Awaited<ReturnType<typeof getTeamStats>> = {
+    totalMembers: 0,
+    activeMembers: 0,
+    adminCount: 0,
+    memberCount: 0,
+  };
+
+  try {
+    [members, stats] = await Promise.all([
+      getTeamMembers(),
+      getTeamStats(),
+    ]);
+  } catch (error) {
+    console.error("Error fetching team data:", error);
+    // Continue with default values if fetch fails
+  }
 
   return (
     <TeamPageClient
