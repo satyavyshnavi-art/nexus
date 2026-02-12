@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { TaskStatus, TaskPriority, TaskType } from "@prisma/client";
 import { classifyBugPriority } from "@/lib/ai/bug-classifier";
+import { unstable_cache, revalidatePath } from "next/cache";
+import { calculateTaskProgress } from "@/lib/utils/task-progress";
 
 // OPTIMIZED: Fast permission check (1 query instead of nested includes)
 async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
@@ -165,4 +167,121 @@ export async function getTaskComments(taskId: string) {
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+/**
+ * Fetches a task with all related data including progress calculation
+ * Uses caching for 30-second revalidation window
+ * Includes parent task info, subtasks, comments count, and attachments count
+ */
+export async function getTaskWithProgress(taskId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  // Cached query with 30-second revalidation
+  const getCachedTask = unstable_cache(
+    async (taskId: string) => {
+      return db.task.findUnique({
+        where: { id: taskId },
+        include: {
+          creator: {
+            select: { id: true, name: true, email: true },
+          },
+          assignee: {
+            select: { id: true, name: true, email: true },
+          },
+          sprint: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              projectId: true,
+            },
+          },
+          parentTask: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+          childTasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              assigneeId: true,
+            },
+          },
+          comments: {
+            select: {
+              id: true,
+              content: true,
+              createdAt: true,
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
+          attachments: {
+            select: {
+              id: true,
+              fileName: true,
+              mimeType: true,
+              sizeBytes: true,
+              createdAt: true,
+              uploader: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+    },
+    [`task-${taskId}`],
+    {
+      revalidate: 30,
+      tags: [`task-${taskId}`, "tasks"],
+    }
+  );
+
+  const task = await getCachedTask(taskId);
+
+  if (!task) throw new Error("Task not found");
+
+  // Verify access to task
+  const hasAccess = await canAccessTask(
+    taskId,
+    session.user.id,
+    session.user.role === "admin"
+  );
+
+  if (!hasAccess) {
+    throw new Error("Unauthorized");
+  }
+
+  // Calculate progress
+  const progress = calculateTaskProgress({
+    status: task.status,
+    childTasks: task.childTasks,
+  });
+
+  return {
+    ...task,
+    progress: {
+      percentage: progress,
+      hasSubtasks: task.childTasks.length > 0,
+      subtaskCount: task.childTasks.length,
+      completedSubtasks: task.childTasks.filter(
+        (t) => t.status === TaskStatus.done
+      ).length,
+    },
+    meta: {
+      commentsCount: task.comments.length,
+      attachmentsCount: task.attachments.length,
+    },
+  };
 }

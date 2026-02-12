@@ -104,8 +104,18 @@ export async function getActiveSprint(projectId: string) {
           tasks: {
             include: {
               assignee: { select: { id: true, name: true, email: true } },
+              childTasks: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  priority: true,
+                  type: true,
+                },
+                orderBy: { createdAt: "asc" },
+              },
               _count: {
-                select: { comments: true, attachments: true },
+                select: { comments: true, attachments: true, childTasks: true },
               },
             },
             orderBy: { createdAt: "desc" },

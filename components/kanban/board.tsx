@@ -18,9 +18,11 @@ import { updateTaskStatus } from "@/server/actions/tasks";
 
 type TaskWithRelations = Task & {
   assignee: Pick<User, "id" | "name" | "email"> | null;
+  childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
     comments: number;
     attachments: number;
+    childTasks?: number;
   };
 };
 

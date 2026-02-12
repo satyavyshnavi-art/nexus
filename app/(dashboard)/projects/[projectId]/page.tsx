@@ -9,6 +9,7 @@ import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
 import { Calendar, Users, LayoutDashboard, ListTodo, Settings } from "lucide-react";
 import Link from "next/link";
+import { TaskListView } from "@/components/tasks/task-list-view";
 
 export default async function ProjectPage({
   params,
@@ -175,34 +176,10 @@ export default async function ProjectPage({
           </div>
 
           {activeSprint && activeSprint.tasks.length > 0 ? (
-            <div className="space-y-2">
-              {activeSprint.tasks.map((task) => (
-                <Card key={task.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{task.title}</h3>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="capitalize">{task.type}</span>
-                          <span className="capitalize">{task.priority}</span>
-                          <span className="capitalize">{task.status}</span>
-                          {task.assignee && <span>Assigned to: {task.assignee.name}</span>}
-                          {task.storyPoints && <span>{task.storyPoints} pts</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {task._count && (
-                          <>
-                            <span>💬 {task._count.comments}</span>
-                            <span>📎 {task._count.attachments}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <TaskListView
+              tasks={activeSprint.tasks}
+              projectMembers={project.members.map((m) => m.user)}
+            />
           ) : (
             <Card>
               <CardContent className="pt-6">
