@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, TaskStatus, TaskPriority } from "@prisma/client";
 import { hash } from "bcrypt";
 
 const prisma = new PrismaClient();
@@ -132,32 +132,32 @@ async function main() {
     {
       title: "Setup Next.js project structure",
       description: "Initialize Next.js 14 with App Router, TypeScript, Tailwind CSS, and shadcn/ui components",
-      status: "done",
-      priority: "critical",
+      status: TaskStatus.done,
+      priority: TaskPriority.critical,
       storyPoints: 5,
       assigneeId: teamMembers[0].id, // Sarah
     },
     {
       title: "Design product catalog page",
       description: "Create responsive product listing with filters, sorting, and pagination",
-      status: "done",
-      priority: "high",
+      status: TaskStatus.done,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[0].id, // Sarah
     },
     {
       title: "Implement shopping cart UI",
       description: "Build cart sidebar with add/remove items, quantity controls, and price calculation",
-      status: "review",
-      priority: "high",
+      status: TaskStatus.review,
+      priority: TaskPriority.high,
       storyPoints: 5,
       assigneeId: teamMembers[5].id, // David
     },
     {
       title: "Create checkout flow",
       description: "Multi-step checkout with shipping, payment, and order confirmation",
-      status: "progress",
-      priority: "critical",
+      status: TaskStatus.progress,
+      priority: TaskPriority.critical,
       storyPoints: 13,
       assigneeId: teamMembers[0].id, // Sarah
     },
@@ -168,32 +168,32 @@ async function main() {
     {
       title: "Setup Prisma with PostgreSQL",
       description: "Configure Prisma ORM, design database schema for products, orders, users",
-      status: "done",
-      priority: "critical",
+      status: TaskStatus.done,
+      priority: TaskPriority.critical,
       storyPoints: 5,
       assigneeId: teamMembers[6].id, // Lisa
     },
     {
       title: "Build product API endpoints",
       description: "Create REST API for product CRUD operations with filtering and search",
-      status: "done",
-      priority: "high",
+      status: TaskStatus.done,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[1].id, // Mike
     },
     {
       title: "Implement order management API",
       description: "Order creation, status updates, and order history endpoints",
-      status: "progress",
-      priority: "critical",
+      status: TaskStatus.progress,
+      priority: TaskPriority.critical,
       storyPoints: 13,
       assigneeId: teamMembers[1].id, // Mike
     },
     {
       title: "Build inventory management system",
       description: "Real-time stock tracking, low stock alerts, and automatic reordering",
-      status: "todo",
-      priority: "high",
+      status: TaskStatus.todo,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[1].id, // Mike
     },
@@ -204,24 +204,24 @@ async function main() {
     {
       title: "Setup NextAuth.js authentication",
       description: "Configure NextAuth with credentials provider, JWT sessions, and password hashing",
-      status: "done",
-      priority: "critical",
+      status: TaskStatus.done,
+      priority: TaskPriority.critical,
       storyPoints: 8,
       assigneeId: teamMembers[5].id, // David
     },
     {
       title: "Implement user registration flow",
       description: "Email validation, password requirements, welcome email",
-      status: "review",
-      priority: "high",
+      status: TaskStatus.review,
+      priority: TaskPriority.high,
       storyPoints: 5,
       assigneeId: teamMembers[5].id, // David
     },
     {
       title: "Add OAuth providers",
       description: "Google and GitHub OAuth integration for social login",
-      status: "todo",
-      priority: "medium",
+      status: TaskStatus.todo,
+      priority: TaskPriority.medium,
       storyPoints: 5,
       assigneeId: teamMembers[5].id, // David
     },
@@ -232,24 +232,24 @@ async function main() {
     {
       title: "Create design system",
       description: "Define color palette, typography, spacing, and component styles",
-      status: "done",
-      priority: "high",
+      status: TaskStatus.done,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[2].id, // Emily
     },
     {
       title: "Design mobile-responsive layouts",
       description: "Mobile-first responsive design for all pages",
-      status: "review",
-      priority: "high",
+      status: TaskStatus.review,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[2].id, // Emily
     },
     {
       title: "Product detail page redesign",
       description: "Enhanced product images, zoom, reviews section, related products",
-      status: "progress",
-      priority: "medium",
+      status: TaskStatus.progress,
+      priority: TaskPriority.medium,
       storyPoints: 5,
       assigneeId: teamMembers[2].id, // Emily
     },
@@ -260,24 +260,24 @@ async function main() {
     {
       title: "Setup CI/CD pipeline",
       description: "GitHub Actions for automated testing, building, and deployment",
-      status: "done",
-      priority: "high",
+      status: TaskStatus.done,
+      priority: TaskPriority.high,
       storyPoints: 5,
       assigneeId: teamMembers[3].id, // Alex
     },
     {
       title: "Configure Vercel deployment",
       description: "Production and preview deployments, environment variables, domain setup",
-      status: "done",
-      priority: "critical",
+      status: TaskStatus.done,
+      priority: TaskPriority.critical,
       storyPoints: 3,
       assigneeId: teamMembers[3].id, // Alex
     },
     {
       title: "Setup monitoring and logging",
       description: "Error tracking with Sentry, performance monitoring, log aggregation",
-      status: "todo",
-      priority: "medium",
+      status: TaskStatus.todo,
+      priority: TaskPriority.medium,
       storyPoints: 5,
       assigneeId: teamMembers[3].id, // Alex
     },
@@ -288,24 +288,24 @@ async function main() {
     {
       title: "Write unit tests for API",
       description: "Test coverage for all backend endpoints using Jest",
-      status: "progress",
-      priority: "high",
+      status: TaskStatus.progress,
+      priority: TaskPriority.high,
       storyPoints: 8,
       assigneeId: teamMembers[4].id, // Jessica
     },
     {
       title: "Create E2E test suite",
       description: "Playwright tests for critical user flows: login, browse, checkout",
-      status: "todo",
-      priority: "high",
+      status: TaskStatus.todo,
+      priority: TaskPriority.high,
       storyPoints: 13,
       assigneeId: teamMembers[4].id, // Jessica
     },
     {
       title: "Perform security audit",
       description: "XSS, CSRF, SQL injection testing, dependency vulnerability scan",
-      status: "todo",
-      priority: "critical",
+      status: TaskStatus.todo,
+      priority: TaskPriority.critical,
       storyPoints: 8,
       assigneeId: teamMembers[4].id, // Jessica
     },
@@ -316,16 +316,16 @@ async function main() {
     {
       title: "Build product recommendation engine",
       description: "AI-powered recommendations based on user behavior and purchase history",
-      status: "todo",
-      priority: "medium",
+      status: TaskStatus.todo,
+      priority: TaskPriority.medium,
       storyPoints: 13,
       assigneeId: teamMembers[1].id, // Mike
     },
     {
       title: "Implement smart search",
       description: "Natural language search with typo tolerance and synonyms",
-      status: "todo",
-      priority: "medium",
+      status: TaskStatus.todo,
+      priority: TaskPriority.medium,
       storyPoints: 8,
       assigneeId: teamMembers[6].id, // Lisa
     },
