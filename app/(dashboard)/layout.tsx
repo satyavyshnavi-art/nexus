@@ -1,8 +1,8 @@
 import { auth, signOut } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { NavMenu } from "@/components/layout/nav-menu";
 import { MobileMenu } from "@/components/layout/mobile-menu";
+import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import Link from "next/link";
 
 export default async function DashboardLayout({
@@ -33,22 +33,12 @@ export default async function DashboardLayout({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden md:block">
-              {session.user.name || session.user.email}
-              <span className="ml-2 text-xs bg-secondary px-2 py-1 rounded">
-                {session.user.role}
-              </span>
-            </span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/login" });
-              }}
-            >
-              <Button variant="outline" size="sm">
-                Logout
-              </Button>
-            </form>
+            <UserProfileMenu
+              name={session.user.name}
+              email={session.user.email || ""}
+              role={session.user.role}
+              avatarSrc={null}
+            />
           </div>
         </div>
       </header>

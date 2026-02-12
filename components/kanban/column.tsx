@@ -4,6 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Task, TaskStatus, User } from "@prisma/client";
 import { TaskCard } from "./task-card";
+import { memo } from "react";
 
 interface ColumnProps {
   status: TaskStatus;
@@ -31,12 +32,18 @@ const columnColors = {
   done: "bg-green-50",
 };
 
-export function Column({ status, title, tasks, onTaskClick }: ColumnProps) {
-  const { setNodeRef } = useDroppable({ id: status });
+export const Column = memo(function Column({ status, title, tasks, onTaskClick }: ColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
     <div className="flex-1 min-w-[280px]">
-      <div className={`rounded-lg ${columnColors[status]} p-4`}>
+      <div
+        className={`
+          rounded-lg p-4 transition-all duration-200 ease-out
+          ${columnColors[status]}
+          ${isOver ? "ring-2 ring-primary shadow-lg scale-[1.02] bg-opacity-70" : ""}
+        `}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-sm uppercase tracking-wide">
             {title}
@@ -49,7 +56,14 @@ export function Column({ status, title, tasks, onTaskClick }: ColumnProps) {
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div ref={setNodeRef} className="space-y-2 min-h-[200px]">
+          <div
+            ref={setNodeRef}
+            className={`
+              space-y-2 min-h-[200px] rounded-md
+              transition-all duration-200
+              ${isOver ? "bg-primary/5 border-2 border-dashed border-primary" : ""}
+            `}
+          >
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -62,4 +76,4 @@ export function Column({ status, title, tasks, onTaskClick }: ColumnProps) {
       </div>
     </div>
   );
-}
+});

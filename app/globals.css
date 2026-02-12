@@ -84,4 +84,53 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   }
+
+  /* Kanban drag animations */
+  @keyframes dragPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+    }
+  }
+
+  @keyframes dropZoneGlow {
+    0%, 100% {
+      background-color: hsl(var(--primary) / 0.05);
+    }
+    50% {
+      background-color: hsl(var(--primary) / 0.15);
+    }
+  }
+
+  @keyframes cardSlideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  .drag-pulse {
+    animation: dragPulse 1.5s ease-in-out infinite;
+  }
+
+  .drop-zone-glow {
+    animation: dropZoneGlow 1s ease-in-out infinite;
+  }
+
+  .card-slide-in {
+    animation: cardSlideIn 0.3s ease-out;
+  }
+
+  /* GPU acceleration for transforms */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
 }

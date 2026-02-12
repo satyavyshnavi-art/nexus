@@ -46,6 +46,9 @@ model User {
   email         String    @unique
   passwordHash  String    @map("password_hash")
   name          String?
+  designation   String?   // e.g., "Senior Frontend Engineer"
+  bio           String?   // e.g., "Passionate about building great UIs"
+  avatar        String?   // URL to avatar image
   role          UserRole  @default(member)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")

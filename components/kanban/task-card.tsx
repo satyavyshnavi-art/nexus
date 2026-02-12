@@ -4,6 +4,7 @@ import { Task, User, TaskPriority, TaskType } from "@prisma/client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
+import { memo } from "react";
 
 interface TaskCardProps {
   task: Task & {
@@ -29,7 +30,7 @@ const typeIcons = {
   bug: "🐛",
 };
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, onClick }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -41,8 +42,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || "transform 200ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+    opacity: isDragging ? 0.4 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    willChange: isDragging ? "transform" : "auto",
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -56,7 +59,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card
-        className="p-3 mb-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+        className={`
+          p-3 mb-2
+          cursor-grab active:cursor-grabbing
+          transition-all duration-200 ease-out
+          hover:shadow-lg hover:-translate-y-0.5
+          ${isDragging ? "shadow-2xl ring-2 ring-primary/20 scale-105" : "shadow-sm"}
+        `}
         onClick={handleClick}
       >
         <div className="space-y-2">
@@ -99,4 +108,4 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       </Card>
     </div>
   );
-}
+});

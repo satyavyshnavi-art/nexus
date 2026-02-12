@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -9,12 +9,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  closestCenter,
 } from "@dnd-kit/core";
 import { Task, TaskStatus, User } from "@prisma/client";
 import { Column } from "./column";
 import { TaskCard } from "./task-card";
 import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
 import { updateTaskStatus } from "@/server/actions/tasks";
+import { toast } from "sonner";
 
 type TaskWithRelations = Task & {
   assignee: Pick<User, "id" | "name" | "email"> | null;
@@ -82,9 +84,11 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
 
     try {
       await updateTaskStatus(taskId, newStatus);
-      // OPTIMIZED: No router.refresh() - optimistic update is enough
+      // Success feedback
+      toast.success(`Ticket moved to ${newStatus === "progress" ? "In Progress" : newStatus === "todo" ? "To Do" : newStatus === "review" ? "Review" : "Done"}`);
     } catch (error) {
       console.error("Failed to update task:", error);
+      toast.error("Failed to move ticket");
       // Revert on error
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: oldStatus } : t))
@@ -101,6 +105,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
     <>
       <DndContext
         sensors={sensors}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
