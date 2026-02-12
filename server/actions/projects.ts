@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { unstable_cache, revalidatePath, revalidateTag } from "next/cache";
+import { unstable_cache, revalidatePath } from "next/cache";
 
 export async function createProject(data: {
   name: string;
@@ -24,7 +24,6 @@ export async function createProject(data: {
   // Revalidate caches
   revalidatePath("/");
   revalidatePath("/admin/projects");
-  revalidateTag("projects");
 
   return project;
 }
@@ -130,8 +129,6 @@ export async function addMemberToProject(projectId: string, userId: string) {
   // Revalidate caches
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
-  revalidateTag(`project-${projectId}`);
-  revalidateTag("projects");
 
   return result;
 }
@@ -151,8 +148,6 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   // Revalidate caches
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
-  revalidateTag(`project-${projectId}`);
-  revalidateTag("projects");
 
   return result;
 }

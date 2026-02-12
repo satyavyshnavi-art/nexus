@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { SprintStatus } from "@prisma/client";
-import { unstable_cache, revalidatePath, revalidateTag } from "next/cache";
+import { unstable_cache, revalidatePath } from "next/cache";
 
 export async function createSprint(data: {
   projectId: string;
@@ -29,7 +29,6 @@ export async function createSprint(data: {
 
   // Revalidate caches
   revalidatePath(`/projects/${data.projectId}`);
-  revalidateTag(`project-${data.projectId}-sprints`);
 
   return sprint;
 }
@@ -68,7 +67,6 @@ export async function activateSprint(sprintId: string) {
 
   // Revalidate caches
   revalidatePath(`/projects/${result.projectId}`);
-  revalidateTag(`project-${result.projectId}-sprints`);
 
   return result;
 }
@@ -86,7 +84,6 @@ export async function completeSprint(sprintId: string) {
 
   // Revalidate caches
   revalidatePath(`/projects/${sprint.projectId}`);
-  revalidateTag(`project-${sprint.projectId}-sprints`);
 
   return sprint;
 }
@@ -119,7 +116,6 @@ export async function getActiveSprint(projectId: string) {
     [`active-sprint-${projectId}`],
     {
       revalidate: 30,
-      tags: [`project-${projectId}-sprints`],
     }
   );
 
@@ -146,7 +142,6 @@ export async function getProjectSprints(projectId: string) {
     [`project-sprints-${projectId}`],
     {
       revalidate: 30,
-      tags: [`project-${projectId}-sprints`],
     }
   );
 
