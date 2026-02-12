@@ -87,6 +87,9 @@ export async function createTask(data: {
     classifyBugPriority(task.id, data.description).catch(console.error);
   }
 
+  // Revalidate the project page to show the new task
+  revalidatePath(`/projects/${sprint.projectId}`);
+
   return task;
 }
 
@@ -105,10 +108,20 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     throw new Error("Unauthorized");
   }
 
-  return db.task.update({
+  const updatedTask = await db.task.update({
     where: { id: taskId },
     data: { status: newStatus },
+    include: {
+      sprint: {
+        select: { projectId: true },
+      },
+    },
   });
+
+  // Revalidate the project page to reflect the updated task status
+  revalidatePath(`/projects/${updatedTask.sprint.projectId}`);
+
+  return updatedTask;
 }
 
 export async function updateTask(
@@ -135,10 +148,20 @@ export async function updateTask(
     throw new Error("Unauthorized");
   }
 
-  return db.task.update({
+  const updatedTask = await db.task.update({
     where: { id: taskId },
     data,
+    include: {
+      sprint: {
+        select: { projectId: true },
+      },
+    },
   });
+
+  // Revalidate the project page to reflect the updated task
+  revalidatePath(`/projects/${updatedTask.sprint.projectId}`);
+
+  return updatedTask;
 }
 
 export async function addComment(taskId: string, content: string) {

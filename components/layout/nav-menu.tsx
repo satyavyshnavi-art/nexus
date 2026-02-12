@@ -24,6 +24,13 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
         Dashboard
       </Link>
 
+      <Link
+        href="/team"
+        className="text-sm font-medium hover:text-primary transition-colors"
+      >
+        Team
+      </Link>
+
       {isAdmin && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

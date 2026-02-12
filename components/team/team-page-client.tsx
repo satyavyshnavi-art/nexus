@@ -1,0 +1,175 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { TeamStats } from "@/components/team/team-stats";
+import { TeamMemberCard } from "@/components/team/team-member-card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, Users } from "lucide-react";
+
+interface TeamPageClientProps {
+  members: Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    designation: string | null;
+    avatar: string | null;
+    role: "admin" | "member";
+    createdAt: Date;
+    stats: {
+      projects: number;
+      activeTasks: number;
+      completedTasks: number;
+    };
+    projectMemberships: Array<{
+      project: {
+        id: string;
+        name: string;
+      };
+    }>;
+    assignedTasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      priority: string;
+      type: string;
+      sprint: {
+        name: string;
+        status: string;
+        project: {
+          name: string;
+        };
+      };
+    }>;
+  }>;
+  stats: {
+    totalMembers: number;
+    activeMembers: number;
+    adminCount: number;
+    memberCount: number;
+  };
+  currentUserId: string;
+  isAdmin: boolean;
+}
+
+export function TeamPageClient({
+  members,
+  stats,
+  currentUserId,
+  isAdmin,
+}: TeamPageClientProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "member">(
+    "all"
+  );
+
+  // Filter and search members
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      // Role filter
+      if (roleFilter !== "all" && member.role !== roleFilter) {
+        return false;
+      }
+
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const name = member.name?.toLowerCase() || "";
+        const email = member.email.toLowerCase();
+        const designation = member.designation?.toLowerCase() || "";
+
+        return (
+          name.includes(query) ||
+          email.includes(query) ||
+          designation.includes(query)
+        );
+      }
+
+      return true;
+    });
+  }, [members, searchQuery, roleFilter]);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Team</h1>
+          <p className="text-muted-foreground mt-2">
+            View and manage team members
+          </p>
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <TeamStats stats={stats} />
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by name, email, or designation..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select
+          value={roleFilter}
+          onValueChange={(value) =>
+            setRoleFilter(value as "all" | "admin" | "member")
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admins</SelectItem>
+            <SelectItem value="member">Members</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results Count */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Users className="h-4 w-4" />
+        <span>
+          Showing {filteredMembers.length} of {members.length} team members
+        </span>
+      </div>
+
+      {/* Team Members Grid */}
+      {filteredMembers.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMembers.map((member) => (
+            <TeamMemberCard
+              key={member.id}
+              member={member}
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 border rounded-lg bg-muted/10">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No members found</h3>
+          <p className="text-muted-foreground">
+            {searchQuery
+              ? "Try adjusting your search filters"
+              : "No team members to display"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

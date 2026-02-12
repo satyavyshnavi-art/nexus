@@ -53,6 +53,15 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // User Preferences
+  emailNotifications    Boolean @default(true)
+  taskNotifications     Boolean @default(true)
+  commentNotifications  Boolean @default(true)
+  sprintNotifications   Boolean @default(true)
+  dailyDigest          Boolean @default(false)
+  theme                String  @default("system")
+  viewDensity          String  @default("comfortable")
+
   // Relations
   verticals           VerticalUser[]
   projectMemberships  ProjectMember[]
