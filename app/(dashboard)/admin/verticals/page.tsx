@@ -9,7 +9,7 @@ export default async function VerticalsPage() {
   const session = await auth();
 
   if (!session?.user || session.user.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   const [verticals, allUsers] = await Promise.all([

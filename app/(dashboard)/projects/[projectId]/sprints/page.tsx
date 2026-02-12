@@ -23,7 +23,7 @@ export default async function SprintsPage({
   ]);
 
   if (!project) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   const isAdmin = session.user.role === "admin";

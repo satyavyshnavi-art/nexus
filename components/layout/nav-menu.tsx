@@ -18,7 +18,7 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
   return (
     <nav className="flex items-center gap-4">
       <Link
-        href="/dashboard"
+        href="/"
         className="text-sm font-medium hover:text-primary transition-colors"
       >
         Dashboard
@@ -34,17 +34,17 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/admin/verticals" className="cursor-pointer">
+              <Link href="/admin/verticals" className="cursor-pointer">
                 Manage Verticals
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/admin/projects" className="cursor-pointer">
+              <Link href="/admin/projects" className="cursor-pointer">
                 Manage Projects
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/admin/users" className="cursor-pointer">
+              <Link href="/admin/users" className="cursor-pointer">
                 Manage Users
               </Link>
             </DropdownMenuItem>

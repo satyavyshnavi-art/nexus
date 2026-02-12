@@ -8,7 +8,7 @@ export default async function UsersPage() {
   const session = await auth();
 
   if (!session?.user || session.user.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   const users = await getAllUsers();

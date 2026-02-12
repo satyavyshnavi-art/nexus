@@ -34,7 +34,7 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
         </SheetHeader>
         <nav className="flex flex-col gap-2 mt-6">
           <Link
-            href="/dashboard"
+            href="/"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent"
           >
@@ -48,7 +48,7 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
                 Admin
               </div>
               <Link
-                href="/dashboard/admin/verticals"
+                href="/admin/verticals"
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent"
               >
@@ -56,7 +56,7 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
                 Manage Verticals
               </Link>
               <Link
-                href="/dashboard/admin/projects"
+                href="/admin/projects"
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent"
               >
@@ -64,7 +64,7 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
                 Manage Projects
               </Link>
               <Link
-                href="/dashboard/admin/users"
+                href="/admin/users"
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent"
               >
