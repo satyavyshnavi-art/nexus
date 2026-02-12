@@ -44,8 +44,8 @@ export function AiSprintForm({
       const result = await aiGenerateSprintTasks(sprintId, inputText);
 
       toast({
-        title: "Tasks generated!",
-        description: `Created ${result.taskCount} tasks with AI`,
+        title: "Tickets generated!",
+        description: `Created ${result.taskCount} tickets with AI`,
         variant: "success",
       });
 
@@ -57,7 +57,7 @@ export function AiSprintForm({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to generate tasks",
+            : "Failed to generate tickets",
         variant: "destructive",
       });
     } finally {
@@ -80,7 +80,7 @@ export function AiSprintForm({
             </p>
             <p className="text-sm text-blue-700">
               Describe your feature or project, and AI will automatically
-              generate user stories and tasks for your sprint.
+              generate user stories and tickets for your sprint.
             </p>
           </div>
         </div>
@@ -120,11 +120,11 @@ export function AiSprintForm({
             <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
             <div>
               <p className="text-sm font-medium text-amber-900">
-                Generating tasks...
+                Generating tickets...
               </p>
               <p className="text-sm text-amber-700">
                 This may take 10-30 seconds. AI is analyzing your requirements
-                and creating structured tasks.
+                and creating structured tickets.
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export function AiSprintForm({
           ) : (
             <>
               <Sparkles className="h-4 w-4 mr-2" />
-              Generate Tasks
+              Generate Tickets
             </>
           )}
         </Button>

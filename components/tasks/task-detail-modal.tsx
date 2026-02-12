@@ -42,7 +42,7 @@ export function TaskDetailModal({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this task?")) {
+    if (!confirm("Are you sure you want to delete this ticket?")) {
       return;
     }
 
@@ -50,8 +50,8 @@ export function TaskDetailModal({
     try {
       // Note: We need to add a deleteTask action
       toast({
-        title: "Task deleted",
-        description: "The task has been deleted successfully",
+        title: "Ticket deleted",
+        description: "The ticket has been deleted successfully",
         variant: "success",
       });
       onOpenChange(false);
@@ -60,7 +60,7 @@ export function TaskDetailModal({
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to delete task",
+          error instanceof Error ? error.message : "Failed to delete ticket",
         variant: "destructive",
       });
     } finally {
@@ -72,8 +72,8 @@ export function TaskDetailModal({
     try {
       await updateTask(task.id, data);
       toast({
-        title: "Task updated",
-        description: "The task has been updated successfully",
+        title: "Ticket updated",
+        description: "The ticket has been updated successfully",
         variant: "success",
       });
       setIsEditing(false);
@@ -82,7 +82,7 @@ export function TaskDetailModal({
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to update task",
+          error instanceof Error ? error.message : "Failed to update ticket",
         variant: "destructive",
       });
     }
@@ -94,7 +94,7 @@ export function TaskDetailModal({
         {isEditing ? (
           <>
             <DialogHeader>
-              <DialogTitle>Edit Task</DialogTitle>
+              <DialogTitle>Edit Ticket</DialogTitle>
             </DialogHeader>
             <TaskEditForm
               task={task}

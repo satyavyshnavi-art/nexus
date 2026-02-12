@@ -38,7 +38,7 @@ export default async function DashboardPage() {
             {projects.map((project) => (
               <Link
                 key={project.id}
-                href={`/dashboard/projects/${project.id}`}
+                href={`/projects/${project.id}`}
               >
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardHeader>

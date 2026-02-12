@@ -36,6 +36,33 @@ async function main() {
 
   console.log("Created demo user:", user.email);
 
+  // Create team members
+  const teamMembers = [];
+  const memberData = [
+    { email: "sarah.johnson@nexus.com", name: "Sarah Johnson" },
+    { email: "mike.chen@nexus.com", name: "Mike Chen" },
+    { email: "emily.davis@nexus.com", name: "Emily Davis" },
+    { email: "alex.kumar@nexus.com", name: "Alex Kumar" },
+    { email: "jessica.martinez@nexus.com", name: "Jessica Martinez" },
+  ];
+
+  for (const memberInfo of memberData) {
+    const memberPassword = await hash("member123", 10);
+    const member = await prisma.user.upsert({
+      where: { email: memberInfo.email },
+      update: {},
+      create: {
+        email: memberInfo.email,
+        passwordHash: memberPassword,
+        name: memberInfo.name,
+        role: "member",
+      },
+    });
+    teamMembers.push(member);
+  }
+
+  console.log(`Created ${teamMembers.length} team members`);
+
   // Create vertical
   const vertical = await prisma.vertical.upsert({
     where: { name: "Engineering" },
@@ -76,7 +103,24 @@ async function main() {
     },
   });
 
-  console.log("Assigned users to vertical");
+  // Assign team members to vertical
+  for (const member of teamMembers) {
+    await prisma.verticalUser.upsert({
+      where: {
+        verticalId_userId: {
+          verticalId: vertical.id,
+          userId: member.id,
+        },
+      },
+      update: {},
+      create: {
+        verticalId: vertical.id,
+        userId: member.id,
+      },
+    });
+  }
+
+  console.log("Assigned all users to vertical");
 
   // Create project
   const project = await prisma.project.upsert({
@@ -122,7 +166,24 @@ async function main() {
     },
   });
 
-  console.log("Added members to project");
+  // Add team members to project
+  for (const member of teamMembers) {
+    await prisma.projectMember.upsert({
+      where: {
+        projectId_userId: {
+          projectId: project.id,
+          userId: member.id,
+        },
+      },
+      update: {},
+      create: {
+        projectId: project.id,
+        userId: member.id,
+      },
+    });
+  }
+
+  console.log("Added all members to project");
 
   // Create sprint
   const startDate = new Date();
@@ -198,6 +259,49 @@ async function main() {
       priority: "medium",
       storyPoints: 5,
       createdBy: admin.id,
+      assigneeId: teamMembers[0]?.id,
+    },
+  });
+
+  const task5 = await prisma.task.create({
+    data: {
+      sprintId: sprint.id,
+      title: "Setup API integration",
+      description: "Integrate with external API services",
+      type: "task",
+      status: "progress",
+      priority: "high",
+      storyPoints: 5,
+      createdBy: admin.id,
+      assigneeId: teamMembers[1]?.id,
+    },
+  });
+
+  const task6 = await prisma.task.create({
+    data: {
+      sprintId: sprint.id,
+      title: "Write unit tests",
+      description: "Add test coverage for core functionality",
+      type: "task",
+      status: "todo",
+      priority: "medium",
+      storyPoints: 3,
+      createdBy: admin.id,
+      assigneeId: teamMembers[2]?.id,
+    },
+  });
+
+  const task7 = await prisma.task.create({
+    data: {
+      sprintId: sprint.id,
+      title: "Update documentation",
+      description: "Update README and API docs",
+      type: "task",
+      status: "todo",
+      priority: "low",
+      storyPoints: 2,
+      createdBy: admin.id,
+      assigneeId: teamMembers[3]?.id,
     },
   });
 

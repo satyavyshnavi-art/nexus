@@ -19,7 +19,7 @@ export function KeyboardShortcutGuide({
   onOpenChange,
 }: KeyboardShortcutGuideProps) {
   const shortcuts = [
-    { keys: ["N"], description: "Create new task (when sprint is active)" },
+    { keys: ["N"], description: "Create new ticket (when sprint is active)" },
     { keys: ["S"], description: "Create new sprint (admin only)" },
     { keys: ["?"], description: "Show keyboard shortcuts" },
     { keys: ["ESC"], description: "Close modal or dialog" },

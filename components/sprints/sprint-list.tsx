@@ -38,7 +38,7 @@ export function SprintList({ sprints, userRole }: SprintListProps) {
                   {format(new Date(sprint.startDate), "MMM d, yyyy")} -{" "}
                   {format(new Date(sprint.endDate), "MMM d, yyyy")}
                 </p>
-                <p>{sprint._count.tasks} tasks</p>
+                <p>{sprint._count.tasks} tickets</p>
               </div>
             </div>
             {userRole === "admin" && (

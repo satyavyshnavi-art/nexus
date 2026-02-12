@@ -15,7 +15,7 @@ export function TaskTypeSelector({
   disabled,
 }: TaskTypeSelectorProps) {
   const types = [
-    { value: TaskType.task, label: "Task", icon: CheckSquare, color: "blue" },
+    { value: TaskType.task, label: "Ticket", icon: CheckSquare, color: "blue" },
     { value: TaskType.bug, label: "Bug", icon: Bug, color: "red" },
     { value: TaskType.story, label: "Story", icon: BookOpen, color: "green" },
   ];

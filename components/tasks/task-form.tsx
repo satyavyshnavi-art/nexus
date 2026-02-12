@@ -72,7 +72,7 @@ export function TaskForm({
       });
 
       toast({
-        title: "Task created",
+        title: "Ticket created",
         description: `${formData.title} has been created successfully`,
         variant: "success",
       });
@@ -91,7 +91,7 @@ export function TaskForm({
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to create task",
+          error instanceof Error ? error.message : "Failed to create ticket",
         variant: "destructive",
       });
     } finally {
@@ -124,7 +124,7 @@ export function TaskForm({
           onChange={(e) =>
             setFormData({ ...formData, description: e.target.value })
           }
-          placeholder="Detailed description of the task..."
+          placeholder="Detailed description of the ticket..."
           disabled={isSubmitting}
           rows={4}
         />
@@ -192,7 +192,7 @@ export function TaskForm({
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Task"}
+          {isSubmitting ? "Creating..." : "Create Ticket"}
         </Button>
       </div>
     </form>

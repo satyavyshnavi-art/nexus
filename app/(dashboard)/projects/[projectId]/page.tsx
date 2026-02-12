@@ -30,7 +30,7 @@ export default async function ProjectPage({
         </div>
         {session?.user.role === "admin" && (
           <div className="flex gap-2">
-            <Link href={`/dashboard/projects/${params.projectId}/sprints`}>
+            <Link href={`/projects/${params.projectId}/sprints`}>
               <Button variant="outline">Manage Sprints</Button>
             </Link>
           </div>
@@ -49,7 +49,7 @@ export default async function ProjectPage({
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm text-muted-foreground">
-                {activeSprint.tasks.length} tasks
+                {activeSprint.tasks.length} tickets
               </div>
               {session?.user.role === "admin" && (
                 <AiSprintButton sprintId={activeSprint.id} />
@@ -73,12 +73,12 @@ export default async function ProjectPage({
             <CardDescription>
               {sprints.length === 0
                 ? "No sprints created yet."
-                : "Activate a sprint to start working on tasks."}
+                : "Activate a sprint to start working on tickets."}
             </CardDescription>
           </CardHeader>
           {session?.user.role === "admin" && (
             <CardContent>
-              <Link href={`/dashboard/projects/${params.projectId}/sprints`}>
+              <Link href={`/projects/${params.projectId}/sprints`}>
                 <Button>
                   {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
                 </Button>
@@ -126,7 +126,7 @@ export default async function ProjectPage({
                   <div>
                     <p className="font-medium">{sprint.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {sprint._count.tasks} tasks
+                      {sprint._count.tasks} tickets
                     </p>
                   </div>
                   <span

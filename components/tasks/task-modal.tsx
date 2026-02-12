@@ -30,7 +30,7 @@ export function TaskModal({
 }: TaskModalProps) {
   const handleSuccess = () => {
     onOpenChange(false);
-    // Refresh the page to show the new task
+    // Refresh the page to show the new ticket
     window.location.reload();
   };
 
@@ -38,9 +38,9 @@ export function TaskModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>Create New Ticket</DialogTitle>
           <DialogDescription>
-            Add a new task to the active sprint. If you create a bug, AI will
+            Add a new ticket to the active sprint. If you create a bug, AI will
             automatically classify its priority.
           </DialogDescription>
         </DialogHeader>
