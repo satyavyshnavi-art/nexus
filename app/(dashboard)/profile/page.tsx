@@ -21,7 +21,13 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const profile = await getCurrentUserProfile();
+  let profile;
+  try {
+    profile = await getCurrentUserProfile();
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    redirect("/");
+  }
 
   const completionRate =
     profile.stats.totalTasks > 0
@@ -31,7 +37,7 @@ export default async function ProfilePage() {
       : 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-8">
       {/* Header Section */}
       <div className="bg-white rounded-lg border p-6">
         <div className="flex items-start gap-6">

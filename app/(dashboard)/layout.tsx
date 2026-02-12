@@ -17,8 +17,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
+    <div className="flex flex-col h-screen bg-gray-50">
+      <header className="bg-white border-b flex-shrink-0">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <MobileMenu
@@ -42,7 +42,11 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-8">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }
