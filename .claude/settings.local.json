@@ -38,7 +38,8 @@
       "Bash(/tmp/verify.sh:*)",
       "Bash(bash:*)",
       "Bash(wc:*)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "Bash(kill:*)"
     ]
   }
 }

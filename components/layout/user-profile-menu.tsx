@@ -68,7 +68,7 @@ export function UserProfileMenu({
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 max-h-[24rem] overflow-y-auto">
         {/* User Info Header */}
         <div className="px-2 py-1.5">
           <p className="text-sm font-semibold leading-none">{name}</p>
