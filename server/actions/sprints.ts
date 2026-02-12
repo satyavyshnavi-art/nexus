@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { SprintStatus } from "@prisma/client";
+import { unstable_cache, revalidatePath, revalidateTag } from "next/cache";
 
 export async function createSprint(data: {
   projectId: string;
@@ -19,12 +20,18 @@ export async function createSprint(data: {
     throw new Error("End date must be after start date");
   }
 
-  return db.sprint.create({
+  const sprint = await db.sprint.create({
     data: {
       ...data,
       createdBy: session.user.id,
     },
   });
+
+  // Revalidate caches
+  revalidatePath(`/projects/${data.projectId}`);
+  revalidateTag(`project-${data.projectId}-sprints`);
+
+  return sprint;
 }
 
 export async function activateSprint(sprintId: string) {
@@ -34,7 +41,7 @@ export async function activateSprint(sprintId: string) {
   }
 
   // Transaction to enforce one active sprint rule
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const sprint = await tx.sprint.findUnique({
       where: { id: sprintId },
     });
@@ -58,6 +65,12 @@ export async function activateSprint(sprintId: string) {
       data: { status: SprintStatus.active },
     });
   });
+
+  // Revalidate caches
+  revalidatePath(`/projects/${result.projectId}`);
+  revalidateTag(`project-${result.projectId}-sprints`);
+
+  return result;
 }
 
 export async function completeSprint(sprintId: string) {
@@ -66,46 +79,76 @@ export async function completeSprint(sprintId: string) {
     throw new Error("Unauthorized");
   }
 
-  return db.sprint.update({
+  const sprint = await db.sprint.update({
     where: { id: sprintId },
     data: { status: SprintStatus.completed },
   });
+
+  // Revalidate caches
+  revalidatePath(`/projects/${sprint.projectId}`);
+  revalidateTag(`project-${sprint.projectId}-sprints`);
+
+  return sprint;
 }
 
 export async function getActiveSprint(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  return db.sprint.findFirst({
-    where: {
-      projectId,
-      status: SprintStatus.active,
-    },
-    include: {
-      tasks: {
+  // Cached query - 30 second cache for active sprint
+  const getCachedActiveSprint = unstable_cache(
+    async (projectId: string) => {
+      return db.sprint.findFirst({
+        where: {
+          projectId,
+          status: SprintStatus.active,
+        },
         include: {
-          assignee: { select: { id: true, name: true, email: true } },
-          _count: {
-            select: { comments: true, attachments: true },
+          tasks: {
+            include: {
+              assignee: { select: { id: true, name: true, email: true } },
+              _count: {
+                select: { comments: true, attachments: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
           },
         },
-        orderBy: { createdAt: "desc" },
-      },
+      });
     },
-  });
+    [`active-sprint-${projectId}`],
+    {
+      revalidate: 30,
+      tags: [`project-${projectId}-sprints`],
+    }
+  );
+
+  return getCachedActiveSprint(projectId);
 }
 
 export async function getProjectSprints(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  return db.sprint.findMany({
-    where: { projectId },
-    include: {
-      _count: {
-        select: { tasks: true },
-      },
+  // Cached query - 30 second cache for project sprints
+  const getCachedProjectSprints = unstable_cache(
+    async (projectId: string) => {
+      return db.sprint.findMany({
+        where: { projectId },
+        include: {
+          _count: {
+            select: { tasks: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
     },
-    orderBy: { createdAt: "desc" },
-  });
+    [`project-sprints-${projectId}`],
+    {
+      revalidate: 30,
+      tags: [`project-${projectId}-sprints`],
+    }
+  );
+
+  return getCachedProjectSprints(projectId);
 }

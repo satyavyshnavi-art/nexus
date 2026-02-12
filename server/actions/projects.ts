@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { unstable_cache, revalidatePath } from "next/cache";
+import { unstable_cache, revalidatePath, revalidateTag } from "next/cache";
 
 export async function createProject(data: {
   name: string;
@@ -24,6 +24,7 @@ export async function createProject(data: {
   // Revalidate caches
   revalidatePath("/");
   revalidatePath("/admin/projects");
+  revalidateTag("projects");
 
   return project;
 }
@@ -57,22 +58,34 @@ export async function getProject(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    include: {
-      vertical: true,
-      members: {
+  // Cached query - 30 second cache per project
+  const getCachedProject = unstable_cache(
+    async (projectId: string) => {
+      return db.project.findUnique({
+        where: { id: projectId },
         include: {
-          user: {
-            select: { id: true, name: true, email: true },
+          vertical: true,
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          _count: {
+            select: { sprints: true },
           },
         },
-      },
-      _count: {
-        select: { sprints: true },
-      },
+      });
     },
-  });
+    [`project-${projectId}`],
+    {
+      revalidate: 30,
+      tags: [`project-${projectId}`, "projects"],
+    }
+  );
+
+  const project = await getCachedProject(projectId);
 
   if (!project) throw new Error("Project not found");
 
@@ -117,6 +130,8 @@ export async function addMemberToProject(projectId: string, userId: string) {
   // Revalidate caches
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
+  revalidateTag(`project-${projectId}`);
+  revalidateTag("projects");
 
   return result;
 }
@@ -136,6 +151,8 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   // Revalidate caches
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
+  revalidateTag(`project-${projectId}`);
+  revalidateTag("projects");
 
   return result;
 }
@@ -146,17 +163,29 @@ export async function getAllProjects() {
     throw new Error("Unauthorized");
   }
 
-  return db.project.findMany({
-    include: {
-      vertical: {
-        select: { id: true, name: true },
-      },
-      _count: {
-        select: { sprints: true, members: true },
-      },
+  // Cached query - 30 second cache for admin projects list
+  const getCachedAllProjects = unstable_cache(
+    async () => {
+      return db.project.findMany({
+        include: {
+          vertical: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { sprints: true, members: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
     },
-    orderBy: { createdAt: "desc" },
-  });
+    ["all-projects"],
+    {
+      revalidate: 30, // Cache for 30 seconds
+      tags: ["projects"],
+    }
+  );
+
+  return getCachedAllProjects();
 }
 
 // Optimized: Get all user projects in ONE query (fixes N+1)

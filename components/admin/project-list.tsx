@@ -57,7 +57,7 @@ export function ProjectList({ projects }: ProjectListProps) {
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {projects.map((project) => (
-          <Card key={project.id} className="p-6">
+          <Card key={project.id} className="p-6 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">{project.name}</h3>
@@ -84,8 +84,8 @@ export function ProjectList({ projects }: ProjectListProps) {
                   <Users className="h-4 w-4 mr-2" />
                   Members
                 </Button>
-                <Link href={`/dashboard/projects/${project.id}`} className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
+                <Link href={`/projects/${project.id}`} className="flex-1" prefetch={true}>
+                  <Button variant="outline" size="sm" className="w-full transition-all hover:bg-primary hover:text-primary-foreground">
                     <FolderKanban className="h-4 w-4 mr-2" />
                     View
                   </Button>
