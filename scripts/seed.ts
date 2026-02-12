@@ -4,7 +4,7 @@ import { hash } from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("🌱 Seeding database...");
 
   // Create admin user
   const adminPassword = await hash("admin123", 10);
@@ -18,35 +18,21 @@ async function main() {
       role: "admin",
     },
   });
+  console.log("✅ Created admin user:", admin.email);
 
-  console.log("Created admin user:", admin.email);
-
-  // Create demo user
-  const userPassword = await hash("user123", 10);
-  const user = await prisma.user.upsert({
-    where: { email: "user@nexus.com" },
-    update: {},
-    create: {
-      email: "user@nexus.com",
-      passwordHash: userPassword,
-      name: "Demo User",
-      role: "member",
-    },
-  });
-
-  console.log("Created demo user:", user.email);
-
-  // Create team members
-  const teamMembers = [];
-  const memberData = [
-    { email: "sarah.johnson@nexus.com", name: "Sarah Johnson" },
-    { email: "mike.chen@nexus.com", name: "Mike Chen" },
-    { email: "emily.davis@nexus.com", name: "Emily Davis" },
-    { email: "alex.kumar@nexus.com", name: "Alex Kumar" },
-    { email: "jessica.martinez@nexus.com", name: "Jessica Martinez" },
+  // Create team members with specific roles/skills
+  const teamData = [
+    { email: "sarah.johnson@nexus.com", name: "Sarah Johnson" }, // Frontend Lead
+    { email: "mike.chen@nexus.com", name: "Mike Chen" }, // Backend Lead
+    { email: "emily.davis@nexus.com", name: "Emily Davis" }, // UI/UX Designer
+    { email: "alex.kumar@nexus.com", name: "Alex Kumar" }, // DevOps Engineer
+    { email: "jessica.martinez@nexus.com", name: "Jessica Martinez" }, // QA Engineer
+    { email: "david.brown@nexus.com", name: "David Brown" }, // Full Stack Dev
+    { email: "lisa.wong@nexus.com", name: "Lisa Wong" }, // Database Specialist
   ];
 
-  for (const memberInfo of memberData) {
+  const teamMembers = [];
+  for (const memberInfo of teamData) {
     const memberPassword = await hash("member123", 10);
     const member = await prisma.user.upsert({
       where: { email: memberInfo.email },
@@ -60,142 +46,78 @@ async function main() {
     });
     teamMembers.push(member);
   }
-
-  console.log(`Created ${teamMembers.length} team members`);
+  console.log(`✅ Created ${teamMembers.length} team members`);
 
   // Create vertical
   const vertical = await prisma.vertical.upsert({
     where: { name: "Engineering" },
     update: {},
-    create: {
-      name: "Engineering",
-    },
+    create: { name: "Engineering" },
   });
+  console.log("✅ Created vertical:", vertical.name);
 
-  console.log("Created vertical:", vertical.name);
-
-  // Assign users to vertical
-  await prisma.verticalUser.upsert({
-    where: {
-      verticalId_userId: {
-        verticalId: vertical.id,
-        userId: admin.id,
-      },
-    },
-    update: {},
-    create: {
-      verticalId: vertical.id,
-      userId: admin.id,
-    },
-  });
-
-  await prisma.verticalUser.upsert({
-    where: {
-      verticalId_userId: {
-        verticalId: vertical.id,
-        userId: user.id,
-      },
-    },
-    update: {},
-    create: {
-      verticalId: vertical.id,
-      userId: user.id,
-    },
-  });
-
-  // Assign team members to vertical
-  for (const member of teamMembers) {
+  // Assign all users to vertical
+  const allUsers = [admin, ...teamMembers];
+  for (const user of allUsers) {
     await prisma.verticalUser.upsert({
       where: {
         verticalId_userId: {
           verticalId: vertical.id,
-          userId: member.id,
+          userId: user.id,
         },
       },
       update: {},
       create: {
         verticalId: vertical.id,
-        userId: member.id,
+        userId: user.id,
       },
     });
   }
+  console.log("✅ Assigned all users to vertical");
 
-  console.log("Assigned all users to vertical");
-
-  // Create project
+  // Create E-Commerce Platform project
   const project = await prisma.project.upsert({
-    where: { id: "demo-project-id" },
+    where: { id: "ecommerce-platform" },
     update: {},
     create: {
-      id: "demo-project-id",
-      name: "Demo Project",
-      description: "A sample project to get started",
+      id: "ecommerce-platform",
+      name: "E-Commerce Platform",
+      description: "Modern e-commerce platform with AI-powered recommendations and real-time inventory management",
       verticalId: vertical.id,
       createdBy: admin.id,
     },
   });
+  console.log("✅ Created project:", project.name);
 
-  console.log("Created project:", project.name);
-
-  // Add members to project
-  await prisma.projectMember.upsert({
-    where: {
-      projectId_userId: {
-        projectId: project.id,
-        userId: admin.id,
-      },
-    },
-    update: {},
-    create: {
-      projectId: project.id,
-      userId: admin.id,
-    },
-  });
-
-  await prisma.projectMember.upsert({
-    where: {
-      projectId_userId: {
-        projectId: project.id,
-        userId: user.id,
-      },
-    },
-    update: {},
-    create: {
-      projectId: project.id,
-      userId: user.id,
-    },
-  });
-
-  // Add team members to project
-  for (const member of teamMembers) {
+  // Add all users as project members
+  for (const user of allUsers) {
     await prisma.projectMember.upsert({
       where: {
         projectId_userId: {
           projectId: project.id,
-          userId: member.id,
+          userId: user.id,
         },
       },
       update: {},
       create: {
         projectId: project.id,
-        userId: member.id,
+        userId: user.id,
       },
     });
   }
+  console.log("✅ Added all members to project");
 
-  console.log("Added all members to project");
-
-  // Create sprint
+  // Create Sprint 1
   const startDate = new Date();
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + 14); // 2 week sprint
 
   const sprint = await prisma.sprint.upsert({
-    where: { id: "demo-sprint-id" },
+    where: { id: "sprint-1-ecommerce" },
     update: {},
     create: {
-      id: "demo-sprint-id",
-      name: "Sprint 1",
+      id: "sprint-1-ecommerce",
+      name: "Sprint 1 - Foundation & Core Features",
       projectId: project.id,
       startDate,
       endDate,
@@ -203,119 +125,264 @@ async function main() {
       createdBy: admin.id,
     },
   });
+  console.log("✅ Created sprint:", sprint.name);
 
-  console.log("Created sprint:", sprint.name);
-
-  // Create sample tasks
-  const task1 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Set up project repository",
-      description: "Initialize Git repository and configure CI/CD",
-      type: "task",
+  // MODULE 1: Frontend Development
+  const frontendTickets = [
+    {
+      title: "Setup Next.js project structure",
+      description: "Initialize Next.js 14 with App Router, TypeScript, Tailwind CSS, and shadcn/ui components",
+      status: "done",
+      priority: "critical",
+      storyPoints: 5,
+      assigneeId: teamMembers[0].id, // Sarah
+    },
+    {
+      title: "Design product catalog page",
+      description: "Create responsive product listing with filters, sorting, and pagination",
       status: "done",
       priority: "high",
-      storyPoints: 3,
-      createdBy: admin.id,
-      assigneeId: admin.id,
+      storyPoints: 8,
+      assigneeId: teamMembers[0].id, // Sarah
     },
-  });
-
-  const task2 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Design database schema",
-      description: "Create ERD and Prisma schema for the application",
-      type: "task",
+    {
+      title: "Implement shopping cart UI",
+      description: "Build cart sidebar with add/remove items, quantity controls, and price calculation",
       status: "review",
       priority: "high",
       storyPoints: 5,
-      createdBy: admin.id,
-      assigneeId: user.id,
+      assigneeId: teamMembers[5].id, // David
     },
-  });
-
-  const task3 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Implement authentication",
-      description: "Set up NextAuth.js with credentials provider",
-      type: "task",
+    {
+      title: "Create checkout flow",
+      description: "Multi-step checkout with shipping, payment, and order confirmation",
       status: "progress",
       priority: "critical",
-      storyPoints: 8,
-      createdBy: admin.id,
-      assigneeId: admin.id,
+      storyPoints: 13,
+      assigneeId: teamMembers[0].id, // Sarah
     },
-  });
+  ];
 
-  const task4 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Create Kanban board UI",
-      description: "Build drag-and-drop Kanban board with dnd-kit",
-      type: "task",
-      status: "todo",
-      priority: "medium",
+  // MODULE 2: Backend Development
+  const backendTickets = [
+    {
+      title: "Setup Prisma with PostgreSQL",
+      description: "Configure Prisma ORM, design database schema for products, orders, users",
+      status: "done",
+      priority: "critical",
       storyPoints: 5,
-      createdBy: admin.id,
-      assigneeId: teamMembers[0]?.id,
+      assigneeId: teamMembers[6].id, // Lisa
     },
-  });
-
-  const task5 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Setup API integration",
-      description: "Integrate with external API services",
-      type: "task",
+    {
+      title: "Build product API endpoints",
+      description: "Create REST API for product CRUD operations with filtering and search",
+      status: "done",
+      priority: "high",
+      storyPoints: 8,
+      assigneeId: teamMembers[1].id, // Mike
+    },
+    {
+      title: "Implement order management API",
+      description: "Order creation, status updates, and order history endpoints",
       status: "progress",
+      priority: "critical",
+      storyPoints: 13,
+      assigneeId: teamMembers[1].id, // Mike
+    },
+    {
+      title: "Build inventory management system",
+      description: "Real-time stock tracking, low stock alerts, and automatic reordering",
+      status: "todo",
+      priority: "high",
+      storyPoints: 8,
+      assigneeId: teamMembers[1].id, // Mike
+    },
+  ];
+
+  // MODULE 3: Authentication & Security
+  const authTickets = [
+    {
+      title: "Setup NextAuth.js authentication",
+      description: "Configure NextAuth with credentials provider, JWT sessions, and password hashing",
+      status: "done",
+      priority: "critical",
+      storyPoints: 8,
+      assigneeId: teamMembers[5].id, // David
+    },
+    {
+      title: "Implement user registration flow",
+      description: "Email validation, password requirements, welcome email",
+      status: "review",
       priority: "high",
       storyPoints: 5,
-      createdBy: admin.id,
-      assigneeId: teamMembers[1]?.id,
+      assigneeId: teamMembers[5].id, // David
     },
-  });
-
-  const task6 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Write unit tests",
-      description: "Add test coverage for core functionality",
-      type: "task",
+    {
+      title: "Add OAuth providers",
+      description: "Google and GitHub OAuth integration for social login",
       status: "todo",
       priority: "medium",
+      storyPoints: 5,
+      assigneeId: teamMembers[5].id, // David
+    },
+  ];
+
+  // MODULE 4: UI/UX Design
+  const designTickets = [
+    {
+      title: "Create design system",
+      description: "Define color palette, typography, spacing, and component styles",
+      status: "done",
+      priority: "high",
+      storyPoints: 8,
+      assigneeId: teamMembers[2].id, // Emily
+    },
+    {
+      title: "Design mobile-responsive layouts",
+      description: "Mobile-first responsive design for all pages",
+      status: "review",
+      priority: "high",
+      storyPoints: 8,
+      assigneeId: teamMembers[2].id, // Emily
+    },
+    {
+      title: "Product detail page redesign",
+      description: "Enhanced product images, zoom, reviews section, related products",
+      status: "progress",
+      priority: "medium",
+      storyPoints: 5,
+      assigneeId: teamMembers[2].id, // Emily
+    },
+  ];
+
+  // MODULE 5: DevOps & Infrastructure
+  const devopsTickets = [
+    {
+      title: "Setup CI/CD pipeline",
+      description: "GitHub Actions for automated testing, building, and deployment",
+      status: "done",
+      priority: "high",
+      storyPoints: 5,
+      assigneeId: teamMembers[3].id, // Alex
+    },
+    {
+      title: "Configure Vercel deployment",
+      description: "Production and preview deployments, environment variables, domain setup",
+      status: "done",
+      priority: "critical",
       storyPoints: 3,
-      createdBy: admin.id,
-      assigneeId: teamMembers[2]?.id,
+      assigneeId: teamMembers[3].id, // Alex
     },
-  });
-
-  const task7 = await prisma.task.create({
-    data: {
-      sprintId: sprint.id,
-      title: "Update documentation",
-      description: "Update README and API docs",
-      type: "task",
+    {
+      title: "Setup monitoring and logging",
+      description: "Error tracking with Sentry, performance monitoring, log aggregation",
       status: "todo",
-      priority: "low",
-      storyPoints: 2,
-      createdBy: admin.id,
-      assigneeId: teamMembers[3]?.id,
+      priority: "medium",
+      storyPoints: 5,
+      assigneeId: teamMembers[3].id, // Alex
     },
-  });
+  ];
 
-  console.log("Created sample tasks");
+  // MODULE 6: QA & Testing
+  const qaTickets = [
+    {
+      title: "Write unit tests for API",
+      description: "Test coverage for all backend endpoints using Jest",
+      status: "progress",
+      priority: "high",
+      storyPoints: 8,
+      assigneeId: teamMembers[4].id, // Jessica
+    },
+    {
+      title: "Create E2E test suite",
+      description: "Playwright tests for critical user flows: login, browse, checkout",
+      status: "todo",
+      priority: "high",
+      storyPoints: 13,
+      assigneeId: teamMembers[4].id, // Jessica
+    },
+    {
+      title: "Perform security audit",
+      description: "XSS, CSRF, SQL injection testing, dependency vulnerability scan",
+      status: "todo",
+      priority: "critical",
+      storyPoints: 8,
+      assigneeId: teamMembers[4].id, // Jessica
+    },
+  ];
+
+  // MODULE 7: AI Features
+  const aiTickets = [
+    {
+      title: "Build product recommendation engine",
+      description: "AI-powered recommendations based on user behavior and purchase history",
+      status: "todo",
+      priority: "medium",
+      storyPoints: 13,
+      assigneeId: teamMembers[1].id, // Mike
+    },
+    {
+      title: "Implement smart search",
+      description: "Natural language search with typo tolerance and synonyms",
+      status: "todo",
+      priority: "medium",
+      storyPoints: 8,
+      assigneeId: teamMembers[6].id, // Lisa
+    },
+  ];
+
+  // Create all tickets
+  const allTickets = [
+    ...frontendTickets,
+    ...backendTickets,
+    ...authTickets,
+    ...designTickets,
+    ...devopsTickets,
+    ...qaTickets,
+    ...aiTickets,
+  ];
+
+  for (const ticketData of allTickets) {
+    await prisma.task.create({
+      data: {
+        sprintId: sprint.id,
+        title: ticketData.title,
+        description: ticketData.description,
+        type: "task",
+        status: ticketData.status,
+        priority: ticketData.priority,
+        storyPoints: ticketData.storyPoints,
+        assigneeId: ticketData.assigneeId,
+        createdBy: admin.id,
+      },
+    });
+  }
+
+  console.log(`✅ Created ${allTickets.length} tickets across 7 modules`);
+  console.log("\n📊 Ticket Distribution:");
+  console.log(`   - Frontend: ${frontendTickets.length} tickets`);
+  console.log(`   - Backend: ${backendTickets.length} tickets`);
+  console.log(`   - Auth & Security: ${authTickets.length} tickets`);
+  console.log(`   - UI/UX Design: ${designTickets.length} tickets`);
+  console.log(`   - DevOps: ${devopsTickets.length} tickets`);
+  console.log(`   - QA & Testing: ${qaTickets.length} tickets`);
+  console.log(`   - AI Features: ${aiTickets.length} tickets`);
 
   console.log("\n✅ Database seeded successfully!");
-  console.log("\nLogin credentials:");
-  console.log("Admin: admin@nexus.com / admin123");
-  console.log("User: user@nexus.com / user123");
+  console.log("\n🔐 Login Credentials:");
+  console.log("├─ Admin: admin@nexus.com / admin123");
+  console.log("├─ Sarah (Frontend): sarah.johnson@nexus.com / member123");
+  console.log("├─ Mike (Backend): mike.chen@nexus.com / member123");
+  console.log("├─ Emily (Design): emily.davis@nexus.com / member123");
+  console.log("├─ Alex (DevOps): alex.kumar@nexus.com / member123");
+  console.log("├─ Jessica (QA): jessica.martinez@nexus.com / member123");
+  console.log("├─ David (Full Stack): david.brown@nexus.com / member123");
+  console.log("└─ Lisa (Database): lisa.wong@nexus.com / member123");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Error seeding database:", e);
     process.exit(1);
   })
   .finally(async () => {
