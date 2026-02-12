@@ -1,0 +1,193 @@
+"use client";
+
+import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { TaskTypeSelector } from "./task-type-selector";
+import { PrioritySelector } from "./priority-selector";
+import { AssigneeSelector } from "./assignee-selector";
+import { createTask } from "@/server/actions/tasks";
+import { toast } from "@/lib/hooks/use-toast";
+import { TaskType, TaskPriority } from "@prisma/client";
+
+interface User {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+interface TaskFormProps {
+  sprintId: string;
+  projectMembers: User[];
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function TaskForm({
+  sprintId,
+  projectMembers,
+  onSuccess,
+  onCancel,
+}: TaskFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    type: TaskType.task,
+    priority: TaskPriority.medium,
+    storyPoints: 0,
+    assigneeId: undefined as string | undefined,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Title is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createTask({
+        sprintId,
+        title: formData.title,
+        description: formData.description || undefined,
+        type: formData.type,
+        storyPoints: formData.storyPoints || undefined,
+        assigneeId: formData.assigneeId,
+      });
+
+      toast({
+        title: "Task created",
+        description: `${formData.title} has been created successfully`,
+        variant: "success",
+      });
+
+      setFormData({
+        title: "",
+        description: "",
+        type: TaskType.task,
+        priority: TaskPriority.medium,
+        storyPoints: 0,
+        assigneeId: undefined,
+      });
+
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to create task",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="title" required>
+          Title
+        </Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) =>
+            setFormData({ ...formData, title: e.target.value })
+          }
+          placeholder="Add authentication to login page"
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
+          placeholder="Detailed description of the task..."
+          disabled={isSubmitting}
+          rows={4}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Type</Label>
+        <TaskTypeSelector
+          value={formData.type}
+          onChange={(type) => setFormData({ ...formData, type })}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="priority">Priority</Label>
+        <PrioritySelector
+          value={formData.priority}
+          onChange={(priority) => setFormData({ ...formData, priority })}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="storyPoints">Story Points</Label>
+          <Input
+            id="storyPoints"
+            type="number"
+            min="0"
+            max="20"
+            value={formData.storyPoints}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                storyPoints: parseInt(e.target.value) || 0,
+              })
+            }
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="assignee">Assignee</Label>
+          <AssigneeSelector
+            members={projectMembers}
+            value={formData.assigneeId}
+            onChange={(assigneeId) =>
+              setFormData({ ...formData, assigneeId })
+            }
+            disabled={isSubmitting}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create Task"}
+        </Button>
+      </div>
+    </form>
+  );
+}

@@ -1,0 +1,133 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { Task, TaskStatus, User } from "@prisma/client";
+import { Column } from "./column";
+import { TaskCard } from "./task-card";
+import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
+import { updateTaskStatus } from "@/server/actions/tasks";
+import { useRouter } from "next/navigation";
+
+type TaskWithRelations = Task & {
+  assignee: Pick<User, "id" | "name" | "email"> | null;
+  _count?: {
+    comments: number;
+    attachments: number;
+  };
+};
+
+interface KanbanBoardProps {
+  initialTasks: TaskWithRelations[];
+  projectMembers?: Pick<User, "id" | "name" | "email">[];
+}
+
+const columns = [
+  { status: "todo" as TaskStatus, title: "To Do" },
+  { status: "progress" as TaskStatus, title: "In Progress" },
+  { status: "review" as TaskStatus, title: "Review" },
+  { status: "done" as TaskStatus, title: "Done" },
+];
+
+export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardProps) {
+  const [tasks, setTasks] = useState(initialTasks);
+  const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const router = useRouter();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = tasks.find((t) => t.id === event.active.id);
+    setActiveTask(task || null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const newStatus = over.id as TaskStatus;
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === newStatus) return;
+
+    const oldStatus = task.status;
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+
+    try {
+      await updateTaskStatus(taskId, newStatus);
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      // Revert on error
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: oldStatus } : t))
+      );
+    }
+  };
+
+  const handleTaskClick = (task: TaskWithRelations) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
+  return (
+    <>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {columns.map((column) => (
+            <Column
+              key={column.status}
+              status={column.status}
+              title={column.title}
+              tasks={tasks.filter((t) => t.status === column.status)}
+              onTaskClick={handleTaskClick}
+            />
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
+      </DndContext>
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          projectMembers={projectMembers}
+          open={isDetailModalOpen}
+          onOpenChange={setIsDetailModalOpen}
+        />
+      )}
+    </>
+  );
+}

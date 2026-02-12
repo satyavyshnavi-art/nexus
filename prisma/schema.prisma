@@ -1,0 +1,205 @@
+// Generator and datasource
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums (ENUM-safe as per PRD requirement)
+enum UserRole {
+  admin
+  member
+}
+
+enum SprintStatus {
+  planned
+  active
+  completed
+}
+
+enum TaskStatus {
+  todo
+  progress
+  review
+  done
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum TaskType {
+  story
+  task
+  bug
+}
+
+// Core tables
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String?
+  role          UserRole  @default(member)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  verticals           VerticalUser[]
+  projectMemberships  ProjectMember[]
+  createdProjects     Project[]
+  createdSprints      Sprint[]
+  createdTasks        Task[]         @relation("TaskCreator")
+  assignedTasks       Task[]         @relation("TaskAssignee")
+  comments            TaskComment[]
+  uploadedAttachments TaskAttachment[]
+
+  @@map("users")
+}
+
+model Vertical {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users    VerticalUser[]
+  projects Project[]
+
+  @@map("verticals")
+}
+
+model VerticalUser {
+  id         String   @id @default(uuid())
+  verticalId String   @map("vertical_id")
+  userId     String   @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  vertical Vertical @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([verticalId, userId])
+  @@index([userId])
+  @@index([verticalId])
+  @@map("vertical_users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  verticalId  String   @map("vertical_id")
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  vertical Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  creator  User            @relation(fields: [createdBy], references: [id])
+  members  ProjectMember[]
+  sprints  Sprint[]
+
+  @@index([verticalId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("project_members")
+}
+
+model Sprint {
+  id        String        @id @default(uuid())
+  projectId String        @map("project_id")
+  name      String
+  startDate DateTime      @map("start_date")
+  endDate   DateTime      @map("end_date")
+  status    SprintStatus  @default(planned)
+  createdBy String        @map("created_by")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id])
+  tasks   Task[]
+
+  @@index([projectId, status])
+  @@map("sprints")
+}
+
+model Task {
+  id           String       @id @default(uuid())
+  sprintId     String       @map("sprint_id")
+  title        String
+  description  String?
+  type         TaskType     @default(task)
+  status       TaskStatus   @default(todo)
+  priority     TaskPriority @default(medium)
+  storyPoints  Int?         @map("story_points")
+  assigneeId   String?      @map("assignee_id")
+  createdBy    String       @map("created_by")
+  parentTaskId String?      @map("parent_task_id") // For story → task relation
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  sprint      Sprint           @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  creator     User             @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  parentTask  Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  childTasks  Task[]           @relation("TaskHierarchy")
+  comments    TaskComment[]
+  attachments TaskAttachment[]
+
+  @@index([sprintId, status])
+  @@index([assigneeId])
+  @@index([parentTaskId])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  uploadedBy String   @map("uploaded_by")
+  s3Key      String   @map("s3_key")
+  fileName   String   @map("file_name")
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@map("task_attachments")
+}
