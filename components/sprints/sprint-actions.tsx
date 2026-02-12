@@ -57,7 +57,7 @@ export function SprintActions({ sprintId, status, sprintName }: SprintActionsPro
     }
   };
 
-  if (status === "planning") {
+  if (status === "planned") {
     return (
       <Button onClick={handleActivate} disabled={isLoading} size="sm">
         {isLoading ? "Activating..." : "Activate"}

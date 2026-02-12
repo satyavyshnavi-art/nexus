@@ -57,7 +57,7 @@ export function SprintList({ sprints, userRole }: SprintListProps) {
 
 function StatusBadge({ status }: { status: Sprint["status"] }) {
   const variants = {
-    planning: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    planned: "bg-yellow-100 text-yellow-800 border-yellow-300",
     active: "bg-green-100 text-green-800 border-green-300",
     completed: "bg-gray-100 text-gray-800 border-gray-300",
   };

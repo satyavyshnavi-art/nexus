@@ -7,12 +7,8 @@ export const sprintSchema = z.object({
     .string()
     .min(1, "Sprint name is required")
     .max(100, "Sprint name must be less than 100 characters"),
-  startDate: z.date({
-    required_error: "Start date is required",
-  }),
-  endDate: z.date({
-    required_error: "End date is required",
-  }),
+  startDate: z.date(),
+  endDate: z.date(),
 }).refine((data) => data.endDate > data.startDate, {
   message: "End date must be after start date",
   path: ["endDate"],

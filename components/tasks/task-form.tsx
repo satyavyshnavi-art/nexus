@@ -32,13 +32,20 @@ export function TaskForm({
   onCancel,
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    type: TaskType;
+    priority: TaskPriority;
+    storyPoints: number;
+    assigneeId: string | undefined;
+  }>({
     title: "",
     description: "",
     type: TaskType.task,
     priority: TaskPriority.medium,
     storyPoints: 0,
-    assigneeId: undefined as string | undefined,
+    assigneeId: undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
