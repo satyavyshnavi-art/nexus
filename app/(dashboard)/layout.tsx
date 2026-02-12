@@ -25,7 +25,7 @@ export default async function DashboardLayout({
               isAdmin={session.user.role === "admin"}
               userName={session.user.name || session.user.email || "User"}
             />
-            <Link href="/dashboard" className="text-xl font-bold text-primary">
+            <Link href="/" className="text-xl font-bold text-primary">
               Nexus
             </Link>
             <div className="hidden md:block">

@@ -18,7 +18,9 @@
       "Bash(gh:*)",
       "Bash(vercel:*)",
       "Bash(test:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)"
     ]
   }
 }

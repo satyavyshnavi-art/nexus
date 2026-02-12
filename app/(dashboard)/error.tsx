@@ -34,7 +34,7 @@ export default function DashboardError({
             <Button onClick={reset}>Try Again</Button>
             <Button
               variant="outline"
-              onClick={() => (window.location.href = "/dashboard")}
+              onClick={() => (window.location.href = "/")}
             >
               <Home className="h-4 w-4 mr-2" />
               Dashboard
