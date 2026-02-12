@@ -20,7 +20,8 @@
       "Bash(test:*)",
       "Bash(npm run build:*)",
       "Bash(git push:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }
