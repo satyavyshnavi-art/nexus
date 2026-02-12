@@ -5,6 +5,28 @@ import { db } from "@/server/db";
 import { TaskStatus, TaskPriority, TaskType } from "@prisma/client";
 import { classifyBugPriority } from "@/lib/ai/bug-classifier";
 
+// OPTIMIZED: Fast permission check (1 query instead of nested includes)
+async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
+  if (isAdmin) return true;
+
+  const result = await db.task.findFirst({
+    where: {
+      id: taskId,
+      sprint: {
+        project: {
+          OR: [
+            { members: { some: { userId } } },
+            { vertical: { users: { some: { userId } } } },
+          ],
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  return !!result;
+}
+
 export async function createTask(data: {
   sprintId: string;
   title: string;
@@ -70,26 +92,14 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Verify user has project access
-  const task = await db.task.findUnique({
-    where: { id: taskId },
-    include: {
-      sprint: {
-        include: {
-          project: {
-            include: {
-              members: { where: { userId: session.user.id } },
-            },
-          },
-        },
-      },
-    },
-  });
+  // OPTIMIZED: Fast permission check
+  const hasAccess = await canAccessTask(
+    taskId,
+    session.user.id,
+    session.user.role === "admin"
+  );
 
-  if (
-    !task ||
-    (task.sprint.project.members.length === 0 && session.user.role !== "admin")
-  ) {
+  if (!hasAccess) {
     throw new Error("Unauthorized");
   }
 
@@ -112,26 +122,14 @@ export async function updateTask(
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Verify user has project access
-  const task = await db.task.findUnique({
-    where: { id: taskId },
-    include: {
-      sprint: {
-        include: {
-          project: {
-            include: {
-              members: { where: { userId: session.user.id } },
-            },
-          },
-        },
-      },
-    },
-  });
+  // OPTIMIZED: Fast permission check
+  const hasAccess = await canAccessTask(
+    taskId,
+    session.user.id,
+    session.user.role === "admin"
+  );
 
-  if (
-    !task ||
-    (task.sprint.project.members.length === 0 && session.user.role !== "admin")
-  ) {
+  if (!hasAccess) {
     throw new Error("Unauthorized");
   }
 

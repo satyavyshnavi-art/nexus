@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
+import { unstable_cache, revalidatePath } from "next/cache";
 
 export async function createProject(data: {
   name: string;
@@ -13,12 +14,18 @@ export async function createProject(data: {
     throw new Error("Unauthorized");
   }
 
-  return db.project.create({
+  const project = await db.project.create({
     data: {
       ...data,
       createdBy: session.user.id,
     },
   });
+
+  // Revalidate caches
+  revalidatePath("/");
+  revalidatePath("/admin/projects");
+
+  return project;
 }
 
 export async function getProjectsByVertical(verticalId: string) {
@@ -99,13 +106,19 @@ export async function addMemberToProject(projectId: string, userId: string) {
     throw new Error("User not in project vertical");
   }
 
-  return db.projectMember.upsert({
+  const result = await db.projectMember.upsert({
     where: {
       projectId_userId: { projectId, userId },
     },
     create: { projectId, userId },
     update: {},
   });
+
+  // Revalidate caches
+  revalidatePath("/");
+  revalidatePath(`/projects/${projectId}`);
+
+  return result;
 }
 
 export async function removeMemberFromProject(projectId: string, userId: string) {
@@ -114,11 +127,17 @@ export async function removeMemberFromProject(projectId: string, userId: string)
     throw new Error("Unauthorized");
   }
 
-  return db.projectMember.delete({
+  const result = await db.projectMember.delete({
     where: {
       projectId_userId: { projectId, userId },
     },
   });
+
+  // Revalidate caches
+  revalidatePath("/");
+  revalidatePath(`/projects/${projectId}`);
+
+  return result;
 }
 
 export async function getAllProjects() {
@@ -138,4 +157,54 @@ export async function getAllProjects() {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+// Optimized: Get all user projects in ONE query (fixes N+1)
+export async function getUserProjects() {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const isAdmin = session.user.role === "admin";
+
+  // Cached query - 30 second cache per user
+  const getCachedProjects = unstable_cache(
+    async (userId: string, isAdmin: boolean) => {
+      return db.project.findMany({
+        where: isAdmin
+          ? {}
+          : {
+              // Get projects where user is a member through vertical OR project membership
+              OR: [
+                {
+                  vertical: {
+                    users: {
+                      some: { userId },
+                    },
+                  },
+                },
+                {
+                  members: {
+                    some: { userId },
+                  },
+                },
+              ],
+            },
+        include: {
+          vertical: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { sprints: true, members: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+    [`user-projects`],
+    {
+      revalidate: 30, // Cache for 30 seconds
+    }
+  );
+
+  return getCachedProjects(session.user.id, isAdmin);
 }

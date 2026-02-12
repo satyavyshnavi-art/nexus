@@ -15,7 +15,6 @@ import { Column } from "./column";
 import { TaskCard } from "./task-card";
 import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
 import { updateTaskStatus } from "@/server/actions/tasks";
-import { useRouter } from "next/navigation";
 
 type TaskWithRelations = Task & {
   assignee: Pick<User, "id" | "name" | "email"> | null;
@@ -42,7 +41,6 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const router = useRouter();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -82,7 +80,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
 
     try {
       await updateTaskStatus(taskId, newStatus);
-      router.refresh();
+      // OPTIMIZED: No router.refresh() - optimistic update is enough
     } catch (error) {
       console.error("Failed to update task:", error);
       // Revert on error

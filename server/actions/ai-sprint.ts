@@ -16,39 +16,46 @@ export async function aiGenerateSprintTasks(
 
   const result = await generateSprintTasks(inputText);
 
-  // Transaction to create all tasks
+  // OPTIMIZED: Batch create all tasks (3 queries instead of 630+)
   return db.$transaction(async (tx) => {
-    const createdTasks = [];
+    // Step 1: Create all story tasks in one batch
+    const storyData = result.stories.map((story) => ({
+      sprintId,
+      title: story.title,
+      type: TaskType.story,
+      storyPoints: story.story_points,
+      createdBy: session.user.id,
+    }));
 
-    for (const story of result.stories) {
-      // Create story task
-      const storyTask = await tx.task.create({
-        data: {
-          sprintId,
-          title: story.title,
-          type: TaskType.story,
-          storyPoints: story.story_points,
-          createdBy: session.user.id,
-        },
+    const storyTasks = await tx.task.createManyAndReturn({
+      data: storyData,
+    });
+
+    // Step 2: Create map for story index lookup
+    const storyIdMap = new Map(
+      storyTasks.map((task, index) => [index, task.id])
+    );
+
+    // Step 3: Create all child tasks in one batch
+    const childTaskData = result.stories.flatMap((story, storyIndex) =>
+      story.tasks.map((taskTitle) => ({
+        sprintId,
+        title: taskTitle,
+        type: TaskType.task,
+        parentTaskId: storyIdMap.get(storyIndex)!,
+        createdBy: session.user.id,
+      }))
+    );
+
+    if (childTaskData.length > 0) {
+      await tx.task.createMany({
+        data: childTaskData,
       });
-
-      createdTasks.push(storyTask);
-
-      // Create child tasks
-      for (const taskTitle of story.tasks) {
-        const childTask = await tx.task.create({
-          data: {
-            sprintId,
-            title: taskTitle,
-            type: TaskType.task,
-            parentTaskId: storyTask.id,
-            createdBy: session.user.id,
-          },
-        });
-        createdTasks.push(childTask);
-      }
     }
 
-    return { success: true, taskCount: createdTasks.length };
+    return {
+      success: true,
+      taskCount: storyTasks.length + childTaskData.length,
+    };
   });
 }

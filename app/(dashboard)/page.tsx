@@ -1,18 +1,13 @@
 import { auth } from "@/lib/auth/config";
-import { getUserVerticals } from "@/server/actions/verticals";
-import { getProjectsByVertical } from "@/server/actions/projects";
+import { getUserProjects } from "@/server/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await auth();
-  const verticals = await getUserVerticals();
 
-  // Get all projects from user's verticals
-  const allProjects = await Promise.all(
-    verticals.map((v) => getProjectsByVertical(v.id))
-  );
-  const projects = allProjects.flat();
+  // Optimized: Single query instead of N+1
+  const projects = await getUserProjects();
 
   return (
     <div className="space-y-8">
@@ -60,12 +55,12 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {verticals.length === 0 && session?.user.role !== "admin" && (
+      {projects.length === 0 && session?.user.role !== "admin" && (
         <Card>
           <CardHeader>
-            <CardTitle>No Verticals Assigned</CardTitle>
+            <CardTitle>No Projects Assigned</CardTitle>
             <CardDescription>
-              You haven&apos;t been assigned to any verticals yet. Please contact
+              You haven&apos;t been assigned to any projects yet. Please contact
               your administrator.
             </CardDescription>
           </CardHeader>
