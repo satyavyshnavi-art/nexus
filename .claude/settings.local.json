@@ -44,7 +44,10 @@
       "Bash(npx vercel:*)",
       "Bash(git clone:*)",
       "Bash(npm run dev:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(node -e \"\nconst { GoogleGenerativeAI } = require\\(''@google/generative-ai''\\);\nconst genAI = new GoogleGenerativeAI\\(''AIzaSyBPwM9gZzDaCDwJyjSTwIknSpjdVs2aqxo''\\);\nconst model = genAI.getGenerativeModel\\({ model: ''gemini-1.5-pro'' }\\);\n\nasync function test\\(\\) {\n  try {\n    const result = await model.generateContent\\(''Say hello''\\);\n    const response = await result.response;\n    console.log\\(''✅ Gemini API working:'', response.text\\(\\).substring\\(0, 50\\)\\);\n  } catch \\(error\\) {\n    console.error\\(''❌ Gemini API error:'', error.message\\);\n  }\n}\ntest\\(\\);\n\")",
+      "Bash(node -e \"\nconst { GoogleGenerativeAI } = require\\(''@google/generative-ai''\\);\nconst genAI = new GoogleGenerativeAI\\(''AIzaSyBPwM9gZzDaCDwJyjSTwIknSpjdVs2aqxo''\\);\n\nasync function listModels\\(\\) {\n  try {\n    const models = await genAI.listModels\\(\\);\n    console.log\\(''Available models:''\\);\n    for await \\(const model of models\\) {\n      if \\(model.supportedGenerationMethods.includes\\(''generateContent''\\)\\) {\n        console.log\\(''✓'', model.name\\);\n      }\n    }\n  } catch \\(error\\) {\n    console.error\\(''Error:'', error.message\\);\n  }\n}\nlistModels\\(\\);\n\")",
+      "Bash(node:*)"
     ]
   }
 }

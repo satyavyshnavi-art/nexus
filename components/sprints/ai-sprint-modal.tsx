@@ -32,7 +32,7 @@ export function AiSprintModal({
           <DialogTitle>AI Sprint Planning</DialogTitle>
           <DialogDescription>
             Let AI generate user stories and tasks based on your feature
-            description. Powered by Anthropic Claude.
+            description. Powered by Google Gemini.
           </DialogDescription>
         </DialogHeader>
         <AiSprintForm
