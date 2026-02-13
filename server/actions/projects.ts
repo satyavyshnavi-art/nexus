@@ -233,3 +233,69 @@ export async function getUserProjects() {
 
   return getCachedProjects(session.user.id, isAdmin);
 }
+
+export async function getProjectMemberData(projectId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  // Fetch project with all necessary data in one query
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: {
+      vertical: {
+        include: {
+          users: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new Error("Project not found");
+  }
+
+  // Extract current member user IDs for filtering
+  const currentMemberIds = new Set(project.members.map((m) => m.userId));
+
+  // Filter available users (in vertical but not in project)
+  const availableUsers = project.vertical.users
+    .filter((vu) => !currentMemberIds.has(vu.userId))
+    .map((vu) => vu.user);
+
+  // Extract current members
+  const currentMembers = project.members.map((m) => m.user);
+
+  return {
+    project: {
+      id: project.id,
+      name: project.name,
+      verticalId: project.verticalId,
+    },
+    verticalName: project.vertical.name,
+    currentMembers,
+    availableUsers,
+  };
+}

@@ -10,9 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MemberAssignment } from "./member-assignment";
-import { Users, FolderKanban, Timer, ArrowRight } from "lucide-react";
+import { Users, FolderKanban, Timer, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { Project, Vertical } from "@prisma/client";
+import { getProjectMemberData } from "@/server/actions/projects";
 
 interface ProjectWithCount extends Project {
   vertical: Pick<Vertical, "id" | "name">;
@@ -28,6 +29,21 @@ interface User {
   email: string;
 }
 
+interface Member {
+  user: User;
+}
+
+interface ProjectMemberData {
+  project: {
+    id: string;
+    name: string;
+    verticalId: string;
+  };
+  verticalName: string;
+  currentMembers: User[];
+  availableUsers: User[];
+}
+
 interface ProjectListProps {
   projects: ProjectWithCount[];
 }
@@ -35,6 +51,8 @@ interface ProjectListProps {
 export function ProjectList({ projects }: ProjectListProps) {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [memberData, setMemberData] = useState<ProjectMemberData | null>(null);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
 
   if (projects.length === 0) {
     return (
@@ -52,12 +70,28 @@ export function ProjectList({ projects }: ProjectListProps) {
     );
   }
 
-  const handleManageMembers = (projectId: string) => {
+  const handleManageMembers = async (projectId: string) => {
     setSelectedProject(projectId);
     setIsManageModalOpen(true);
+    setIsLoadingMembers(true);
+    setMemberData(null);
+
+    try {
+      const data = await getProjectMemberData(projectId);
+      setMemberData(data);
+    } catch (error) {
+      console.error("Failed to load member data:", error);
+    } finally {
+      setIsLoadingMembers(false);
+    }
   };
 
-  const selectedProjectData = projects.find((p) => p.id === selectedProject);
+  const handleCloseDialog = () => {
+    setIsManageModalOpen(false);
+    setSelectedProject(null);
+    setMemberData(null);
+    setIsLoadingMembers(false);
+  };
 
   return (
     <>
@@ -119,27 +153,46 @@ export function ProjectList({ projects }: ProjectListProps) {
         ))}
       </div>
 
-      {selectedProjectData && (
-        <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                Manage Members - {selectedProjectData.name}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                Members must belong to the {selectedProjectData.vertical.name}{" "}
-                vertical
-              </p>
-              {/* Note: We would need to fetch project details with members and vertical users */}
-              <p className="text-sm text-muted-foreground">
-                Refresh the page to manage members (requires server data)
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={isManageModalOpen} onOpenChange={handleCloseDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Manage Members
+              {memberData && ` - ${memberData.project.name}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingMembers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : memberData ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Members must belong to the {memberData.verticalName} vertical
+                </p>
+                <MemberAssignment
+                  projectId={memberData.project.id}
+                  verticalId={memberData.project.verticalId}
+                  currentMembers={memberData.currentMembers.map((user) => ({
+                    user,
+                  }))}
+                  verticalUsers={[
+                    ...memberData.currentMembers,
+                    ...memberData.availableUsers,
+                  ]}
+                />
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">
+                  Failed to load member data. Please try again.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
