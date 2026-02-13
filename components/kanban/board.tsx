@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, memo } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragEndEvent,
@@ -41,10 +42,12 @@ const columns = [
 ];
 
 export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -67,7 +70,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
     const { active, over } = event;
     setActiveTask(null);
 
-    if (!over) return;
+    if (!over || isUpdating) return;
 
     const taskId = active.id as string;
     const newStatus = over.id as TaskStatus;
@@ -82,17 +85,29 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
 
+    setIsUpdating(true);
+
     try {
       await updateTaskStatus(taskId, newStatus);
+
       // Success feedback
-      toast.success(`Ticket moved to ${newStatus === "progress" ? "In Progress" : newStatus === "todo" ? "To Do" : newStatus === "review" ? "Review" : "Done"}`);
+      const statusLabel = newStatus === "progress" ? "In Progress" :
+                         newStatus === "todo" ? "To Do" :
+                         newStatus === "review" ? "Review" : "Done";
+      toast.success(`Ticket moved to ${statusLabel}`);
+
+      // Force refresh to get latest data from server
+      router.refresh();
     } catch (error) {
       console.error("Failed to update task:", error);
-      toast.error("Failed to move ticket");
+      toast.error(error instanceof Error ? error.message : "Failed to move ticket");
+
       // Revert on error
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: oldStatus } : t))
       );
+    } finally {
+      setIsUpdating(false);
     }
   };
 
