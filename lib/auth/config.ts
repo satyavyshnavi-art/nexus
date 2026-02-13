@@ -14,7 +14,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "repo read:user", // Request repo access for syncing
+          scope: "read:user user:email", // Minimal scope for sign-in only
         },
       },
     }),
