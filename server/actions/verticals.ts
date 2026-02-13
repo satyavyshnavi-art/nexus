@@ -88,3 +88,117 @@ export async function removeUserFromVertical(userId: string, verticalId: string)
     },
   });
 }
+
+export async function getVerticalDetails(verticalId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  const vertical = await db.vertical.findUnique({
+    where: { id: verticalId },
+    include: {
+      users: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              designation: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
+          _count: {
+            select: {
+              members: true,
+              sprints: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      _count: {
+        select: {
+          users: true,
+          projects: true,
+        },
+      },
+    },
+  });
+
+  if (!vertical) {
+    throw new Error("Vertical not found");
+  }
+
+  return vertical;
+}
+
+export async function updateVertical(verticalId: string, name: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  if (!name || name.trim().length === 0) {
+    throw new Error("Vertical name cannot be empty");
+  }
+
+  const updated = await db.vertical.update({
+    where: { id: verticalId },
+    data: { name: name.trim() },
+  });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin/verticals");
+  revalidatePath(`/admin/verticals/${verticalId}`);
+
+  return updated;
+}
+
+export async function deleteVertical(verticalId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  // Check for existing projects
+  const vertical = await db.vertical.findUnique({
+    where: { id: verticalId },
+    include: {
+      _count: {
+        select: { projects: true },
+      },
+    },
+  });
+
+  if (!vertical) {
+    throw new Error("Vertical not found");
+  }
+
+  if (vertical._count.projects > 0) {
+    throw new Error(
+      `Cannot delete vertical with ${vertical._count.projects} project(s). Remove all projects first.`
+    );
+  }
+
+  await db.vertical.delete({
+    where: { id: verticalId },
+  });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin/verticals");
+}

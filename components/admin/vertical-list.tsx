@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ interface VerticalListProps {
 export function VerticalList({ verticals, allUsers }: VerticalListProps) {
   const [selectedVertical, setSelectedVertical] = useState<string | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const router = useRouter();
 
   if (verticals.length === 0) {
     return (
@@ -45,7 +47,8 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
     );
   }
 
-  const handleManageUsers = (verticalId: string) => {
+  const handleManageUsers = (e: React.MouseEvent, verticalId: string) => {
+    e.stopPropagation();
     setSelectedVertical(verticalId);
     setIsManageModalOpen(true);
   };
@@ -56,7 +59,11 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {verticals.map((vertical) => (
-          <Card key={vertical.id} className="p-6">
+          <Card
+            key={vertical.id}
+            className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push(`/admin/verticals/${vertical.id}`)}
+          >
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">{vertical.name}</h3>
@@ -68,7 +75,7 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleManageUsers(vertical.id)}
+                onClick={(e) => handleManageUsers(e, vertical.id)}
                 className="w-full"
               >
                 <Users className="h-4 w-4 mr-2" />
