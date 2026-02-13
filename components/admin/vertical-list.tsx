@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAssignment } from "./user-assignment";
-import { Users } from "lucide-react";
+import { Users, ArrowRight } from "lucide-react";
 import type { Vertical } from "@prisma/client";
 
 interface VerticalWithCount extends Vertical {
@@ -61,26 +61,38 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
         {verticals.map((vertical) => (
           <Card
             key={vertical.id}
-            className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push(`/admin/verticals/${vertical.id}`)}
+            className="p-6 hover:border-primary/50 transition-all group"
           >
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">{vertical.name}</h3>
+                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                  {vertical.name}
+                </h3>
                 <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                   <span>{vertical._count.users} users</span>
                   <span>{vertical._count.projects} projects</span>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => handleManageUsers(e, vertical.id)}
-                className="w-full"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Manage Users
-              </Button>
+
+              <div className="space-y-2">
+                <Button
+                  size="sm"
+                  onClick={() => router.push(`/admin/verticals/${vertical.id}`)}
+                  className="w-full"
+                >
+                  View Details
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => handleManageUsers(e, vertical.id)}
+                  className="w-full"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Users
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
