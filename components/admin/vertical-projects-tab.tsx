@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { FolderKanban, Users, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FolderKanban, Users, CalendarDays, ExternalLink, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Project {
@@ -32,7 +35,7 @@ export function VerticalProjectsTab({ projects }: VerticalProjectsTabProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {projects.map((project) => (
-        <Card key={project.id} className="p-6">
+        <Card key={project.id} className="p-6 hover:shadow-lg transition-shadow">
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">{project.name}</h3>
@@ -49,7 +52,7 @@ export function VerticalProjectsTab({ projects }: VerticalProjectsTabProps) {
                 <span>{project._count.members} members</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <FolderKanban className="h-4 w-4" />
+                <Activity className="h-4 w-4" />
                 <span>{project._count.sprints} sprints</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -58,6 +61,15 @@ export function VerticalProjectsTab({ projects }: VerticalProjectsTabProps) {
                   Created {formatDistanceToNow(new Date(project.createdAt), { addSuffix: true })}
                 </span>
               </div>
+            </div>
+
+            <div className="pt-2 border-t">
+              <Link href={`/projects/${project.id}`}>
+                <Button variant="outline" className="w-full" size="sm">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Project
+                </Button>
+              </Link>
             </div>
           </div>
         </Card>

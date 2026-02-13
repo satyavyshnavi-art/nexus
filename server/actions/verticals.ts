@@ -97,7 +97,11 @@ export async function getVerticalDetails(verticalId: string) {
 
   const vertical = await db.vertical.findUnique({
     where: { id: verticalId },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true,
       users: {
         include: {
           user: {
