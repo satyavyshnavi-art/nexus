@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,14 +76,15 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => router.push(`/admin/verticals/${vertical.id}`)}
-                  className="w-full"
-                >
-                  View Details
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <Link href={`/admin/verticals/${vertical.id}`} className="w-full">
+                  <Button
+                    size="sm"
+                    className="w-full"
+                  >
+                    View Details
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   size="sm"
