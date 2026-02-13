@@ -25,6 +25,7 @@ interface ColumnProps {
       attachments: number;
     };
   }) => void;
+  projectLinked?: boolean;
 }
 
 const columnConfig = {
@@ -58,7 +59,7 @@ const columnConfig = {
   },
 };
 
-export const Column = memo(function Column({ status, title, tasks, onTaskClick }: ColumnProps) {
+export const Column = memo(function Column({ status, title, tasks, onTaskClick, projectLinked = false }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const config = columnConfig[status];
   const StatusIcon = config.icon;
@@ -114,6 +115,7 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick }
                   key={task.id}
                   task={task}
                   onClick={onTaskClick ? () => onTaskClick(task) : undefined}
+                  projectLinked={projectLinked}
                 />
               ))
             )}

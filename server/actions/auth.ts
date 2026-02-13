@@ -44,3 +44,7 @@ export async function loginUser(email: string, password: string) {
     return { success: false, error: "Login failed" };
   }
 }
+
+export async function loginWithGitHub() {
+  await signIn("github", { redirectTo: "/" });
+}

@@ -44,7 +44,7 @@ enum TaskType {
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
-  passwordHash  String    @map("password_hash")
+  passwordHash  String?   @map("password_hash") // Optional for GitHub users
   name          String?
   designation   String?   // e.g., "Senior Frontend Engineer"
   bio           String?   // e.g., "Passionate about building great UIs"
@@ -52,6 +52,13 @@ model User {
   role          UserRole  @default(member)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // GitHub OAuth fields
+  githubId           String?   @unique @map("github_id")
+  githubUsername     String?   @map("github_username")
+  githubAccessToken  String?   @map("github_access_token")  // Encrypted
+  githubRefreshToken String?   @map("github_refresh_token") // Encrypted
+  githubTokenExpiry  DateTime? @map("github_token_expiry")
 
   // User Preferences
   emailNotifications    Boolean @default(true)
@@ -71,6 +78,7 @@ model User {
   assignedTasks       Task[]         @relation("TaskAssignee")
   comments            TaskComment[]
   uploadedAttachments TaskAttachment[]
+  linkedProjects      Project[]      @relation("GitHubLinkedBy")
 
   @@map("users")
 }
@@ -112,13 +120,23 @@ model Project {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  vertical Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
-  creator  User            @relation(fields: [createdBy], references: [id])
-  members  ProjectMember[]
-  sprints  Sprint[]
+  // GitHub integration
+  githubRepoOwner String?   @map("github_repo_owner")
+  githubRepoName  String?   @map("github_repo_name")
+  githubRepoId    BigInt?   @map("github_repo_id")
+  githubLinkedBy  String?   @map("github_linked_by")
+  githubLinkedAt  DateTime? @map("github_linked_at")
+
+  vertical     Vertical         @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  creator      User             @relation(fields: [createdBy], references: [id])
+  linkedByUser User?            @relation("GitHubLinkedBy", fields: [githubLinkedBy], references: [id])
+  members      ProjectMember[]
+  sprints      Sprint[]
+  syncLogs     GitHubSyncLog[]
 
   @@index([verticalId])
   @@index([createdAt(sort: Desc)]) // For ordering by creation date
+  @@index([githubRepoOwner, githubRepoName])
   @@map("projects")
 }
 
@@ -171,6 +189,12 @@ model Task {
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
+  // GitHub sync
+  githubIssueNumber Int?      @map("github_issue_number")
+  githubIssueId     BigInt?   @unique @map("github_issue_id")
+  githubSyncedAt    DateTime? @map("github_synced_at")
+  githubUrl         String?   @map("github_url")
+
   sprint      Sprint           @relation(fields: [sprintId], references: [id], onDelete: Cascade)
   creator     User             @relation("TaskCreator", fields: [createdBy], references: [id])
   assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
@@ -178,6 +202,7 @@ model Task {
   childTasks  Task[]           @relation("TaskHierarchy")
   comments    TaskComment[]
   attachments TaskAttachment[]
+  syncLogs    GitHubSyncLog[]
 
   @@index([sprintId, status])
   @@index([assigneeId])
@@ -185,6 +210,8 @@ model Task {
   @@index([createdBy]) // For filtering by creator
   @@index([createdAt(sort: Desc)]) // For ordering by creation date
   @@index([sprintId, createdAt(sort: Desc)]) // For sprint task queries
+  @@index([githubIssueId])
+  @@index([sprintId, githubIssueNumber])
   @@map("tasks")
 }
 
@@ -219,4 +246,23 @@ model TaskAttachment {
 
   @@index([taskId])
   @@map("task_attachments")
+}
+
+model GitHubSyncLog {
+  id                String   @id @default(uuid())
+  taskId            String?  @map("task_id")
+  projectId         String   @map("project_id")
+  action            String   // "create", "update", "close"
+  status            String   // "success", "failed"
+  errorMessage      String?  @map("error_message")
+  githubIssueNumber Int?     @map("github_issue_number")
+  userId            String   @map("user_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([taskId])
+  @@map("github_sync_logs")
 }

@@ -240,6 +240,14 @@ export async function updatePassword(
     throw new Error("User not found");
   }
 
+  // Check if user has a password (GitHub users might not)
+  if (!user.passwordHash) {
+    throw new Error(
+      "This account uses GitHub sign-in and doesn't have a password. " +
+      "To set a password, please contact support."
+    );
+  }
+
   // Verify current password
   const isValid = await compare(currentPassword, user.passwordHash);
   if (!isValid) {

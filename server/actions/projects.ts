@@ -75,6 +75,7 @@ export async function getProject(projectId: string) {
             select: { sprints: true },
           },
         },
+        // Note: GitHub fields (githubRepoOwner, githubRepoName, etc.) are included by default
       });
     },
     [`project-${projectId}`],

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
 import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp } from "lucide-react";
+import { GitHubSyncButton } from "@/components/tasks/github-sync-button";
 
 interface TaskCardProps {
   task: Task & {
@@ -17,6 +18,7 @@ interface TaskCardProps {
     };
   };
   onClick?: () => void;
+  projectLinked?: boolean;
 }
 
 const priorityConfig = {
@@ -60,7 +62,7 @@ const typeConfig = {
   },
 };
 
-export const TaskCard = memo(function TaskCard({ task, onClick }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, onClick, projectLinked = false }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -157,6 +159,19 @@ export const TaskCard = memo(function TaskCard({ task, onClick }: TaskCardProps)
               </div>
             )}
           </div>
+
+          {/* GitHub Sync Button */}
+          {projectLinked && (
+            <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+              <GitHubSyncButton
+                taskId={task.id}
+                isSynced={!!task.githubIssueNumber}
+                issueNumber={task.githubIssueNumber}
+                issueUrl={task.githubUrl}
+                projectLinked={projectLinked}
+              />
+            </div>
+          )}
         </div>
       </Card>
     </div>

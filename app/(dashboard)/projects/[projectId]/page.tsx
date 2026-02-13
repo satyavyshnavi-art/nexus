@@ -153,6 +153,7 @@ export default async function ProjectPage({
               <KanbanBoard
                 initialTasks={activeSprint.tasks}
                 projectMembers={project.members.map((m) => m.user)}
+                projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
               />
             </div>
           ) : (

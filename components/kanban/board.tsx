@@ -32,6 +32,7 @@ type TaskWithRelations = Task & {
 interface KanbanBoardProps {
   initialTasks: TaskWithRelations[];
   projectMembers?: Pick<User, "id" | "name" | "email">[];
+  projectLinked?: boolean;
 }
 
 const columns = [
@@ -41,7 +42,7 @@ const columns = [
   { status: "done" as TaskStatus, title: "Done" },
 ];
 
-export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardProps) {
+export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked = false }: KanbanBoardProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
@@ -132,11 +133,12 @@ export function KanbanBoard({ initialTasks, projectMembers = [] }: KanbanBoardPr
               title={column.title}
               tasks={tasks.filter((t) => t.status === column.status)}
               onTaskClick={handleTaskClick}
+              projectLinked={projectLinked}
             />
           ))}
         </div>
         <DragOverlay>
-          {activeTask ? <TaskCard task={activeTask} /> : null}
+          {activeTask ? <TaskCard task={activeTask} projectLinked={projectLinked} /> : null}
         </DragOverlay>
       </DndContext>
 

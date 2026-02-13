@@ -7,8 +7,9 @@ An AI-powered sprint planning and project management platform built with Next.js
 - 🤖 **AI Sprint Planning**: Generate sprint backlogs from natural language descriptions using Claude Sonnet 4.5
 - 🐛 **AI Bug Classification**: Automatic bug priority classification
 - 📋 **Kanban Board**: Drag-and-drop task management with real-time updates
+- 🔗 **GitHub Integration**: OAuth sign-in and manual task-to-issue sync (see [GITHUB_SETUP.md](./GITHUB_SETUP.md))
 - 👥 **Multi-tenant**: Vertical-based organization structure
-- 🔐 **Secure Authentication**: NextAuth.js with credentials provider
+- 🔐 **Secure Authentication**: NextAuth.js with credentials and GitHub OAuth
 - 📎 **File Attachments**: Cloudflare R2 storage integration
 - 🎯 **Sprint Management**: One active sprint per project enforcement
 - 📊 **Story Points**: Track effort estimation
