@@ -4,9 +4,9 @@ import { getVerticalDetails } from "@/server/actions/verticals";
 import { VerticalDetailTabs } from "@/components/admin/vertical-detail-tabs";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function VerticalDetailPage({ params }: PageProps) {
@@ -16,7 +16,8 @@ export default async function VerticalDetailPage({ params }: PageProps) {
     redirect("/");
   }
 
-  const vertical = await getVerticalDetails(params.id);
+  const { id } = await params;
+  const vertical = await getVerticalDetails(id);
 
   return <VerticalDetailTabs vertical={vertical} />;
 }
