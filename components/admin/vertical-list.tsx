@@ -33,9 +33,9 @@ interface VerticalListProps {
 }
 
 export function VerticalList({ verticals, allUsers }: VerticalListProps) {
+  const router = useRouter();
   const [selectedVertical, setSelectedVertical] = useState<string | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const router = useRouter();
 
   if (verticals.length === 0) {
     return (
