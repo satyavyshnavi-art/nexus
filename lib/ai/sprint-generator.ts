@@ -16,6 +16,13 @@ export type SprintTasksOutput = z.infer<typeof SprintTaskSchema>;
 export async function generateSprintTasks(
   inputText: string
 ): Promise<SprintTasksOutput> {
+  // Check if API key is configured
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    throw new Error(
+      "GOOGLE_AI_API_KEY is not configured. Please add it to your .env file to use AI features."
+    );
+  }
+
   const systemPrompt = `You are a sprint planning assistant. Convert feature descriptions into structured sprint backlogs.
 
 Output ONLY valid JSON matching this schema:
