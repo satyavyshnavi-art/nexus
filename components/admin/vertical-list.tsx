@@ -74,7 +74,7 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Button
                   size="sm"
                   onClick={() => router.push(`/admin/verticals/${vertical.id}`)}
