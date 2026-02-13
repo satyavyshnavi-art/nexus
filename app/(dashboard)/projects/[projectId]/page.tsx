@@ -10,6 +10,9 @@ import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
 import { Calendar, Users, LayoutDashboard, ListTodo, Settings } from "lucide-react";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
+import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
+import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
+import { getLinkedRepository } from "@/server/actions/github-link";
 
 export default async function ProjectPage({
   params,
@@ -22,6 +25,7 @@ export default async function ProjectPage({
   const project = await getProject(projectId);
   const activeSprint = await getActiveSprint(projectId);
   const sprints = await getProjectSprints(projectId);
+  const linkedRepo = await getLinkedRepository(projectId);
 
   const isAdmin = session?.user.role === "admin";
 
@@ -267,6 +271,40 @@ export default async function ProjectPage({
 
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-4">
+          {/* GitHub Integration Section */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>GitHub Integration</CardTitle>
+                <CardDescription>
+                  Link this project to a GitHub repository to sync tasks as issues
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {linkedRepo ? (
+                  <GitHubLinkedStatus
+                    projectId={projectId}
+                    repository={linkedRepo.repository}
+                    repositoryUrl={linkedRepo.repositoryUrl}
+                    linkedAt={linkedRepo.linkedAt!}
+                    linkedBy={linkedRepo.linkedBy!}
+                    isAdmin={isAdmin}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between p-4 border rounded-lg border-dashed">
+                    <div>
+                      <p className="font-medium">No repository linked</p>
+                      <p className="text-sm text-muted-foreground">
+                        Link a GitHub repository to enable task syncing
+                      </p>
+                    </div>
+                    <GitHubLinkDialog projectId={projectId} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Project Info */}
             <Card>
