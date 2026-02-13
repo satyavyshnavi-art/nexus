@@ -19,6 +19,7 @@ export function TeamStats({ stats }: TeamStatsProps) {
       description: "All team members",
       color: "text-purple-600",
       bgColor: "bg-purple-100",
+      borderColor: "border-l-purple-500",
     },
     {
       title: "Active Members",
@@ -27,6 +28,7 @@ export function TeamStats({ stats }: TeamStatsProps) {
       description: "With active tasks",
       color: "text-green-600",
       bgColor: "bg-green-100",
+      borderColor: "border-l-green-500",
     },
     {
       title: "Admins",
@@ -35,6 +37,7 @@ export function TeamStats({ stats }: TeamStatsProps) {
       description: "Administrator access",
       color: "text-amber-600",
       bgColor: "bg-amber-100",
+      borderColor: "border-l-amber-500",
     },
     {
       title: "Members",
@@ -43,6 +46,7 @@ export function TeamStats({ stats }: TeamStatsProps) {
       description: "Regular members",
       color: "text-blue-600",
       bgColor: "bg-blue-100",
+      borderColor: "border-l-blue-500",
     },
   ];
 
@@ -51,18 +55,18 @@ export function TeamStats({ stats }: TeamStatsProps) {
       {statCards.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card key={stat.title}>
+          <Card key={stat.title} className={`border-l-4 ${stat.borderColor}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 {stat.title}
               </CardTitle>
-              <div className={`${stat.bgColor} p-2 rounded-lg`}>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+              <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
+                <Icon className={`h-5 w-5 ${stat.color}`} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-3xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground mt-1.5">
                 {stat.description}
               </p>
             </CardContent>

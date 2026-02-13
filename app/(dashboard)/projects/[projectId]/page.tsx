@@ -59,36 +59,51 @@ export default async function ProjectPage({
 
       {/* Statistics Cards */}
       {taskStats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Tasks</CardDescription>
-              <CardTitle className="text-3xl">{taskStats.total}</CardTitle>
-            </CardHeader>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Tickets</p>
+                  <p className="text-3xl font-bold mt-1">{taskStats.total}</p>
+                </div>
+                <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <ListTodo className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Todo</CardDescription>
-              <CardTitle className="text-3xl text-gray-600">{taskStats.todo}</CardTitle>
-            </CardHeader>
+          <Card className="border-l-4 border-l-slate-400">
+            <CardContent className="pt-6">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-muted-foreground mb-1">To Do</p>
+                <p className="text-3xl font-bold text-slate-600">{taskStats.todo}</p>
+              </div>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>In Progress</CardDescription>
-              <CardTitle className="text-3xl text-blue-600">{taskStats.progress}</CardTitle>
-            </CardHeader>
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="pt-6">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-muted-foreground mb-1">In Progress</p>
+                <p className="text-3xl font-bold text-blue-600">{taskStats.progress}</p>
+              </div>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Review</CardDescription>
-              <CardTitle className="text-3xl text-yellow-600">{taskStats.review}</CardTitle>
-            </CardHeader>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="pt-6">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Review</p>
+                <p className="text-3xl font-bold text-amber-600">{taskStats.review}</p>
+              </div>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Done</CardDescription>
-              <CardTitle className="text-3xl text-green-600">{taskStats.done}</CardTitle>
-            </CardHeader>
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="pt-6">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Done</p>
+                <p className="text-3xl font-bold text-green-600">{taskStats.done}</p>
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}
@@ -141,24 +156,28 @@ export default async function ProjectPage({
               />
             </div>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>No Active Sprint</CardTitle>
-                <CardDescription>
-                  {sprints.length === 0
-                    ? "No sprints created yet. Create a sprint to start working on tasks."
-                    : "Activate a sprint to start working on tasks."}
-                </CardDescription>
-              </CardHeader>
-              {isAdmin && (
-                <CardContent>
-                  <Link href={`/projects/${projectId}/sprints`}>
-                    <Button>
-                      {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
-                    </Button>
-                  </Link>
-                </CardContent>
-              )}
+            <Card className="border-dashed">
+              <CardContent className="pt-12 pb-12">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <Calendar className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No Active Sprint</h3>
+                  <p className="text-muted-foreground text-sm max-w-sm mb-6">
+                    {sprints.length === 0
+                      ? "No sprints created yet. Create a sprint to start organizing tickets and tracking progress."
+                      : "Select and activate a sprint from your sprint list to begin working on tickets."}
+                  </p>
+                  {isAdmin && (
+                    <Link href={`/projects/${projectId}/sprints`}>
+                      <Button size="lg">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           )}
         </TabsContent>

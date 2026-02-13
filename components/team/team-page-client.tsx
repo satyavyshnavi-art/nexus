@@ -160,12 +160,14 @@ export function TeamPageClient({
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 border rounded-lg bg-muted/10">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <div className="text-center py-16 border-2 border-dashed rounded-lg bg-muted/10">
+          <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="h-10 w-10 text-muted-foreground" />
+          </div>
           <h3 className="text-lg font-semibold mb-2">No members found</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto">
             {searchQuery
-              ? "Try adjusting your search filters"
+              ? "Try adjusting your search filters to find team members"
               : "No team members to display"}
           </p>
         </div>

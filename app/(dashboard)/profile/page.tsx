@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { ProfileEditButton } from "@/components/profile/profile-edit-button";
 import { format } from "date-fns";
-import { Mail, Calendar, Briefcase, Activity } from "lucide-react";
+import { Mail, Calendar, Briefcase, Activity, CheckCircle2 } from "lucide-react";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -146,46 +146,61 @@ export default async function ProfilePage() {
         <div className="md:col-span-2 space-y-6">
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
+            <Card className="border-l-4 border-l-primary">
               <CardContent className="pt-6">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Total Tickets
-                  </span>
-                  <span className="text-3xl font-bold">
-                    {profile.stats.totalTasks}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Completed
-                  </span>
-                  <div className="flex items-end gap-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-muted-foreground mb-2">
+                      Total Tickets
+                    </span>
                     <span className="text-3xl font-bold">
-                      {profile.stats.completedTasks}
+                      {profile.stats.totalTasks}
                     </span>
-                    <span className="text-sm text-muted-foreground mb-1">
-                      ({completionRate}%)
-                    </span>
+                  </div>
+                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Activity className="h-5 w-5 text-primary" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-green-500">
               <CardContent className="pt-6">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Active Projects
-                  </span>
-                  <span className="text-3xl font-bold">
-                    {profile.stats.activeProjects}
-                  </span>
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-muted-foreground mb-2">
+                      Completed
+                    </span>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold">
+                        {profile.stats.completedTasks}
+                      </span>
+                      <Badge variant="secondary" className="mb-1">
+                        {completionRate}%
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-muted-foreground mb-2">
+                      Active Projects
+                    </span>
+                    <span className="text-3xl font-bold">
+                      {profile.stats.activeProjects}
+                    </span>
+                  </div>
+                  <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Briefcase className="h-5 w-5 text-blue-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>

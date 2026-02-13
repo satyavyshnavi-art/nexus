@@ -58,31 +58,43 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {verticals.map((vertical) => (
           <Card
             key={vertical.id}
-            className="p-6 hover:border-primary/50 transition-all group"
+            className="p-6 hover:shadow-lg hover:border-primary/50 hover:-translate-y-1 transition-all duration-200 group"
           >
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                <h3 className="text-xl font-bold group-hover:text-primary transition-colors mb-3">
                   {vertical.name}
                 </h3>
-                <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                  <span>{vertical._count.users} users</span>
-                  <span>{vertical._count.projects} projects</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-lg border border-primary/10">
+                    <Users className="h-4 w-4 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Users</span>
+                      <span className="text-sm font-semibold">{vertical._count.users}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
+                    <ArrowRight className="h-4 w-4 text-blue-600" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Projects</span>
+                      <span className="text-sm font-semibold">{vertical._count.projects}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 pt-2 border-t">
                 <Link href={`/admin/verticals/${vertical.id}`} className="w-full">
                   <Button
                     size="sm"
-                    className="w-full"
+                    className="w-full group/btn"
                   >
                     View Details
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Button
