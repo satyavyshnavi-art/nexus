@@ -2,12 +2,26 @@
 
 Utility scripts for managing and diagnosing the Nexus application.
 
+## Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run diagnose:projects <email>` | Check why a specific user can't see projects |
+| `npm run diagnose:visibility [email]` | Generate full visibility report |
+| `npm run test:cache` | Test cache revalidation behavior |
+| `npm run test:new-user` | Simulate complete new user flow |
+| `npm run simulate:add-member <project> <email>` | Simulate adding user to project |
+
+See `/Users/vyshanvi/nexus/DIAGNOSTICS.md` for comprehensive troubleshooting guide.
+
+---
+
 ## Available Scripts
 
-### Diagnostic Scripts
+### Project Visibility Diagnostics (NEW)
 
-#### `diagnose-github-user.ts`
-Comprehensive diagnostic tool to troubleshoot why a user (especially GitHub OAuth users) may not see projects in their dashboard.
+#### `diagnose-user-projects.ts`
+Comprehensive diagnostic tool to identify why a user can't see their assigned projects.
 
 **Usage:**
 ```bash
@@ -62,6 +76,73 @@ npx tsx scripts/check-github-auth.ts
 ```
 
 **Use case:** Verify admin has GitHub OAuth token before linking repositories.
+
+#### `full-project-visibility-report.ts`
+Generate comprehensive project visibility report for all users or a specific user.
+
+**Usage:**
+```bash
+npm run diagnose:visibility                          # All users
+npm run diagnose:visibility sarah.frontend@nexus.com # Specific user
+```
+
+**What it shows:**
+- Vertical assignments per user
+- Direct project memberships
+- Visible projects (via getUserProjects query)
+- Access type (via vertical or direct member)
+- Summary table with statistics
+- Analysis and recommendations
+
+#### `test-cache-revalidation.ts`
+Test cache revalidation behavior after project member changes.
+
+**Usage:**
+```bash
+npm run test:cache
+```
+
+**What it checks:**
+- Current project memberships
+- getUserProjects() query results
+- Cache keys that should be revalidated
+- Recent membership changes timing
+- Troubleshooting checklist for cache issues
+
+#### `test-new-user-flow.ts`
+Simulate complete new user onboarding flow from creation to project access.
+
+**Usage:**
+```bash
+npm run test:new-user
+```
+
+**What it does:**
+1. Creates a test user
+2. Checks visibility (should be 0 projects)
+3. Assigns user to vertical
+4. Checks visibility (should see vertical's projects)
+5. Adds user as direct project member
+6. Verifies final visibility
+7. Cleans up test user
+
+#### `simulate-add-member.ts`
+Simulate adding a user to a project without using the UI.
+
+**Usage:**
+```bash
+npm run simulate:add-member "Payment Gateway Module" mike.backend@nexus.com
+```
+
+**What it shows:**
+- User and project verification
+- Vertical membership check
+- Before/after project visibility comparison
+- Cache revalidation paths
+- Step-by-step analysis
+
+#### `diagnose-github-user.ts`
+Comprehensive diagnostic tool to troubleshoot why a user (especially GitHub OAuth users) may not see projects in their dashboard.
 
 ### Setup Scripts
 
@@ -135,9 +216,46 @@ npx tsx scripts/create-github-project.ts
 
 ## Common Troubleshooting Workflows
 
-### User Can't See Projects
+### User Can't See Projects (Primary Issue)
 
-1. Run diagnostic:
+**Quick Diagnosis:**
+```bash
+npm run diagnose:projects user@example.com
+```
+
+**Common Causes:**
+
+1. **User not assigned to any verticals**
+   ```
+   ❌ User is NOT assigned to any verticals
+   ```
+   **Fix:** Admin assigns user to vertical via `/admin/verticals`
+
+2. **Vertical has no projects**
+   ```
+   ✅ User is assigned to 1 vertical(s)
+   ❌ Query returns 0 projects
+   ```
+   **Fix:** Create projects in the vertical OR assign user to different vertical
+
+3. **Cache not revalidated**
+   ```
+   ✅ Query returns 3 project(s)
+   But dashboard shows "No Projects"
+   ```
+   **Fix:**
+   - Hard refresh browser (Cmd+Shift+R)
+   - Clear Next.js cache: `rm -rf .next && npm run dev`
+   - Wait 30 seconds for cache to expire
+
+**Full Analysis:**
+```bash
+npm run diagnose:visibility
+```
+
+### GitHub OAuth User Can't See Projects
+
+1. Run GitHub-specific diagnostic:
    ```bash
    npx tsx scripts/diagnose-github-user.ts user@example.com
    ```
@@ -153,10 +271,9 @@ npx tsx scripts/create-github-project.ts
      - Add user directly to projects
 
 3. Fix using admin panel:
-   - Navigate to `/admin/members`
+   - Navigate to `/admin/verticals`
    - Add user to appropriate verticals
-   - Navigate to project settings
-   - Add user to specific projects if needed
+   - User will see ALL projects in that vertical
 
 ### GitHub Repository Linking Issues
 

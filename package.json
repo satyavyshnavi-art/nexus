@@ -14,6 +14,11 @@
     "db:seed:modular": "tsx scripts/seed-modular.ts",
     "db:studio": "prisma studio",
     "diagnose:user": "tsx scripts/diagnose-github-user.ts",
+    "diagnose:projects": "tsx scripts/diagnose-user-projects.ts",
+    "diagnose:visibility": "tsx scripts/full-project-visibility-report.ts",
+    "test:cache": "tsx scripts/test-cache-revalidation.ts",
+    "test:new-user": "tsx scripts/test-new-user-flow.ts",
+    "simulate:add-member": "tsx scripts/simulate-add-member.ts",
     "check:github": "tsx scripts/check-github-auth.ts",
     "fix:github-users": "tsx scripts/fix-github-users-vertical.ts"
   },
