@@ -13,7 +13,7 @@ import {
   addMemberToProject,
   removeMemberFromProject,
 } from "@/server/actions/projects";
-import { toast } from "@/lib/hooks/use-toast";
+import { toast } from "sonner";
 import { UserPlus, X } from "lucide-react";
 
 interface User {
@@ -48,18 +48,13 @@ export function MemberAssignment({
     setIsAdding(true);
     try {
       await addMemberToProject(projectId, selectedUserId);
-      toast({
-        title: "Member added",
+      toast.success("Member added", {
         description: "Member has been added to the project",
-        variant: "success",
       });
       window.location.reload();
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to add member",
-        variant: "destructive",
+      toast.error("Failed to add member", {
+        description: error instanceof Error ? error.message : "An error occurred",
       });
     } finally {
       setIsAdding(false);
@@ -69,18 +64,13 @@ export function MemberAssignment({
   const handleRemoveMember = async (userId: string) => {
     try {
       await removeMemberFromProject(projectId, userId);
-      toast({
-        title: "Member removed",
+      toast.success("Member removed", {
         description: "Member has been removed from the project",
-        variant: "success",
       });
       window.location.reload();
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to remove member",
-        variant: "destructive",
+      toast.error("Failed to remove member", {
+        description: error instanceof Error ? error.message : "An error occurred",
       });
     }
   };
