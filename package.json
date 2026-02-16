@@ -12,7 +12,10 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx scripts/seed-comprehensive.ts",
     "db:seed:modular": "tsx scripts/seed-modular.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "diagnose:user": "tsx scripts/diagnose-github-user.ts",
+    "check:github": "tsx scripts/check-github-auth.ts",
+    "fix:github-users": "tsx scripts/fix-github-users-vertical.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

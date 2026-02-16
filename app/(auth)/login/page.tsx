@@ -1,19 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { loginUser, loginWithGitHub } from "@/server/actions/auth";
 
+// Map NextAuth error codes to user-friendly messages
+const getErrorMessage = (error: string | null): string | null => {
+  if (!error) return null;
+
+  const errorMessages: Record<string, string> = {
+    OAuthSignin: "Error connecting to GitHub. Please try again.",
+    OAuthCallback: "Error during GitHub authentication. Please try again.",
+    OAuthCreateAccount: "Could not create account with GitHub. Please try signing in with email or contact support.",
+    OAuthAccountNotLinked: "This email is already associated with another account. Please sign in using your original method.",
+    EmailSignin: "Error sending verification email. Please try again.",
+    CredentialsSignin: "Invalid email or password. Please try again.",
+    SessionRequired: "Please sign in to access this page.",
+    Default: "An error occurred during sign-in. Please try again.",
+  };
+
+  return errorMessages[error] || errorMessages.Default;
+};
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check for OAuth errors in URL on mount
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    const errorMessage = getErrorMessage(urlError);
+    if (errorMessage) {
+      setError(errorMessage);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

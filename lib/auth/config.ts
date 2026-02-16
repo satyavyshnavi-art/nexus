@@ -5,6 +5,7 @@ import { compare } from "bcrypt";
 import { db } from "@/server/db";
 import type { UserRole } from "@prisma/client";
 import { encrypt } from "@/lib/crypto/encryption";
+import { ensureUserHasVertical } from "@/lib/auth/helpers";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -97,9 +98,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   : null,
               },
             });
+
+            // Ensure existing user has a vertical assignment
+            await ensureUserHasVertical(dbUser.id);
           } else {
             // Create new user from GitHub
-            await db.user.create({
+            const newUser = await db.user.create({
               data: {
                 email: user.email!,
                 name: user.name || (profile as any)?.login || "GitHub User",
@@ -113,6 +117,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: "member", // Default role
               },
             });
+
+            // Automatically assign new GitHub user to a vertical
+            await ensureUserHasVertical(newUser.id);
           }
         } catch (error) {
           console.error("GitHub sign-in error:", error);
