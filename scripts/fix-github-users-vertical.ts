@@ -21,7 +21,7 @@ async function main() {
   // Find all users who don't have any vertical memberships
   const usersWithoutVerticals = await db.user.findMany({
     where: {
-      verticalUsers: {
+      verticals: {
         none: {},
       },
     },
