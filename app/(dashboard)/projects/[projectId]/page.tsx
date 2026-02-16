@@ -13,6 +13,7 @@ import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
 import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
 import { getLinkedRepository } from "@/server/actions/github-link";
+import { TeamTabContent } from "@/components/projects/team-tab-content";
 
 export default async function ProjectPage({
   params,
@@ -217,56 +218,12 @@ export default async function ProjectPage({
 
         {/* Tab: Team */}
         <TabsContent value="team" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Team Members ({project.members.length})</h2>
-            {isAdmin && (
-              <Link href={`/admin/projects`}>
-                <Button variant="outline" size="sm">
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Members
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {project.members.map((member) => {
-              const memberTasks = activeSprint?.tasks.filter(
-                (t) => t.assigneeId === member.userId
-              );
-              return (
-                <Card key={member.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{member.user.name}</CardTitle>
-                    <CardDescription>{member.user.email}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {memberTasks && memberTasks.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">
-                          Assigned Tasks: {memberTasks.length}
-                        </p>
-                        <div className="flex gap-4 text-sm text-muted-foreground">
-                          <span>
-                            Todo: {memberTasks.filter((t) => t.status === "todo").length}
-                          </span>
-                          <span>
-                            In Progress:{" "}
-                            {memberTasks.filter((t) => t.status === "progress").length}
-                          </span>
-                          <span>
-                            Done: {memberTasks.filter((t) => t.status === "done").length}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No tasks assigned</p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <TeamTabContent
+            projectId={projectId}
+            members={project.members}
+            activeSprint={activeSprint}
+            isAdmin={isAdmin}
+          />
         </TabsContent>
 
         {/* Tab: Overview */}

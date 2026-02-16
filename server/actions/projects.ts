@@ -127,9 +127,10 @@ export async function addMemberToProject(projectId: string, userId: string) {
     update: {},
   });
 
-  // Revalidate caches
-  revalidatePath("/");
-  revalidatePath(`/projects/${projectId}`);
+  // Revalidate caches - the affected user's dashboard should update immediately
+  revalidatePath("/"); // Dashboard for all users
+  revalidatePath(`/projects/${projectId}`); // Project page
+  revalidatePath("/admin/projects"); // Admin projects list
 
   return result;
 }
@@ -146,9 +147,10 @@ export async function removeMemberFromProject(projectId: string, userId: string)
     },
   });
 
-  // Revalidate caches
-  revalidatePath("/");
-  revalidatePath(`/projects/${projectId}`);
+  // Revalidate caches - the affected user's dashboard should update immediately
+  revalidatePath("/"); // Dashboard for all users
+  revalidatePath(`/projects/${projectId}`); // Project page
+  revalidatePath("/admin/projects"); // Admin projects list
 
   return result;
 }
@@ -225,9 +227,10 @@ export async function getUserProjects() {
         orderBy: { createdAt: "desc" },
       });
     },
-    [`user-projects`],
+    [`user-projects-${session.user.id}`],
     {
       revalidate: 30, // Cache for 30 seconds
+      tags: [`user-${session.user.id}-projects`, "projects"],
     }
   );
 
