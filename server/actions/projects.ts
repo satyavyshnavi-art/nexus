@@ -338,3 +338,23 @@ export async function getProjectMemberData(projectId: string) {
     availableUsers,
   };
 }
+
+export async function deleteProject(projectId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const project = await db.project.delete({
+      where: { id: projectId },
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/");
+    return project;
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+    throw new Error("Failed to delete project");
+  }
+}
