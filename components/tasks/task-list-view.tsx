@@ -9,7 +9,8 @@ import { CheckSquare, Bug, BookOpen, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 
 interface TaskListViewProps {
-  tasks: (Task & {
+  tasks: (Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
     _count?: {
       comments: number;

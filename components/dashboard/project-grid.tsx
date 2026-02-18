@@ -20,8 +20,18 @@ import { deleteProject } from "@/server/actions/projects";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 
+import type { Project } from "@prisma/client";
+
+interface ProjectWithCount extends Omit<Project, 'githubRepoId'> {
+    githubRepoId: string | null;
+    _count: {
+        sprints: number;
+        members: number;
+    };
+}
+
 interface ProjectGridProps {
-    projects: any[]; // Using any for now to avoid extensive type imports, but strictly it matches the return of getUserProjects
+    projects: ProjectWithCount[];
     isAdmin: boolean;
 }
 

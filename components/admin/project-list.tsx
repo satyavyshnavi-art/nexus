@@ -26,7 +26,8 @@ import type { Project, Vertical } from "@prisma/client";
 import { getProjectMemberData, deleteProject } from "@/server/actions/projects";
 import { toast } from "sonner";
 
-interface ProjectWithCount extends Project {
+interface ProjectWithCount extends Omit<Project, 'githubRepoId'> {
+  githubRepoId: string | null;
   vertical: Pick<Vertical, "id" | "name">;
   _count: {
     sprints: number;

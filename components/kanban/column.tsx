@@ -11,14 +11,16 @@ import { Circle, Clock, Eye, CheckCircle2 } from "lucide-react";
 interface ColumnProps {
   status: TaskStatus;
   title: string;
-  tasks: (Task & {
+  tasks: (Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
     _count?: {
       comments: number;
       attachments: number;
     };
   })[];
-  onTaskClick?: (task: Task & {
+  onTaskClick?: (task: Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
     _count?: {
       comments: number;

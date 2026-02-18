@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { Calendar, User as UserIcon, Hash } from "lucide-react";
 
 interface TaskMetadataProps {
-  task: Task & {
+  task: Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
   };
   createdBy?: Pick<User, "id" | "name" | "email"> | null;

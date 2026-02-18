@@ -27,7 +27,9 @@ interface Member {
 }
 
 interface SprintWithTasks extends Sprint {
-  tasks: Task[];
+  tasks: (Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
+  })[];
 }
 
 interface ProjectMemberData {

@@ -20,7 +20,8 @@ import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
 import { updateTaskStatus } from "@/server/actions/tasks";
 import { toast } from "sonner";
 
-type TaskWithRelations = Task & {
+type TaskWithRelations = Omit<Task, 'githubIssueId'> & {
+  githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {

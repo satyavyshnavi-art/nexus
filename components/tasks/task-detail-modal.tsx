@@ -21,7 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2 } from "lucide-react";
 
-interface TaskWithDetails extends Task {
+interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
+  githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {

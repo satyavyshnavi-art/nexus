@@ -9,7 +9,8 @@ import { memo } from "react";
 import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp } from "lucide-react";
 
 interface TaskCardProps {
-  task: Task & {
+  task: Omit<Task, "githubIssueId"> & {
+    githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
     _count?: {
       comments: number;
