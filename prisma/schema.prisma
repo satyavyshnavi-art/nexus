@@ -144,6 +144,7 @@ model Task {
   githubIssueNumber Int?             @map("github_issue_number")
   githubSyncedAt    DateTime?        @map("github_synced_at")
   githubUrl         String?          @map("github_url")
+  githubStatus      String?          @map("github_status") // "open" | "closed" - tracks GitHub-side status
   syncLogs          GitHubSyncLog[]
   attachments       TaskAttachment[]
   comments          TaskComment[]

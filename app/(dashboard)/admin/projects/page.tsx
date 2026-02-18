@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { getAllProjects } from "@/server/actions/projects";
 import { getAllVerticals } from "@/server/actions/verticals";
+import { getAllUsers } from "@/server/actions/users";
 import { ProjectList } from "@/components/admin/project-list";
 import { CreateProjectButton } from "@/components/admin/create-project-button";
 
@@ -12,9 +13,10 @@ export default async function ProjectsPage() {
     redirect("/");
   }
 
-  const [projects, verticals] = await Promise.all([
+  const [projects, verticals, users] = await Promise.all([
     getAllProjects(),
     getAllVerticals(),
+    getAllUsers(),
   ]);
 
   return (
@@ -26,7 +28,7 @@ export default async function ProjectsPage() {
             Manage all projects across verticals
           </p>
         </div>
-        <CreateProjectButton verticals={verticals} />
+        <CreateProjectButton verticals={verticals} users={users} />
       </div>
 
       <ProjectList projects={projects} />

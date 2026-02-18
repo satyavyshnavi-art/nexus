@@ -10,11 +10,18 @@ interface Vertical {
   name: string;
 }
 
-interface CreateProjectButtonProps {
-  verticals: Vertical[];
+interface User {
+  id: string;
+  name: string | null;
+  email: string;
 }
 
-export function CreateProjectButton({ verticals }: CreateProjectButtonProps) {
+interface CreateProjectButtonProps {
+  verticals: Vertical[];
+  users: User[];
+}
+
+export function CreateProjectButton({ verticals, users }: CreateProjectButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -23,7 +30,7 @@ export function CreateProjectButton({ verticals }: CreateProjectButtonProps) {
         <Plus className="h-4 w-4 mr-2" />
         New Project
       </Button>
-      <ProjectModal verticals={verticals} open={open} onOpenChange={setOpen} />
+      <ProjectModal verticals={verticals} users={users} open={open} onOpenChange={setOpen} />
     </>
   );
 }

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createSprint } from "@/server/actions/sprints";
-import { toast } from "@/lib/hooks/use-toast";
+import { toast } from "sonner";
 import { sprintSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 
@@ -28,8 +28,8 @@ export function SprintForm({ projectId, onSuccess, onCancel }: SprintFormProps) 
     e.preventDefault();
     setErrors({});
 
-    // Validate with Zod
     try {
+      // Validate with Zod
       const validated = sprintSchema.parse({
         name: formData.name,
         startDate: new Date(formData.startDate),
@@ -45,15 +45,14 @@ export function SprintForm({ projectId, onSuccess, onCancel }: SprintFormProps) 
         endDate: validated.endDate,
       });
 
-      toast({
-        title: "Sprint created",
+      toast.success("Sprint created", {
         description: `${validated.name} has been created successfully`,
-        variant: "success",
       });
 
       setFormData({ name: "", startDate: "", endDate: "" });
       onSuccess?.();
     } catch (error) {
+      console.error("Sprint creation failed:", error);
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -62,16 +61,12 @@ export function SprintForm({ projectId, onSuccess, onCancel }: SprintFormProps) 
           }
         });
         setErrors(fieldErrors);
-        toast({
-          title: "Validation Error",
+        toast.error("Validation Error", {
           description: "Please check the form for errors",
-          variant: "destructive",
         });
       } else {
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: error instanceof Error ? error.message : "Failed to create sprint",
-          variant: "destructive",
         });
       }
     } finally {

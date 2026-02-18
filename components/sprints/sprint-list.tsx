@@ -64,9 +64,8 @@ function StatusBadge({ status }: { status: Sprint["status"] }) {
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-        variants[status]
-      }`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${variants[status]
+        }`}
     >
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>

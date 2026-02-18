@@ -14,11 +14,13 @@ interface User {
 interface CreateTaskButtonProps {
   sprintId: string;
   projectMembers: User[];
+  projectLinked?: boolean;
 }
 
 export function CreateTaskButton({
   sprintId,
   projectMembers,
+  projectLinked = false,
 }: CreateTaskButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -33,6 +35,7 @@ export function CreateTaskButton({
         projectMembers={projectMembers}
         open={open}
         onOpenChange={setOpen}
+        projectLinked={projectLinked}
       />
     </>
   );

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { getUploadUrl, getDownloadUrl } from "@/lib/storage/r2-client";
+import { getUploadUrl, getDownloadUrl } from "@/lib/storage/s3-client";
 import { randomUUID } from "crypto";
 
 export async function requestUploadUrl(data: {
@@ -62,8 +62,11 @@ export async function saveAttachmentMetadata(data: {
 
   return db.taskAttachment.create({
     data: {
-      ...data,
+      taskId: data.taskId,
       s3Key: data.key,
+      fileName: data.fileName,
+      mimeType: data.mimeType,
+      sizeBytes: data.sizeBytes,
       uploadedBy: session.user.id,
     },
   });

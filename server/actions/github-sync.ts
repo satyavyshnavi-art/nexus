@@ -64,21 +64,33 @@ export async function syncTaskToGitHub(taskId: string) {
     );
   }
 
-  // 4. Check authorization (admin or project member)
-  if (session.user.role !== "admin") {
-    await verifyProjectMembership(session.user.id, project.id);
-  }
+  // 4. Get the GitHub token owner - prioritize: current user → project linker → system bot
+  let syncUserId = session.user.id;
 
-  // 5. Check user has GitHub account
-  const user = await db.user.findUnique({
+  // Check if current user has GitHub token
+  const currentUser = await db.user.findUnique({
     where: { id: session.user.id },
     select: { githubAccessToken: true },
   });
 
-  if (!user?.githubAccessToken) {
-    throw new Error(
-      "Please connect your GitHub account to sync tasks. Sign out and sign in with GitHub."
-    );
+  if (!currentUser?.githubAccessToken) {
+    // Fallback to project linker's token (the person who linked the repo)
+    if (project.githubLinkedBy) {
+      const linker = await db.user.findUnique({
+        where: { id: project.githubLinkedBy },
+        select: { githubAccessToken: true },
+      });
+      if (linker?.githubAccessToken) {
+        syncUserId = project.githubLinkedBy;
+      } else if (!process.env.GITHUB_ACCESS_TOKEN) {
+        // No fallback available
+        console.log(`[Auto-Sync] Skipping sync for task ${taskId}: no GitHub token available`);
+        return { success: false, skipped: true };
+      }
+    } else if (!process.env.GITHUB_ACCESS_TOKEN) {
+      console.log(`[Auto-Sync] Skipping sync for task ${taskId}: no GitHub token available`);
+      return { success: false, skipped: true };
+    }
   }
 
   try {
@@ -87,7 +99,7 @@ export async function syncTaskToGitHub(taskId: string) {
     if (task.githubIssueNumber) {
       // Update existing issue
       result = await updateGitHubIssue(
-        session.user.id,
+        syncUserId,
         taskId,
         project.githubRepoOwner,
         project.githubRepoName
@@ -101,17 +113,23 @@ export async function syncTaskToGitHub(taskId: string) {
           action: "update",
           status: "success",
           githubIssueNumber: result.issueNumber,
-          userId: session.user.id,
+          userId: syncUserId,
         },
       });
     } else {
       // Create new issue
       result = await createGitHubIssue(
-        session.user.id,
+        syncUserId,
         taskId,
         project.githubRepoOwner,
         project.githubRepoName
       );
+
+      // Set githubStatus to open
+      await db.task.update({
+        where: { id: taskId },
+        data: { githubStatus: "open" },
+      });
 
       // Log sync
       await db.gitHubSyncLog.create({
@@ -121,7 +139,7 @@ export async function syncTaskToGitHub(taskId: string) {
           action: "create",
           status: "success",
           githubIssueNumber: result.issueNumber,
-          userId: session.user.id,
+          userId: syncUserId,
         },
       });
     }
@@ -142,7 +160,7 @@ export async function syncTaskToGitHub(taskId: string) {
         action: task.githubIssueNumber ? "update" : "create",
         status: "failed",
         errorMessage: error.message,
-        userId: session.user.id,
+        userId: syncUserId,
       },
     });
 

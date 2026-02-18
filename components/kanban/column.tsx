@@ -26,6 +26,8 @@ interface ColumnProps {
     };
   }) => void;
   projectLinked?: boolean;
+  userHasGitHub?: boolean;
+  isDragging?: boolean;
 }
 
 const columnConfig = {
@@ -35,6 +37,7 @@ const columnConfig = {
     icon: Circle,
     iconColor: "text-slate-600",
     accentBorder: "border-l-slate-400",
+    dropHighlight: "ring-slate-400 border-slate-400 bg-slate-100/80",
   },
   progress: {
     bg: "bg-blue-50",
@@ -42,6 +45,7 @@ const columnConfig = {
     icon: Clock,
     iconColor: "text-blue-600",
     accentBorder: "border-l-blue-500",
+    dropHighlight: "ring-blue-400 border-blue-400 bg-blue-100/80",
   },
   review: {
     bg: "bg-amber-50",
@@ -49,6 +53,7 @@ const columnConfig = {
     icon: Eye,
     iconColor: "text-amber-600",
     accentBorder: "border-l-amber-500",
+    dropHighlight: "ring-amber-400 border-amber-400 bg-amber-100/80",
   },
   done: {
     bg: "bg-green-50",
@@ -56,10 +61,11 @@ const columnConfig = {
     icon: CheckCircle2,
     iconColor: "text-green-600",
     accentBorder: "border-l-green-500",
+    dropHighlight: "ring-green-400 border-green-400 bg-green-100/80",
   },
 };
 
-export const Column = memo(function Column({ status, title, tasks, onTaskClick, projectLinked = false }: ColumnProps) {
+export const Column = memo(function Column({ status, title, tasks, onTaskClick, projectLinked = false, userHasGitHub = false, isDragging = false }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const config = columnConfig[status];
   const StatusIcon = config.icon;
@@ -68,9 +74,15 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
     <div className="flex-1 min-w-[300px] max-w-[400px]">
       <div
         className={`
-          rounded-lg border-2 border-transparent transition-all duration-200 ease-out h-full flex flex-col
+          rounded-lg border-2 h-full flex flex-col
+          transition-all duration-150 ease-out
           ${config.bg}
-          ${isOver ? "ring-2 ring-primary/50 shadow-xl border-primary/30 scale-[1.01]" : "shadow-sm"}
+          ${isOver
+            ? `ring-2 shadow-xl scale-[1.02] ${config.dropHighlight}`
+            : isDragging
+              ? "border-dashed border-gray-300 shadow-sm"
+              : "border-transparent shadow-sm"
+          }
         `}
       >
         {/* Column Header */}
@@ -97,16 +109,25 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
             ref={setNodeRef}
             className={`
               flex-1 p-3 min-h-[300px] rounded-b-lg
-              transition-all duration-200
-              ${isOver ? "bg-primary/5 border-2 border-dashed border-primary/50" : ""}
+              transition-all duration-150
+              ${isOver ? "bg-primary/5" : ""}
             `}
           >
             {tasks.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+              <div className={`
+                flex items-center justify-center h-32 text-muted-foreground text-sm
+                ${isDragging ? "border-2 border-dashed border-primary/30 rounded-lg" : ""}
+              `}>
                 <p className="text-center">
-                  No tickets yet
-                  <br />
-                  <span className="text-xs">Drag tickets here</span>
+                  {isDragging ? (
+                    <span className="text-primary/60 font-medium">Drop here</span>
+                  ) : (
+                    <>
+                      No tickets yet
+                      <br />
+                      <span className="text-xs">Drag tickets here</span>
+                    </>
+                  )}
                 </p>
               </div>
             ) : (
@@ -115,7 +136,7 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
                   key={task.id}
                   task={task}
                   onClick={onTaskClick ? () => onTaskClick(task) : undefined}
-                  projectLinked={projectLinked}
+                  isDragging={isDragging}
                 />
               ))
             )}

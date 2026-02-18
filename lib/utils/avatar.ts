@@ -4,15 +4,18 @@
  */
 
 // Purple/Blue/Indigo color palette for avatars
+// Purple/Black/Dark gradient palette for avatars
+// Premium solid color palette for avatars (Unisex/Professional)
+// Lilac-themed avatar palette
 const AVATAR_COLORS = [
-  { bg: 'hsl(270, 75%, 60%)', text: 'hsl(0, 0%, 100%)' },      // Purple
-  { bg: 'hsl(263, 70%, 50%)', text: 'hsl(0, 0%, 100%)' },      // Deep Purple
-  { bg: 'hsl(281, 89%, 54%)', text: 'hsl(0, 0%, 100%)' },      // Violet
-  { bg: 'hsl(242, 84%, 58%)', text: 'hsl(0, 0%, 100%)' },      // Indigo
-  { bg: 'hsl(217, 91%, 60%)', text: 'hsl(0, 0%, 100%)' },      // Blue
-  { bg: 'hsl(198, 88%, 48%)', text: 'hsl(0, 0%, 100%)' },      // Cyan
-  { bg: 'hsl(280, 59%, 56%)', text: 'hsl(0, 0%, 100%)' },      // Purple-Blue
-  { bg: 'hsl(259, 80%, 52%)', text: 'hsl(0, 0%, 100%)' },      // Iris
+  { bg: '#8b5cf6', text: '#ffffff' }, // Violet
+  { bg: '#a78bfa', text: '#ffffff' }, // Light Violet
+  { bg: '#7c3aed', text: '#ffffff' }, // Deep Violet
+  { bg: '#6d28d9', text: '#ffffff' }, // Purple
+  { bg: '#c084fc', text: '#ffffff' }, // Lavender
+  { bg: '#9333ea', text: '#ffffff' }, // Rich Purple
+  { bg: '#a855f7', text: '#ffffff' }, // Medium Purple
+  { bg: '#7e22ce', text: '#ffffff' }, // Dark Purple
 ];
 
 /**

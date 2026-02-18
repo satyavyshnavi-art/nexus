@@ -20,6 +20,7 @@ interface TaskModalProps {
   projectMembers: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectLinked?: boolean;
 }
 
 export function TaskModal({
@@ -27,6 +28,7 @@ export function TaskModal({
   projectMembers,
   open,
   onOpenChange,
+  projectLinked = false,
 }: TaskModalProps) {
   const handleSuccess = () => {
     onOpenChange(false);
@@ -49,6 +51,7 @@ export function TaskModal({
           projectMembers={projectMembers}
           onSuccess={handleSuccess}
           onCancel={() => onOpenChange(false)}
+          projectLinked={projectLinked}
         />
       </DialogContent>
     </Dialog>

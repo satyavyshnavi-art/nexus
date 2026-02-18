@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProfileEditButton } from "@/components/profile/profile-edit-button";
+import { ProfileErrorView } from "@/components/profile/profile-error-view";
 import { format } from "date-fns";
 import { Mail, Calendar, Briefcase, Activity, CheckCircle2 } from "lucide-react";
 
@@ -26,14 +27,19 @@ export default async function ProfilePage() {
     profile = await getCurrentUserProfile();
   } catch (error) {
     console.error("Error fetching profile:", error);
-    redirect("/");
+    return (
+      <ProfileErrorView
+        error={error instanceof Error ? error.message : "Unknown error"}
+        userId={session?.user?.id}
+      />
+    );
   }
 
   const completionRate =
     profile.stats.totalTasks > 0
       ? Math.round(
-          (profile.stats.completedTasks / profile.stats.totalTasks) * 100
-        )
+        (profile.stats.completedTasks / profile.stats.totalTasks) * 100
+      )
       : 0;
 
   return (
@@ -87,6 +93,17 @@ export default async function ProfilePage() {
               <CardDescription>Your personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  User ID
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs bg-muted p-1 rounded font-mono select-all">
+                    {profile.id}
+                  </code>
+                </div>
+              </div>
+
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Email
@@ -244,8 +261,8 @@ export default async function ProfilePage() {
                               task.status === "done"
                                 ? "default"
                                 : task.status === "progress"
-                                ? "secondary"
-                                : "outline"
+                                  ? "secondary"
+                                  : "outline"
                             }
                             className="text-xs"
                           >

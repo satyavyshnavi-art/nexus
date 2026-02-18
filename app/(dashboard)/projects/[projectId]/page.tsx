@@ -14,6 +14,8 @@ import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
 import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
 import { getLinkedRepository } from "@/server/actions/github-link";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
+import { EmptyState } from "@/components/ui/empty-state";
+import { db } from "@/server/db";
 
 export default async function ProjectPage({
   params,
@@ -30,31 +32,44 @@ export default async function ProjectPage({
 
   const isAdmin = session?.user.role === "admin";
 
+  // Check if current user has GitHub connected
+  const currentUser = session?.user?.id
+    ? await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { githubAccessToken: true },
+    })
+    : null;
+  const userHasGitHub = !!currentUser?.githubAccessToken;
+
   // Calculate statistics
   const taskStats = activeSprint
     ? {
-        todo: activeSprint.tasks.filter((t) => t.status === "todo").length,
-        progress: activeSprint.tasks.filter((t) => t.status === "progress").length,
-        review: activeSprint.tasks.filter((t) => t.status === "review").length,
-        done: activeSprint.tasks.filter((t) => t.status === "done").length,
-        total: activeSprint.tasks.length,
-      }
+      todo: activeSprint.tasks.filter((t) => t.status === "todo").length,
+      progress: activeSprint.tasks.filter((t) => t.status === "progress").length,
+      review: activeSprint.tasks.filter((t) => t.status === "review").length,
+      done: activeSprint.tasks.filter((t) => t.status === "done").length,
+      total: activeSprint.tasks.length,
+    }
     : null;
 
   return (
     <div className="space-y-6">
+
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <p className="text-muted-foreground">{project.description}</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Vertical: {project.vertical.name}
-          </p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent pb-1">{project.name}</h1>
+          <p className="text-muted-foreground text-lg mt-1">{project.description}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="px-2 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium">
+              {project.vertical.name}
+            </span>
+          </div>
         </div>
         {isAdmin && (
           <Link href={`/projects/${projectId}/sprints`}>
-            <Button variant="outline">
+            <Button variant="outline" className="glass hover:bg-white/50">
               <Calendar className="h-4 w-4 mr-2" />
               Manage Sprints
             </Button>
@@ -65,20 +80,20 @@ export default async function ProjectPage({
       {/* Statistics Cards */}
       {taskStats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="border-l-4 border-l-primary">
+          <Card className="border-l-4 border-l-primary bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Tickets</p>
                   <p className="text-3xl font-bold mt-1">{taskStats.total}</p>
                 </div>
-                <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <ListTodo className="h-6 w-6 text-primary" />
+                <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <ListTodo className="h-5 w-5 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-slate-400">
+          <Card className="border-l-4 border-l-slate-400 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">To Do</p>
@@ -86,7 +101,7 @@ export default async function ProjectPage({
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">In Progress</p>
@@ -94,7 +109,7 @@ export default async function ProjectPage({
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-amber-500">
+          <Card className="border-l-4 border-l-amber-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Review</p>
@@ -102,7 +117,7 @@ export default async function ProjectPage({
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Done</p>
@@ -115,7 +130,7 @@ export default async function ProjectPage({
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
-        <TabsList>
+        <TabsList className="bg-white/50 backdrop-blur-sm border">
           <TabsTrigger value="board">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Kanban Board
@@ -137,20 +152,24 @@ export default async function ProjectPage({
         {/* Tab: Kanban Board */}
         <TabsContent value="board" className="space-y-4">
           {activeSprint ? (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-in fade-in duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold">{activeSprint.name}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(activeSprint.startDate).toLocaleDateString()} -{" "}
-                    {new Date(activeSprint.endDate).toLocaleDateString()}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(activeSprint.startDate).toLocaleDateString()} -{" "}
+                      {new Date(activeSprint.endDate).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {isAdmin && <AiSprintButton sprintId={activeSprint.id} />}
                   <CreateTaskButton
                     sprintId={activeSprint.id}
                     projectMembers={project.members.map((m) => m.user)}
+                    projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
                   />
                 </div>
               </div>
@@ -159,32 +178,35 @@ export default async function ProjectPage({
                 initialTasks={activeSprint.tasks}
                 projectMembers={project.members.map((m) => m.user)}
                 projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
+                userHasGitHub={userHasGitHub}
               />
             </div>
           ) : (
-            <Card className="border-dashed">
-              <CardContent className="pt-12 pb-12">
-                <div className="flex flex-col items-center justify-center text-center">
-                  <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mb-4">
-                    <Calendar className="h-10 w-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">No Active Sprint</h3>
-                  <p className="text-muted-foreground text-sm max-w-sm mb-6">
-                    {sprints.length === 0
-                      ? "No sprints created yet. Create a sprint to start organizing tickets and tracking progress."
-                      : "Select and activate a sprint from your sprint list to begin working on tickets."}
-                  </p>
-                  {isAdmin && (
-                    <Link href={`/projects/${projectId}/sprints`}>
-                      <Button size="lg">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Calendar}
+              title="No Active Sprint"
+              description={sprints.length === 0
+                ? "No sprints created yet. Create a sprint to start organizing tickets and tracking progress."
+                : "Select and activate a sprint from your sprint list to begin working on tickets."}
+              className="bg-white/50 backdrop-blur-sm"
+            />
+          )}
+          {/* Custom Empty State Action for Link */}
+          {!activeSprint && isAdmin && (
+            <div className="flex justify-center -mt-20 relative z-10 pointer-events-none">
+              {/* This is a hacky way to inject the button, better to just render the button below the empty state or modify EmptyState to accept ReactNode action */}
+              {/* Let's just render the link below the EmptyState manually for now */}
+            </div>
+          )}
+          {!activeSprint && isAdmin && (
+            <div className="flex justify-center mt-4">
+              <Link href={`/projects/${projectId}/sprints`}>
+                <Button variant="outline" className="glass">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
+                </Button>
+              </Link>
+            </div>
           )}
         </TabsContent>
 
@@ -206,13 +228,12 @@ export default async function ProjectPage({
               projectMembers={project.members.map((m) => m.user)}
             />
           ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  No tasks yet. Create your first task to get started.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={ListTodo}
+              title="No Tasks Found"
+              description="No tasks yet. Create your first task to get started."
+              className="bg-white/50 backdrop-blur-sm"
+            />
           )}
         </TabsContent>
 
@@ -228,39 +249,37 @@ export default async function ProjectPage({
 
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-4">
-          {/* GitHub Integration Section */}
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle>GitHub Integration</CardTitle>
-                <CardDescription>
-                  Link this project to a GitHub repository to sync tasks as issues
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {linkedRepo ? (
-                  <GitHubLinkedStatus
-                    projectId={projectId}
-                    repository={linkedRepo.repository}
-                    repositoryUrl={linkedRepo.repositoryUrl}
-                    linkedAt={linkedRepo.linkedAt!}
-                    linkedBy={linkedRepo.linkedBy!}
-                    isAdmin={isAdmin}
-                  />
-                ) : (
-                  <div className="flex items-center justify-between p-4 border rounded-lg border-dashed">
-                    <div>
-                      <p className="font-medium">No repository linked</p>
-                      <p className="text-sm text-muted-foreground">
-                        Link a GitHub repository to enable task syncing
-                      </p>
-                    </div>
-                    <GitHubLinkDialog projectId={projectId} />
+          {/* GitHub Integration Section - visible to all members */}
+          <Card>
+            <CardHeader>
+              <CardTitle>GitHub Integration</CardTitle>
+              <CardDescription>
+                Link this project to a GitHub repository to sync tasks as issues
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {linkedRepo ? (
+                <GitHubLinkedStatus
+                  projectId={projectId}
+                  repository={linkedRepo.repository}
+                  repositoryUrl={linkedRepo.repositoryUrl}
+                  linkedAt={linkedRepo.linkedAt!}
+                  linkedBy={linkedRepo.linkedBy!}
+                  isAdmin={isAdmin}
+                />
+              ) : (
+                <div className="flex items-center justify-between p-4 border rounded-lg border-dashed">
+                  <div>
+                    <p className="font-medium">No repository linked</p>
+                    <p className="text-sm text-muted-foreground">
+                      Link a GitHub repository to enable task syncing
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  <GitHubLinkDialog projectId={projectId} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Project Info */}
@@ -309,13 +328,12 @@ export default async function ProjectPage({
                         </p>
                       </div>
                       <span
-                        className={`text-xs px-3 py-1 rounded-full font-medium ${
-                          sprint.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : sprint.status === "completed"
+                        className={`text-xs px-3 py-1 rounded-full font-medium ${sprint.status === "active"
+                          ? "bg-green-100 text-green-800"
+                          : sprint.status === "completed"
                             ? "bg-gray-100 text-gray-800"
                             : "bg-blue-100 text-blue-800"
-                        }`}
+                          }`}
                       >
                         {sprint.status}
                       </span>

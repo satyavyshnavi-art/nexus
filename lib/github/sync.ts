@@ -60,7 +60,50 @@ export async function createGitHubIssue(
   }
 
   // Create GitHub issue
-  const octokit = await createOctokitForUser(userId);
+  let octokit;
+  let usedTokenSource = "creator";
+
+  try {
+    // Strategy 1: Try Creator's Token
+    octokit = await createOctokitForUser(userId);
+  } catch (error) {
+    console.log(`[GitHub Sync] Creator (ID: ${userId}) has no GitHub token. Trying fallbacks...`);
+
+    // Strategy 2: System Bot Token (from ENV)
+    if (process.env.GITHUB_ACCESS_TOKEN) {
+      console.log(`[GitHub Sync] Using System Bot Token.`);
+      const { Octokit } = await import("@octokit/rest");
+      octokit = new Octokit({
+        auth: process.env.GITHUB_ACCESS_TOKEN,
+        userAgent: 'Nexus-PM/1.0.0-Bot',
+      });
+      usedTokenSource = "system";
+    }
+    // Strategy 3: Assignee's Token
+    else if (task.assignee?.githubUsername) {
+      console.log(`[GitHub Sync] Trying Assignee's Token (${task.assignee.githubUsername}).`);
+      // We need to find the assignee's User ID to get their token
+      // This is a bit of a lookup since we only have the username on the task relation sometimes
+      // Better to look up the assignee by ID from the task
+      const assigneeUser = await db.user.findUnique({
+        where: { id: task.assigneeId! },
+        select: { id: true }
+      });
+
+      if (assigneeUser) {
+        try {
+          octokit = await createOctokitForUser(assigneeUser.id);
+          usedTokenSource = "assignee";
+        } catch (assigneeError) {
+          console.log(`[GitHub Sync] Assignee also has no token.`);
+        }
+      }
+    }
+  }
+
+  if (!octokit) {
+    throw new Error("No valid GitHub token found (checked Creator, System, and Assignee). Cannot sync to GitHub.");
+  }
 
   // Build issue body
   const bodyParts = [

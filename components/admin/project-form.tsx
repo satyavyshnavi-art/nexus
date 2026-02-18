@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createProject } from "@/server/actions/projects";
 import { toast } from "@/lib/hooks/use-toast";
 
@@ -20,14 +21,22 @@ interface Vertical {
   name: string;
 }
 
+interface User {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 interface ProjectFormProps {
   verticals: Vertical[];
+  users: User[];
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export function ProjectForm({
   verticals,
+  users,
   onSuccess,
   onCancel,
 }: ProjectFormProps) {
@@ -37,6 +46,15 @@ export function ProjectForm({
     description: "",
     verticalId: "",
   });
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  const toggleUser = (userId: string) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +74,7 @@ export function ProjectForm({
         name: formData.name,
         description: formData.description || undefined,
         verticalId: formData.verticalId,
+        initialMemberIds: selectedUserIds,
       });
 
       toast({
@@ -65,6 +84,7 @@ export function ProjectForm({
       });
 
       setFormData({ name: "", description: "", verticalId: "" });
+      setSelectedUserIds([]);
       onSuccess?.();
     } catch (error) {
       toast({
@@ -81,8 +101,8 @@ export function ProjectForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name" required>
-          Project Name
+        <Label htmlFor="name" className="text-sm font-medium">
+          Project Name <span className="text-red-500">*</span>
         </Label>
         <Input
           id="name"
@@ -96,7 +116,7 @@ export function ProjectForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="text-sm font-medium">Description</Label>
         <Textarea
           id="description"
           value={formData.description}
@@ -110,8 +130,8 @@ export function ProjectForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="vertical" required>
-          Vertical
+        <Label htmlFor="vertical" className="text-sm font-medium">
+          Vertical <span className="text-red-500">*</span>
         </Label>
         <Select
           value={formData.verticalId}
@@ -131,6 +151,37 @@ export function ProjectForm({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">
+          Assign Members ({selectedUserIds.length} selected)
+        </Label>
+        <div className="border rounded-md max-h-48 overflow-y-auto p-2 space-y-2">
+          {users.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-2 text-center">No users found.</p>
+          ) : (
+            users.map((user) => (
+              <div key={user.id} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded">
+                <Checkbox
+                  id={`user-${user.id}`}
+                  checked={selectedUserIds.includes(user.id)}
+                  onCheckedChange={() => toggleUser(user.id)}
+                  disabled={isSubmitting}
+                />
+                <Label
+                  htmlFor={`user-${user.id}`}
+                  className="text-sm font-normal cursor-pointer flex-1"
+                >
+                  {user.name || user.email} <span className="text-muted-foreground ml-1 text-xs">({user.email})</span>
+                </Label>
+              </div>
+            ))
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Selected members will be able to see and access this project immediately.
+        </p>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">

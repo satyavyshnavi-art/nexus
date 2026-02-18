@@ -12,7 +12,7 @@ const AvatarRoot = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
     ref={ref}
-    className={cn('relative inline-flex items-center justify-center flex-shrink-0', className)}
+    className={cn('relative inline-flex items-center justify-center flex-shrink-0 aspect-square rounded-full', className)}
     {...props}
   />
 ));
@@ -39,7 +39,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      'flex items-center justify-center rounded-full font-semibold text-sm',
+      'flex h-full w-full items-center justify-center rounded-full p-0 leading-none font-semibold',
       className
     )}
     style={style}
@@ -66,7 +66,7 @@ const sizeMap = {
   sm: { size: 'h-8 w-8', fontSize: 'text-sm' },
   md: { size: 'h-10 w-10', fontSize: 'text-sm' },
   lg: { size: 'h-14 w-14', fontSize: 'text-base' },
-  xl: { size: 'h-20 w-20', fontSize: 'text-lg' },
+  xl: { size: 'h-20 w-20 min-h-[5rem] min-w-[5rem]', fontSize: 'text-2xl' },
 };
 
 export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
@@ -92,7 +92,7 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           {src && <AvatarImage src={src} alt={name} />}
           <AvatarFallback
             style={{
-              backgroundColor: colors.bg,
+              background: colors.bg,
               color: colors.text,
             }}
             className={sizeClasses.fontSize}

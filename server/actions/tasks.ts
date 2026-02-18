@@ -6,6 +6,8 @@ import { TaskStatus, TaskPriority, TaskType } from "@prisma/client";
 import { classifyBugPriority } from "@/lib/ai/bug-classifier";
 import { unstable_cache, revalidatePath } from "next/cache";
 import { calculateTaskProgress } from "@/lib/utils/task-progress";
+import { syncTaskToGitHub } from "@/server/actions/github-sync";
+
 
 // OPTIMIZED: Fast permission check (1 query instead of nested includes)
 async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
@@ -37,6 +39,7 @@ export async function createTask(data: {
   storyPoints?: number;
   assigneeId?: string;
   parentTaskId?: string;
+  pushToGitHub?: boolean;
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -75,20 +78,21 @@ export async function createTask(data: {
     }
   }
 
+  const { pushToGitHub, ...taskData } = data;
+
   const task = await db.task.create({
     data: {
-      ...data,
+      ...taskData,
       createdBy: session.user.id,
     },
   });
 
-  // Trigger AI bug classification asynchronously
-  if (data.type === TaskType.bug && data.description) {
-    classifyBugPriority(task.id, data.description).catch(console.error);
+  // Only sync to GitHub if the user opted in
+  if (pushToGitHub) {
+    syncTaskToGitHub(task.id).catch(err => {
+      console.error(`[Auto-Sync] Failed to sync new task ${task.id}:`, err);
+    });
   }
-
-  // Revalidate the project page to show the new task
-  revalidatePath(`/projects/${sprint.projectId}`);
 
   return task;
 }
@@ -110,12 +114,24 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
 
   const updatedTask = await db.task.update({
     where: { id: taskId },
-    data: { status: newStatus },
+    data: {
+      status: newStatus,
+      // When marked done, also set githubStatus to closed (issue will be closed on GitHub)
+      // When moved away from done, reset githubStatus to open
+      ...(newStatus === "done"
+        ? { githubStatus: "closed" }
+        : { githubStatus: "open" }),
+    },
     include: {
       sprint: {
         select: { projectId: true },
       },
     },
+  });
+
+  // Trigger GitHub Sync asynchronously
+  syncTaskToGitHub(taskId).catch(err => {
+    console.error(`[Auto-Sync] Failed to sync updated task status ${taskId}:`, err);
   });
 
   // Revalidate the project page to reflect the updated task status
@@ -156,6 +172,11 @@ export async function updateTask(
         select: { projectId: true },
       },
     },
+  });
+
+  // Trigger GitHub Sync asynchronously
+  syncTaskToGitHub(taskId).catch(err => {
+    console.error(`[Auto-Sync] Failed to sync updated task ${taskId}:`, err);
   });
 
   // Revalidate the project page to reflect the updated task

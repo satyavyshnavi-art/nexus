@@ -182,7 +182,7 @@ export function VerticalDetailTabs({ vertical }: VerticalDetailTabsProps) {
         </TabsContent>
 
         <TabsContent value="projects">
-          <VerticalProjectsTab projects={vertical.projects} />
+          <VerticalProjectsTab projects={vertical.projects} verticalId={vertical.id} />
         </TabsContent>
 
         <TabsContent value="settings">

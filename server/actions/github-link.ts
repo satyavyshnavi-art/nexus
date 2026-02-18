@@ -23,14 +23,27 @@ export async function linkGitHubRepository(
   repoOwner: string,
   repoName: string
 ) {
-  // 1. Auth check
+  // 1. Auth check - allow any authenticated user (membership verified below)
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    throw new Error("Unauthorized: Admin access required to link repositories");
+  if (!session?.user) {
+    throw new Error("Unauthorized: Please sign in to link repositories");
   }
 
   // 2. Validate inputs
   const data = linkRepoSchema.parse({ projectId, repoOwner, repoName });
+
+  // 3. Verify user is admin or a member of this project
+  const isAdmin = session.user.role === "admin";
+  if (!isAdmin) {
+    const membership = await db.projectMember.findUnique({
+      where: {
+        projectId_userId: { projectId: data.projectId, userId: session.user.id },
+      },
+    });
+    if (!membership) {
+      throw new Error("Unauthorized: You must be a member of this project to link a repository");
+    }
+  }
 
   // 3. Verify user has GitHub account
   const user = await db.user.findUnique({

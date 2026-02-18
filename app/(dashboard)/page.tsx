@@ -2,8 +2,18 @@ import { auth } from "@/lib/auth/config";
 import { getUserProjects } from "@/server/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
-import { Folders, Users, Timer, Sparkles } from "lucide-react";
+import { Folders, Users, Timer, Sparkles, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -16,74 +26,94 @@ export default async function DashboardPage() {
   const totalMembers = projects.reduce((acc, p) => acc + p._count.members, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header with greeting */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome back, {session?.user.name}
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent pb-1">Dashboard</h1>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Welcome back, <span className="font-semibold text-foreground">{session?.user.name}</span>
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-primary">
-            {projects.length} Active {projects.length === 1 ? 'Project' : 'Projects'}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-purple-50/50 border border-purple-100 rounded-full backdrop-blur-sm">
+            <Sparkles className="h-4 w-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-700">
+              {projects.length} Active {projects.length === 1 ? 'Project' : 'Projects'}
+            </span>
+          </div>
+          {/* Add Create Project button if needed, but it's in nav usually */}
         </div>
       </div>
 
       {/* Quick Stats */}
       {projects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Link
             href={session?.user.role === "admin" ? "/admin/projects" : "#projects"}
             className="group"
           >
-            <Card className="border-l-4 border-l-primary transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
+            <Card className="border-l-4 border-l-primary/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">Projects</p>
-                    <p className="text-2xl font-bold mt-1">{projects.length}</p>
+                    <p className="text-3xl font-bold mt-2">{projects.length}</p>
                   </div>
-                  <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Folders className="h-6 w-6 text-primary" />
+                  <div className="h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300 group-hover:scale-110">
+                    <Folders className="h-7 w-7 text-primary" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link
-            href={projects[0]?.id ? `/projects/${projects[0].id}/sprints` : "#"}
-            className="group"
-          >
-            <Card className="border-l-4 border-l-blue-500 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground group-hover:text-blue-600 transition-colors">Total Sprints</p>
-                    <p className="text-2xl font-bold mt-1">{totalSprints}</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Card className="border-l-4 border-l-blue-500/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm group">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground group-hover:text-blue-600 transition-colors">Total Sprints</p>
+                      <p className="text-3xl font-bold mt-2">{totalSprints}</p>
+                    </div>
+                    <div className="h-14 w-14 bg-blue-100 rounded-2xl flex items-center justify-center group-hover:bg-blue-200 transition-all duration-300 group-hover:scale-110">
+                      <Timer className="h-7 w-7 text-blue-600" />
+                    </div>
                   </div>
-                  <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                    <Timer className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                </CardContent>
+              </Card>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Sprints by Project</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {projects.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground">No projects found</div>
+              ) : (
+                projects.map((project) => (
+                  <Link key={project.id} href={`/projects/${project.id}/sprints`} className="w-full">
+                    <DropdownMenuItem className="cursor-pointer justify-between">
+                      <span className="truncate max-w-[140px]">{project.name}</span>
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {project._count.sprints}
+                      </Badge>
+                    </DropdownMenuItem>
+                  </Link>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Link href="/team" className="group">
-            <Card className="border-l-4 border-l-green-500 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
+            <Card className="border-l-4 border-l-green-500/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground group-hover:text-green-600 transition-colors">Team Members</p>
-                    <p className="text-2xl font-bold mt-1">{totalMembers}</p>
+                    <p className="text-3xl font-bold mt-2">{totalMembers}</p>
                   </div>
-                  <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                    <Users className="h-6 w-6 text-green-600" />
+                  <div className="h-14 w-14 bg-green-100 rounded-2xl flex items-center justify-center group-hover:bg-green-200 transition-all duration-300 group-hover:scale-110">
+                    <Users className="h-7 w-7 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -93,22 +123,17 @@ export default async function DashboardPage() {
       )}
 
       {/* Projects Grid */}
-      <div id="projects">
-        <h2 className="text-2xl font-semibold mb-6">Your Projects</h2>
+      <div id="projects" className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold tracking-tight">Your Projects</h2>
+        </div>
+
         {projects.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="pt-12 pb-12">
-              <div className="flex flex-col items-center justify-center text-center">
-                <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mb-4">
-                  <Folders className="h-10 w-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No Projects Yet</h3>
-                <p className="text-muted-foreground text-sm max-w-sm">
-                  You haven&apos;t been assigned to any projects yet. Contact your admin to get started.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Folders}
+            title="No Projects Yet"
+            description="You haven't been assigned to any projects yet. Contact your admin to get started."
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
@@ -117,28 +142,28 @@ export default async function DashboardPage() {
                 href={`/projects/${project.id}`}
                 className="group"
               >
-                <Card className="h-full transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:-translate-y-1">
+                <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-white/50 backdrop-blur-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <CardTitle className="group-hover:text-primary transition-colors line-clamp-1">
+                      <CardTitle className="group-hover:text-primary transition-colors line-clamp-1 text-lg">
                         {project.name}
                       </CardTitle>
-                      <Badge variant="outline" className="shrink-0 text-xs">
+                      <Badge variant="secondary" className="shrink-0 text-xs font-normal bg-purple-50 text-purple-700 border-purple-100">
                         Active
                       </Badge>
                     </div>
-                    <CardDescription className="line-clamp-2 min-h-[2.5rem]">
-                      {project.description || "No description"}
+                    <CardDescription className="line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed">
+                      {project.description || "No description provided for this project."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Timer className="h-4 w-4" />
+                    <div className="flex items-center gap-4 text-sm pt-2">
+                      <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
+                        <Timer className="h-3.5 w-3.5" />
                         <span>{project._count.sprints} {project._count.sprints === 1 ? 'sprint' : 'sprints'}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Users className="h-4 w-4" />
+                      <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
+                        <Users className="h-3.5 w-3.5" />
                         <span>{project._count.members} {project._count.members === 1 ? 'member' : 'members'}</span>
                       </div>
                     </div>

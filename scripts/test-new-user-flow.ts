@@ -18,16 +18,16 @@ const db = new PrismaClient();
 
 async function testNewUserFlow() {
   console.log("\n🧪 TEST: New User Flow\n");
-  console.log("=" .repeat(80));
+  console.log("=".repeat(80));
   console.log("This script simulates creating a new user and assigning them to projects");
-  console.log("=" .repeat(80) + "\n");
+  console.log("=".repeat(80) + "\n");
 
   const testEmail = `test.user.${Date.now()}@nexus.com`;
 
   try {
     // Step 1: Create a new user
     console.log("📋 STEP 1: Creating New User");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
 
     const passwordHash = await hash("password123", 10);
 
@@ -47,9 +47,9 @@ async function testNewUserFlow() {
 
     // Step 2: Check what they see (should be nothing)
     console.log("📋 STEP 2: Before Vertical Assignment - What User Sees");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
 
-    let projects = await db.project.findMany({
+    let projects: any = await db.project.findMany({
       where: {
         OR: [
           {
@@ -76,7 +76,7 @@ async function testNewUserFlow() {
 
     // Step 3: Assign to a vertical
     console.log("📋 STEP 3: Assigning User to Vertical");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
 
     const vertical = await db.vertical.findFirst({
       include: {
@@ -104,7 +104,7 @@ async function testNewUserFlow() {
 
     // Step 4: Check what they see now (should see vertical's projects)
     console.log("📋 STEP 4: After Vertical Assignment - What User Sees");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
 
     projects = await db.project.findMany({
       where: {
@@ -133,7 +133,7 @@ async function testNewUserFlow() {
     console.log(`Query returns: ${projects.length} project(s)`);
     if (projects.length > 0) {
       console.log(`✅ Expected: User sees ${projects.length} project(s) from vertical\n`);
-      projects.forEach((p, idx) => {
+      projects.forEach((p: any, idx: number) => {
         console.log(`   ${idx + 1}. ${p.name} (${p.vertical.name}) - Via Vertical`);
       });
     } else {
@@ -144,7 +144,7 @@ async function testNewUserFlow() {
     // Step 5: Add user as direct member to a project
     if (projects.length > 0) {
       console.log("📋 STEP 5: Adding User as Direct Project Member");
-      console.log("-" .repeat(80));
+      console.log("-".repeat(80));
 
       const projectToJoin = projects[0];
 
@@ -160,7 +160,7 @@ async function testNewUserFlow() {
 
       // Step 6: Check project membership
       console.log("📋 STEP 6: Verifying Project Membership");
-      console.log("-" .repeat(80));
+      console.log("-".repeat(80));
 
       const memberships = await db.projectMember.findMany({
         where: { userId: newUser.id },
@@ -180,7 +180,7 @@ async function testNewUserFlow() {
 
     // Step 7: Final check
     console.log("📋 STEP 7: Final Visibility Check");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
 
     projects = await db.project.findMany({
       where: {
@@ -210,7 +210,7 @@ async function testNewUserFlow() {
     });
 
     console.log(`getUserProjects() would return ${projects.length} project(s):\n`);
-    projects.forEach((p, idx) => {
+    projects.forEach((p: any, idx: number) => {
       const isDirect = p.members.length > 0;
       console.log(`   ${idx + 1}. ${p.name}`);
       console.log(`      Vertical: ${p.vertical.name}`);
@@ -219,9 +219,9 @@ async function testNewUserFlow() {
     console.log();
 
     // Summary
-    console.log("=" .repeat(80));
+    console.log("=".repeat(80));
     console.log("✅ TEST COMPLETE");
-    console.log("=" .repeat(80));
+    console.log("=".repeat(80));
     console.log();
     console.log("Key Takeaways:");
     console.log("1. New users see NO projects until assigned to a vertical");
@@ -232,7 +232,7 @@ async function testNewUserFlow() {
 
     // Cleanup
     console.log("🧹 Cleaning Up Test User");
-    console.log("-" .repeat(80));
+    console.log("-".repeat(80));
     await db.user.delete({ where: { id: newUser.id } });
     console.log(`✅ Test user deleted: ${testEmail}\n`);
 

@@ -8,24 +8,37 @@ export async function createProject(data: {
   name: string;
   description?: string;
   verticalId: string;
+  initialMemberIds?: string[];
 }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
+  const { initialMemberIds = [], ...projectData } = data;
+
+  // Always include the creator as a member
+  const memberIds = new Set([session.user.id, ...initialMemberIds]);
+
   const project = await db.project.create({
     data: {
-      ...data,
+      ...projectData,
       createdBy: session.user.id,
+      members: {
+        create: Array.from(memberIds).map((userId) => ({
+          userId,
+        })),
+      },
     },
+    select: { id: true, name: true },
   });
 
   // Revalidate caches
   revalidatePath("/");
   revalidatePath("/admin/projects");
+  revalidatePath(`/admin/verticals/${data.verticalId}`);
 
-  return project;
+  return { id: project.id, name: project.name };
 }
 
 export async function getProjectsByVertical(verticalId: string) {
@@ -40,10 +53,10 @@ export async function getProjectsByVertical(verticalId: string) {
       ...(isAdmin
         ? {}
         : {
-            members: {
-              some: { userId: session.user.id },
-            },
-          }),
+          members: {
+            some: { userId: session.user.id },
+          },
+        }),
     },
     include: {
       _count: {
@@ -106,18 +119,18 @@ export async function addMemberToProject(projectId: string, userId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Verify user belongs to project's vertical
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    include: { vertical: { include: { users: true } } },
-  });
+  // Verify user belongs to project's vertical -> REMOVED to allow cross-vertical assignment
+  // const project = await db.project.findUnique({
+  //   where: { id: projectId },
+  //   include: { vertical: { include: { users: true } } },
+  // });
 
-  const userInVertical = project?.vertical.users.some(
-    (vu) => vu.userId === userId
-  );
-  if (!userInVertical) {
-    throw new Error("User not in project vertical");
-  }
+  // const userInVertical = project?.vertical.users.some(
+  //   (vu) => vu.userId === userId
+  // );
+  // if (!userInVertical) {
+  //   throw new Error("User not in project vertical");
+  // }
 
   const result = await db.projectMember.upsert({
     where: {
@@ -193,29 +206,31 @@ export async function getUserProjects() {
 
   const isAdmin = session.user.role === "admin";
 
+  console.log(`getUserProjects: Session user ID: ${session.user.id}, Role: ${session.user.role}`);
+
   // Cached query - 30 second cache per user
   const getCachedProjects = unstable_cache(
     async (userId: string, isAdmin: boolean) => {
-      return db.project.findMany({
+      const results = await db.project.findMany({
         where: isAdmin
           ? {}
           : {
-              // Get projects where user is a member through vertical OR project membership
-              OR: [
-                {
-                  vertical: {
-                    users: {
-                      some: { userId },
-                    },
-                  },
-                },
-                {
-                  members: {
+            // Get projects where user is a member through vertical OR project membership
+            OR: [
+              {
+                vertical: {
+                  users: {
                     some: { userId },
                   },
                 },
-              ],
-            },
+              },
+              {
+                members: {
+                  some: { userId },
+                },
+              },
+            ],
+          },
         include: {
           vertical: {
             select: { id: true, name: true },
@@ -226,10 +241,12 @@ export async function getUserProjects() {
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log(`getUserProjects: Found ${results.length} projects for user ${userId}`);
+      return results;
     },
-    [`user-projects-${session.user.id}`],
+    [`user-projects-${session.user.id}-v2`], // Force cache bust with v2
     {
-      revalidate: 30, // Cache for 30 seconds
+      revalidate: 10, // Lower cache time to 10s for debugging
       tags: [`user-${session.user.id}-projects`, "projects"],
     }
   );
@@ -283,10 +300,23 @@ export async function getProjectMemberData(projectId: string) {
   // Extract current member user IDs for filtering
   const currentMemberIds = new Set(project.members.map((m) => m.userId));
 
-  // Filter available users (in vertical but not in project)
-  const availableUsers = project.vertical.users
-    .filter((vu) => !currentMemberIds.has(vu.userId))
-    .map((vu) => vu.user);
+  // Filter available users (not in project)
+  // OPTIMIZATION: Fetch all users if admin, or keep vertical restriction? 
+  // For now, fetching all users to fix the "can't see new user" issue.
+  const allUsers = await db.user.findMany({
+    where: {
+      NOT: {
+        id: { in: Array.from(currentMemberIds) }
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    }
+  });
+
+  const availableUsers = allUsers;
 
   // Extract current members
   const currentMembers = project.members.map((m) => m.user);

@@ -12,25 +12,37 @@ export async function createSprint(data: {
   endDate: Date;
 }) {
   const session = await auth();
+  console.log(`[createSprint] Session role: ${session?.user?.role}, User ID: ${session?.user?.id}`);
+
   if (!session?.user || session.user.role !== "admin") {
+    console.error("[createSprint] Unauthorized access attempt");
     throw new Error("Unauthorized");
   }
 
+  console.log(`[createSprint] Creating sprint for project ${data.projectId}:`, data);
+
   if (data.endDate < data.startDate) {
+    console.error("[createSprint] Date validation failed");
     throw new Error("End date must be after start date");
   }
 
-  const sprint = await db.sprint.create({
-    data: {
-      ...data,
-      createdBy: session.user.id,
-    },
-  });
+  try {
+    const sprint = await db.sprint.create({
+      data: {
+        ...data,
+        createdBy: session.user.id,
+      },
+    });
+    console.log(`[createSprint] Success! Sprint ID: ${sprint.id}`);
 
-  // Revalidate caches
-  revalidatePath(`/projects/${data.projectId}`);
+    // Revalidate caches
+    revalidatePath(`/projects/${data.projectId}`);
 
-  return sprint;
+    return sprint;
+  } catch (error) {
+    console.error("[createSprint] Database error:", error);
+    throw error;
+  }
 }
 
 export async function activateSprint(sprintId: string) {

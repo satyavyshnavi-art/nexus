@@ -130,9 +130,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.role = user.role as UserRole;
+        // If coming from GitHub, the user.id might be the Provider ID, not our DB UUID.
+        // We MUST fetch the real DB ID to ensure session coherence.
+        if (account?.provider === "github" || account?.provider === "google") {
+          const dbUser = await db.user.findUnique({
+            where: { email: user.email! }
+          });
+
+          if (dbUser) {
+            token.sub = dbUser.id; // Override with DB UUID
+            token.role = dbUser.role;
+            token.designation = dbUser.designation;
+          }
+        } else {
+          // Credentials provider returns correct shape
+          token.role = user.role as UserRole;
+          token.designation = user.designation;
+        }
       }
       return token;
     },
@@ -141,6 +157,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.sub!;
         session.user.role = token.role as UserRole;
+        session.user.designation = token.designation as string | null;
       }
       return session;
     },

@@ -102,8 +102,8 @@ export function TeamMemberCard({
   const displayName = member.name || "Unnamed User";
 
   return (
-    <Card className="transition-all duration-200 hover:shadow-lg hover:border-primary/30 group">
-      <CardContent className="p-6">
+    <Card className="h-full flex flex-col transition-all duration-200 hover:shadow-lg hover:border-primary/30 group">
+      <CardContent className="flex-1 flex flex-col p-6">
         {/* Header Section */}
         <div className="flex items-start gap-4 mb-6">
           <Avatar
@@ -114,7 +114,10 @@ export function TeamMemberCard({
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-bold text-xl group-hover:text-primary transition-colors">
+              <h3
+                className="font-bold text-xl group-hover:text-primary transition-colors truncate"
+                title={displayName}
+              >
                 {displayName}
               </h3>
               <Badge
@@ -129,53 +132,53 @@ export function TeamMemberCard({
               </Badge>
             </div>
             {member.designation && (
-              <p className="text-sm font-medium text-muted-foreground mb-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2 truncate" title={member.designation}>
                 {member.designation}
               </p>
             )}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{member.email}</span>
+              <span className="truncate" title={member.email}>{member.email}</span>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-purple-50 border border-purple-100 rounded-lg p-3">
+          <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-purple-100 rounded-md flex items-center justify-center">
-                <Briefcase className="h-4 w-4 text-purple-600" />
+              <div className="h-8 w-8 bg-primary/10 rounded-md flex items-center justify-center shrink-0">
+                <Briefcase className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-2xl font-bold">{member.stats.projects}</span>
+              <span className="text-2xl font-bold truncate">{member.stats.projects}</span>
             </div>
-            <p className="text-xs font-medium text-muted-foreground">Projects</p>
+            <p className="text-xs font-medium text-muted-foreground truncate">Projects</p>
           </div>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+          <div className="bg-accent border border-accent/50 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-blue-100 rounded-md flex items-center justify-center">
-                <Clock className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 bg-accent rounded-md flex items-center justify-center shrink-0">
+                <Clock className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-2xl font-bold">{member.stats.activeTasks}</span>
+              <span className="text-2xl font-bold truncate">{member.stats.activeTasks}</span>
             </div>
-            <p className="text-xs font-medium text-muted-foreground">Active</p>
+            <p className="text-xs font-medium text-muted-foreground truncate">Active</p>
           </div>
 
-          <div className="bg-green-50 border border-green-100 rounded-lg p-3">
+          <div className="bg-secondary border border-secondary/50 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-green-100 rounded-md flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <div className="h-8 w-8 bg-secondary rounded-md flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-2xl font-bold">{member.stats.completedTasks}</span>
+              <span className="text-2xl font-bold truncate">{member.stats.completedTasks}</span>
             </div>
-            <p className="text-xs font-medium text-muted-foreground">Completed</p>
+            <p className="text-xs font-medium text-muted-foreground truncate">Completed</p>
           </div>
         </div>
 
         {/* Member Since */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pb-4 border-b">
-          <Calendar className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pb-4 border-b mt-auto">
+          <Calendar className="h-4 w-4 shrink-0" />
           <span>Joined {memberSince}</span>
         </div>
 
@@ -201,7 +204,7 @@ export function TeamMemberCard({
 
         {/* Expanded Details */}
         {isExpanded && (
-          <div className="space-y-4 pt-4 mt-4 border-t">
+          <div className="space-y-4 pt-4 mt-4 border-t animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Projects */}
             {member.projectMemberships.length > 0 && (
               <div>
@@ -215,7 +218,7 @@ export function TeamMemberCard({
                       key={pm.project.id}
                       className="text-sm p-3 rounded-lg bg-muted/50 border border-muted hover:bg-muted transition-colors"
                     >
-                      <span className="font-medium">{pm.project.name}</span>
+                      <span className="font-medium truncate block">{pm.project.name}</span>
                     </div>
                   ))}
                 </div>
@@ -240,7 +243,7 @@ export function TeamMemberCard({
                         <Badge variant="outline" className="text-xs">
                           {task.status}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
                           {task.sprint.project.name}
                         </span>
                       </div>
@@ -263,8 +266,8 @@ export function TeamMemberCard({
                   {isUpdating
                     ? "Updating..."
                     : member.role === UserRole.admin
-                    ? "Change to Member"
-                    : "Make Admin"}
+                      ? "Change to Member"
+                      : "Make Admin"}
                 </Button>
               </div>
             )}

@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
 import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp } from "lucide-react";
-import { GitHubSyncButton } from "@/components/tasks/github-sync-button";
 
 interface TaskCardProps {
   task: Task & {
@@ -19,70 +18,41 @@ interface TaskCardProps {
   };
   onClick?: () => void;
   projectLinked?: boolean;
+  userHasGitHub?: boolean;
+  isDragging?: boolean;
+  isOverlay?: boolean;
 }
 
 const priorityConfig = {
-  low: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
-  },
-  medium: {
-    bg: "bg-yellow-50",
-    text: "text-yellow-700",
-    border: "border-yellow-200",
-  },
-  high: {
-    bg: "bg-orange-50",
-    text: "text-orange-700",
-    border: "border-orange-200",
-  },
-  critical: {
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-  },
+  low: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  medium: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+  high: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" },
+  critical: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
 };
 
 const typeConfig = {
-  story: {
-    icon: BookOpen,
-    label: "Story",
-    color: "text-purple-600",
-  },
-  task: {
-    icon: CheckSquare,
-    label: "Task",
-    color: "text-blue-600",
-  },
-  bug: {
-    icon: Bug,
-    label: "Bug",
-    color: "text-red-600",
-  },
+  story: { icon: BookOpen, label: "Story", color: "text-purple-600" },
+  task: { icon: CheckSquare, label: "Task", color: "text-blue-600" },
+  bug: { icon: Bug, label: "Bug", color: "text-red-600" },
 };
 
-export const TaskCard = memo(function TaskCard({ task, onClick, projectLinked = false }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging,
+    isDragging: isSelfDragging,
   } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || "transform 200ms cubic-bezier(0.25, 0.8, 0.25, 1)",
-    opacity: isDragging ? 0.4 : 1,
-    cursor: isDragging ? "grabbing" : "grab",
-    willChange: isDragging ? "transform" : "auto",
+    transition: transition || undefined,
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    // Only trigger onClick if not dragging
-    if (!isDragging && onClick) {
+    if (!isSelfDragging && onClick) {
       e.stopPropagation();
       onClick();
     }
@@ -91,15 +61,24 @@ export const TaskCard = memo(function TaskCard({ task, onClick, projectLinked = 
   const TypeIcon = typeConfig[task.type].icon;
   const priorityStyle = priorityConfig[task.priority];
 
+  // The actual card being dragged becomes a placeholder
+  if (isSelfDragging) {
+    return (
+      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div className="task-card p-4 mb-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 h-[100px]" />
+      </div>
+    );
+  }
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={isOverlay ? undefined : setNodeRef} style={isOverlay ? undefined : style} {...(isOverlay ? {} : attributes)} {...(isOverlay ? {} : listeners)}>
       <Card
         className={`
-          p-4 mb-3
+          task-card p-4 mb-3
           cursor-grab active:cursor-grabbing
-          transition-all duration-200 ease-out
-          hover:shadow-lg hover:-translate-y-1 hover:border-primary/50
-          ${isDragging ? "shadow-2xl ring-2 ring-primary/30 scale-[1.02]" : "shadow-sm"}
+          transition-all duration-150 ease-out
+          ${!isDragging ? "hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/40" : ""}
+          ${isOverlay ? "shadow-2xl ring-2 ring-primary/40 border-primary/30" : "shadow-sm"}
         `}
         onClick={handleClick}
       >
@@ -159,19 +138,6 @@ export const TaskCard = memo(function TaskCard({ task, onClick, projectLinked = 
               </div>
             )}
           </div>
-
-          {/* GitHub Sync Button */}
-          {projectLinked && (
-            <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
-              <GitHubSyncButton
-                taskId={task.id}
-                isSynced={!!task.githubIssueNumber}
-                issueNumber={task.githubIssueNumber}
-                issueUrl={task.githubUrl}
-                projectLinked={projectLinked}
-              />
-            </div>
-          )}
         </div>
       </Card>
     </div>

@@ -47,7 +47,26 @@
       "Bash(open:*)",
       "Bash(node -e \"\nconst { GoogleGenerativeAI } = require\\(''@google/generative-ai''\\);\nconst genAI = new GoogleGenerativeAI\\(''AIzaSyBPwM9gZzDaCDwJyjSTwIknSpjdVs2aqxo''\\);\nconst model = genAI.getGenerativeModel\\({ model: ''gemini-1.5-pro'' }\\);\n\nasync function test\\(\\) {\n  try {\n    const result = await model.generateContent\\(''Say hello''\\);\n    const response = await result.response;\n    console.log\\(''✅ Gemini API working:'', response.text\\(\\).substring\\(0, 50\\)\\);\n  } catch \\(error\\) {\n    console.error\\(''❌ Gemini API error:'', error.message\\);\n  }\n}\ntest\\(\\);\n\")",
       "Bash(node -e \"\nconst { GoogleGenerativeAI } = require\\(''@google/generative-ai''\\);\nconst genAI = new GoogleGenerativeAI\\(''AIzaSyBPwM9gZzDaCDwJyjSTwIknSpjdVs2aqxo''\\);\n\nasync function listModels\\(\\) {\n  try {\n    const models = await genAI.listModels\\(\\);\n    console.log\\(''Available models:''\\);\n    for await \\(const model of models\\) {\n      if \\(model.supportedGenerationMethods.includes\\(''generateContent''\\)\\) {\n        console.log\\(''✓'', model.name\\);\n      }\n    }\n  } catch \\(error\\) {\n    console.error\\(''Error:'', error.message\\);\n  }\n}\nlistModels\\(\\);\n\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(npx prisma:*)",
+      "Bash(lsof:*)",
+      "Bash(npm outdated:*)",
+      "WebSearch",
+      "Bash(openssl rand:*)",
+      "Bash(/tmp/github-setup-instructions.txt << 'EOF'\nAfter creating your GitHub OAuth App:\n\n1. Copy the Client ID from GitHub\n2. Open /Users/vyshanvi/nexus/.env\n3. Update these lines:\n   GITHUB_CLIENT_ID=\"your_client_id_here\"\n   GITHUB_CLIENT_SECRET=\"your_client_secret_here\"\n\nThe GITHUB_TOKEN_ENCRYPTION_KEY is already set!\n\n4. Save the file and restart your dev server\n\nIMPORTANT: To link repositories, you need to:\n1. Log out of Nexus\n2. Log back in using \"Sign in with GitHub\" button\n3. This will store your GitHub access token\n4. Then you can link repositories to projects\nEOF)",
+      "Bash(ps:*)",
+      "Bash(else echo \".env file not found\")",
+      "Bash(fi)",
+      "Bash(else echo \"\")",
+      "Bash(find:*)",
+      "Bash(npm run db:status:*)",
+      "Bash(/tmp/update-env-instructions.txt << 'EOF'\nOpen your .env file and replace the placeholder values:\n\nBefore:\nGITHUB_CLIENT_ID=\"xx\"  # or similar placeholder\nGITHUB_CLIENT_SECRET=\"xx\"  # or similar placeholder\n\nAfter:\nGITHUB_CLIENT_ID=\"Iv1.abc123...\" # Paste your real Client ID \\(starts with Iv1.\\)\nGITHUB_CLIENT_SECRET=\"ghp_...\" # Paste your real Client Secret \\(starts with ghp_\\)\n\nSave the file!\nEOF)",
+      "Bash(/tmp/vercel-env-setup.txt << 'EOF'\nGo to Vercel Dashboard:\nhttps://vercel.com/satyavyshnavi-art/nexus/settings/environment-variables\n\nAdd these environment variables \\(click \"Add New\"\\):\n\n1. DATABASE_URL\n   Value: \\(your Neon PostgreSQL URL\\)\n   \n2. NEXTAUTH_SECRET\n   Value: lRPORcshF6b1slo+h7a1q3vmGjg5Ouo8LpQClStG15o=\n   \n3. NEXTAUTH_URL\n   Value: https://nexus-rosy-nine.vercel.app\n   \n4. GOOGLE_AI_API_KEY\n   Value: AIzaSyBPwM9gZzDaCDwJyjSTwIknSpjdVs2aqxo\n   \n5. GITHUB_CLIENT_ID\n   Value: [paste PRODUCTION Client ID from Step 1]\n   \n6. GITHUB_CLIENT_SECRET\n   Value: [paste PRODUCTION Client Secret from Step 1]\n   \n7. GITHUB_TOKEN_ENCRYPTION_KEY\n   Value: 2hbGUGfQz8/2PMetxcO9IYtQIPmZiZIUidGIRIV8J+s=\n\nFor each variable:\n- Select Environment: Production, Preview, Development \\(all 3\\)\n- Click \"Save\"\n\nEOF)",
+      "Bash(/tmp/analysis.md << 'EOF'\n# GitHub Sign-in Issue Analysis\n\n## The Problem Flow\n\n1. **User clicks \"Sign in with GitHub\"** on `/login` page\n2. `handleGitHubSignIn\\(\\)` is called \\(line 38-47 in login/page.tsx\\)\n3. `loginWithGitHub\\(\\)` server action is invoked \\(line 42\\)\n4. This calls `await signIn\\(\"github\", { redirectTo: \"/\" }\\)`\n5. NextAuth initiates OAuth flow\n\n## What Happens on Error:\n\nWhen `signIn\\(\\)` is called in NextAuth:\n- If successful: User is redirected to `redirectTo: \"/\"` \\(the dashboard\\)\n- If error in callback: NextAuth redirects back to `pages.signIn: \"/login\"` with `?error=<error_code>` parameter\n- **CRITICAL**: The page is fully reloaded by the browser during redirect\n\n## The Bug:\n\nThe login page component has NO logic to:\n1. Check the URL search params for the `error` parameter that NextAuth appends\n2. Extract and display the error message\n3. Show it to the user\n\nWhen a GitHub OAuth error occurs:\n- NextAuth redirects: `/login?error=OAuthSignin` \\(or other error codes\\)\n- The page reloads but `handleGitHubSignIn\\(\\)` catch block never fires\n- The login page renders but never reads the `?error=` param\n- User sees \"Sign in failed\" message because... [need to investigate this]\n- BUT the user is actually logged in because the signIn callback succeeded!\n\n## Possible Scenario:\n\n1. GitHub auth succeeds, but a secondary issue occurs \\(like DB error\\)\n2. The `signIn` callback catches it and throws\n3. NextAuth redirects with error\n4. User still gets logged in somehow \\(session already created?\\)\n5. Page shows error but user is already authenticated\n\nEOF)",
+      "Bash(git checkout:*)",
+      "Bash(psql:*)",
+      "Bash(npm run fix:github-users:*)"
     ]
   }
 }

@@ -24,19 +24,14 @@ export async function ensureUserHasVertical(userId: string): Promise<void> {
   // User has no verticals - find or create default vertical
   const defaultVerticalName = "Default";
 
-  let defaultVertical = await db.vertical.findUnique({
+  // Use upsert to handle race conditions safely
+  const defaultVertical = await db.vertical.upsert({
     where: { name: defaultVerticalName },
+    update: {},
+    create: {
+      name: defaultVerticalName,
+    },
   });
-
-  // Create default vertical if it doesn't exist
-  if (!defaultVertical) {
-    defaultVertical = await db.vertical.create({
-      data: {
-        id: randomUUID(),
-        name: defaultVerticalName,
-      },
-    });
-  }
 
   // Assign user to default vertical
   await db.verticalUser.create({

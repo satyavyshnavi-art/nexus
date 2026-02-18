@@ -4,48 +4,58 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 270 15% 10%;
+    --background: 270 20% 98%;
+    --foreground: 270 10% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 270 15% 10%;
+    --card-foreground: 270 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 270 15% 10%;
-    --primary: 270 75% 60%;
+    --popover-foreground: 270 10% 10%;
+    --primary: 270 60% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 270 30% 97%;
-    --secondary-foreground: 270 15% 20%;
+    --secondary: 270 30% 94%;
+    --secondary-foreground: 270 20% 20%;
     --muted: 270 20% 95%;
     --muted-foreground: 270 10% 45%;
-    --accent: 270 50% 95%;
-    --accent-foreground: 270 75% 40%;
+    --accent: 270 40% 92%;
+    --accent-foreground: 270 20% 15%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 0 0% 98%;
     --border: 270 20% 90%;
     --input: 270 20% 90%;
-    --ring: 270 75% 60%;
+    --ring: 270 60% 60%;
     --radius: 0.5rem;
+    --chart-1: 270 60% 60%;
+    --chart-2: 290 50% 55%;
+    --chart-3: 250 50% 55%;
+    --chart-4: 310 45% 60%;
+    --chart-5: 230 55% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 270 15% 8%;
+    --foreground: 270 10% 95%;
+    --card: 270 15% 10%;
+    --card-foreground: 270 10% 95%;
+    --popover: 270 15% 10%;
+    --popover-foreground: 270 10% 95%;
+    --primary: 270 60% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 270 15% 16%;
+    --secondary-foreground: 270 10% 95%;
+    --muted: 270 15% 16%;
+    --muted-foreground: 270 10% 60%;
+    --accent: 270 20% 18%;
+    --accent-foreground: 270 10% 95%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 270 15% 18%;
+    --input: 270 15% 18%;
+    --ring: 270 60% 65%;
+    --chart-1: 270 60% 65%;
+    --chart-2: 290 50% 60%;
+    --chart-3: 250 50% 60%;
+    --chart-4: 310 45% 65%;
+    --chart-5: 230 55% 65%;
   }
 }
 
@@ -53,6 +63,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -69,6 +80,7 @@
       opacity: 0;
       transform: translateY(10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -87,18 +99,24 @@
 
   /* Kanban drag animations */
   @keyframes dragPulse {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
     }
+
     50% {
       box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
     }
   }
 
   @keyframes dropZoneGlow {
-    0%, 100% {
+
+    0%,
+    100% {
       background-color: hsl(var(--primary) / 0.05);
     }
+
     50% {
       background-color: hsl(var(--primary) / 0.15);
     }
@@ -109,6 +127,7 @@
       opacity: 0;
       transform: translateX(-10px) scale(0.95);
     }
+
     to {
       opacity: 1;
       transform: translateX(0) scale(1);
@@ -132,5 +151,35 @@
     transform: translateZ(0);
     backface-visibility: hidden;
     perspective: 1000px;
+  }
+
+  /* Premium UI Utilities */
+  .glass {
+    @apply bg-white/70 dark:bg-black/70 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  .text-balance-header {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
   }
 }

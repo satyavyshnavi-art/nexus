@@ -1,0 +1,27 @@
+
+> nexus@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.production.local, .env.local, .env.production, .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 1881.9ms
+  Running TypeScript ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/11) ...
+⨯ useSearchParams() should be wrapped in a suspense boundary at page "/login". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at Q (/Users/vyshanvi/nexus/.next/server/chunks/ssr/node_modules_next_920e7746._.js:2:2111)
+    at o (/Users/vyshanvi/nexus/.next/server/chunks/ssr/node_modules_next_920e7746._.js:4:5284)
+    at l (/Users/vyshanvi/nexus/.next/server/chunks/ssr/[root-of-the-server]__62704d5f._.js:1:8021)
+    at an (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:84360)
+    at ai (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86179)
+    at al (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:107953)
+    at as (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:105368)
+    at aa (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:84712)
+    at ai (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86228)
+    at ai (/Users/vyshanvi/nexus/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:104708)
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /(auth)/login/page: /login, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

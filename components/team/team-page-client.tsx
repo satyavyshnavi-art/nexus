@@ -4,13 +4,6 @@ import { useState, useMemo } from "react";
 import { TeamStats } from "@/components/team/team-stats";
 import { TeamMemberCard } from "@/components/team/team-member-card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Search, Users } from "lucide-react";
 
 interface TeamPageClientProps {
@@ -58,6 +51,8 @@ interface TeamPageClientProps {
   isAdmin: boolean;
 }
 
+type FilterType = "all" | "active" | "admin" | "member";
+
 export function TeamPageClient({
   members,
   stats,
@@ -65,17 +60,15 @@ export function TeamPageClient({
   isAdmin,
 }: TeamPageClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "member">(
-    "all"
-  );
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
 
   // Filter and search members
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
-      // Role filter
-      if (roleFilter !== "all" && member.role !== roleFilter) {
-        return false;
-      }
+      // Stat card filter
+      if (activeFilter === "admin" && member.role !== "admin") return false;
+      if (activeFilter === "member" && member.role !== "member") return false;
+      if (activeFilter === "active" && member.stats.activeTasks === 0) return false;
 
       // Search filter
       if (searchQuery) {
@@ -93,7 +86,11 @@ export function TeamPageClient({
 
       return true;
     });
-  }, [members, searchQuery, roleFilter]);
+  }, [members, searchQuery, activeFilter]);
+
+  const filterLabel = activeFilter === "all" ? "all" :
+    activeFilter === "active" ? "active" :
+      activeFilter === "admin" ? "admin" : "member";
 
   return (
     <div className="space-y-6 pb-8">
@@ -107,10 +104,14 @@ export function TeamPageClient({
         </div>
       </div>
 
-      {/* Statistics */}
-      <TeamStats stats={stats} />
+      {/* Statistics — clickable to filter */}
+      <TeamStats
+        stats={stats}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
 
-      {/* Filters */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -122,21 +123,6 @@ export function TeamPageClient({
             className="pl-10"
           />
         </div>
-        <Select
-          value={roleFilter}
-          onValueChange={(value) =>
-            setRoleFilter(value as "all" | "admin" | "member")
-          }
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admins</SelectItem>
-            <SelectItem value="member">Members</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Results Count */}
@@ -144,6 +130,11 @@ export function TeamPageClient({
         <Users className="h-4 w-4" />
         <span>
           Showing {filteredMembers.length} of {members.length} team members
+          {activeFilter !== "all" && (
+            <span className="ml-1 text-primary font-medium">
+              ({filterLabel})
+            </span>
+          )}
         </span>
       </div>
 
@@ -168,7 +159,9 @@ export function TeamPageClient({
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">
             {searchQuery
               ? "Try adjusting your search filters to find team members"
-              : "No team members to display"}
+              : activeFilter !== "all"
+                ? `No ${filterLabel} members found. Click the card again to clear the filter.`
+                : "No team members to display"}
           </p>
         </div>
       )}

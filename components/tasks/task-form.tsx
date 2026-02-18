@@ -11,6 +11,7 @@ import { AssigneeSelector } from "./assignee-selector";
 import { createTask } from "@/server/actions/tasks";
 import { toast } from "@/lib/hooks/use-toast";
 import { TaskType, TaskPriority } from "@prisma/client";
+import { GitBranch } from "lucide-react";
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface TaskFormProps {
   projectMembers: User[];
   onSuccess?: () => void;
   onCancel?: () => void;
+  projectLinked?: boolean;
 }
 
 export function TaskForm({
@@ -30,8 +32,10 @@ export function TaskForm({
   projectMembers,
   onSuccess,
   onCancel,
+  projectLinked = false,
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pushToGitHub, setPushToGitHub] = useState(projectLinked);
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -69,11 +73,12 @@ export function TaskForm({
         type: formData.type,
         storyPoints: formData.storyPoints || undefined,
         assigneeId: formData.assigneeId,
+        pushToGitHub,
       });
 
       toast({
         title: "Ticket created",
-        description: `${formData.title} has been created successfully`,
+        description: `${formData.title} has been created successfully${pushToGitHub ? " and pushed to GitHub" : ""}`,
         variant: "success",
       });
 
@@ -179,6 +184,27 @@ export function TaskForm({
           />
         </div>
       </div>
+
+      {/* Push to GitHub checkbox */}
+      {projectLinked && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+          <input
+            type="checkbox"
+            id="pushToGitHub"
+            checked={pushToGitHub}
+            onChange={(e) => setPushToGitHub(e.target.checked)}
+            disabled={isSubmitting}
+            className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+          />
+          <label
+            htmlFor="pushToGitHub"
+            className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none"
+          >
+            <GitBranch className="h-4 w-4 text-muted-foreground" />
+            Push to GitHub
+          </label>
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-4">
         {onCancel && (

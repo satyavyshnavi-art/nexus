@@ -14,14 +14,22 @@ interface Vertical {
   name: string;
 }
 
+interface User {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 interface ProjectModalProps {
   verticals: Vertical[];
+  users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function ProjectModal({
   verticals,
+  users,
   open,
   onOpenChange,
 }: ProjectModalProps) {
@@ -41,6 +49,7 @@ export function ProjectModal({
         </DialogHeader>
         <ProjectForm
           verticals={verticals}
+          users={users}
           onSuccess={handleSuccess}
           onCancel={() => onOpenChange(false)}
         />

@@ -27,6 +27,10 @@ interface UserProfileMenuProps {
   avatarSrc?: string | null;
   /** Custom className for the trigger button */
   className?: string;
+  /** User ID */
+  id?: string;
+  /** User designation */
+  designation?: string | null;
 }
 
 export function UserProfileMenu({
@@ -35,6 +39,7 @@ export function UserProfileMenu({
   role = 'member',
   avatarSrc,
   className,
+  ...otherProps
 }: UserProfileMenuProps) {
   const handleSignOut = async () => {
     await signOut({ redirectTo: '/login' });
@@ -75,6 +80,14 @@ export function UserProfileMenu({
           <p className="text-xs text-muted-foreground leading-none mt-1">
             {email}
           </p>
+          <p className="text-[10px] text-muted-foreground leading-none mt-1 font-mono">
+            ID: {otherProps.id?.slice(0, 8)}...
+          </p>
+          {otherProps.designation && (
+            <p className="text-xs text-primary font-medium mt-1">
+              {otherProps.designation}
+            </p>
+          )}
           <div className="mt-2">
             <Badge variant={roleColor} className="text-xs">
               {roleLabel}

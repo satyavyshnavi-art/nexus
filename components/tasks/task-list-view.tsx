@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailModal } from "./task-detail-modal";
 import { CheckSquare, Bug, BookOpen, TrendingUp } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface TaskListViewProps {
   tasks: (Task & {
@@ -62,6 +63,19 @@ export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
     return Math.round((completed / task.childTasks.length) * 100);
   };
 
+  // ... inside component ...
+
+  if (tasks.length === 0) {
+    return (
+      <EmptyState
+        icon={CheckSquare}
+        title="No Tasks Found"
+        description="There are no tasks in this view. Create a new task to get started."
+        className="bg-white/50 backdrop-blur-sm"
+      />
+    );
+  }
+
   return (
     <>
       <div className="space-y-2">
@@ -95,7 +109,7 @@ export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
                         variant="outline"
                         className={`text-xs ${statusColors[task.status]}`}
                       >
-                        {task.status === "progress" ? "In Progress" : task.status}
+                        {task.status === "progress" ? "In Progress" : task.status === "todo" ? "To Do" : task.status === "review" ? "Review" : "Done"}
                       </Badge>
                     </div>
 
