@@ -11,13 +11,15 @@ import { ProfileCard } from "@/components/profile-card";
 export default async function TeamMemberPage({
     params,
 }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
     const session = await auth();
     if (!session?.user) redirect("/login");
 
+    const { id } = await params;
+
     const user = await db.user.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
             verticals: {
                 include: {
