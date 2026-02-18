@@ -141,7 +141,18 @@ export async function getActiveSprint(projectId: string) {
     }
   );
 
-  return getCachedActiveSprint(projectId);
+  const sprint = await getCachedActiveSprint(projectId);
+
+  if (!sprint) return null;
+
+  // Serialize BigInt fields for client components
+  return {
+    ...sprint,
+    tasks: sprint.tasks.map((task) => ({
+      ...task,
+      githubIssueId: task.githubIssueId?.toString() || null,
+    })),
+  };
 }
 
 export async function getProjectSprints(projectId: string) {

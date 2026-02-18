@@ -315,6 +315,7 @@ export async function getTaskWithProgress(taskId: string) {
 
   return {
     ...task,
+    githubIssueId: task.githubIssueId?.toString() || null,
     progress: {
       percentage: progress,
       hasSubtasks: task.childTasks.length > 0,

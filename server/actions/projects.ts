@@ -110,7 +110,11 @@ export async function getProject(projectId: string) {
     throw new Error("Unauthorized");
   }
 
-  return project;
+  // Serialize BigInt for client components (just in case it's passed)
+  return {
+    ...project,
+    githubRepoId: project.githubRepoId?.toString() || null,
+  };
 }
 
 export async function addMemberToProject(projectId: string, userId: string) {
