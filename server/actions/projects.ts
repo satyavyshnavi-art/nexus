@@ -47,7 +47,7 @@ export async function getProjectsByVertical(verticalId: string) {
 
   const isAdmin = session.user.role === "admin";
 
-  return db.project.findMany({
+  const projects = await db.project.findMany({
     where: {
       verticalId,
       ...(isAdmin
@@ -64,6 +64,11 @@ export async function getProjectsByVertical(verticalId: string) {
       },
     },
   });
+
+  return projects.map(project => ({
+    ...project,
+    githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
+  }));
 }
 
 export async function getProject(projectId: string) {
@@ -181,7 +186,7 @@ export async function getAllProjects() {
   // Cached query - 30 second cache for admin projects list
   const getCachedAllProjects = unstable_cache(
     async () => {
-      return db.project.findMany({
+      const projects = await db.project.findMany({
         include: {
           vertical: {
             select: { id: true, name: true },
@@ -192,6 +197,11 @@ export async function getAllProjects() {
         },
         orderBy: { createdAt: "desc" },
       });
+
+      return projects.map(project => ({
+        ...project,
+        githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
+      }));
     },
     ["all-projects"],
     {
@@ -219,21 +229,10 @@ export async function getUserProjects() {
         where: isAdmin
           ? {}
           : {
-            // Get projects where user is a member through vertical OR project membership
-            OR: [
-              {
-                vertical: {
-                  users: {
-                    some: { userId },
-                  },
-                },
-              },
-              {
-                members: {
-                  some: { userId },
-                },
-              },
-            ],
+            // Get projects where user is explicitly a member
+            members: {
+              some: { userId },
+            },
           },
         include: {
           vertical: {
@@ -246,7 +245,10 @@ export async function getUserProjects() {
         orderBy: { createdAt: "desc" },
       });
       console.log(`getUserProjects: Found ${results.length} projects for user ${userId}`);
-      return results;
+      return results.map(project => ({
+        ...project,
+        githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
+      }));
     },
     [`user-projects-${session.user.id}-v2`], // Force cache bust with v2
     {
