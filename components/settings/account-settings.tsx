@@ -94,6 +94,8 @@ export function AccountSettings({ userId, initialName, initialEmail }: AccountSe
         </CardContent>
       </Card>
 
+      <GitHubConnection userId={userId} />
+
       <Card>
         <CardHeader>
           <CardTitle>Change Password</CardTitle>
@@ -136,5 +138,72 @@ export function AccountSettings({ userId, initialName, initialEmail }: AccountSe
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+import { useEffect } from "react";
+import { getGitHubConnectionStatus } from "@/server/actions/settings";
+import { loginWithGitHub } from "@/server/actions/auth";
+import { Github } from "lucide-react";
+
+function GitHubConnection({ userId }: { userId: string }) {
+  const [status, setStatus] = useState<{ connected: boolean; username?: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getGitHubConnectionStatus()
+      .then((data) => {
+        setStatus(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to get GitHub status:", err);
+        setLoading(false);
+      });
+  }, [userId]);
+
+  const handleConnect = async () => {
+    try {
+      await loginWithGitHub();
+    } catch (error) {
+      toast.error("Failed to redirect to GitHub");
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>GitHub Connection</CardTitle>
+        <CardDescription>Connect your GitHub account to link repositories and sync issues</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="bg-background p-2 rounded-full border">
+              <Github className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="font-medium">GitHub Account</p>
+              <p className="text-sm text-muted-foreground">
+                {status?.connected
+                  ? `Connected as ${status.username}`
+                  : "Not connected"}
+              </p>
+            </div>
+          </div>
+          {status?.connected ? (
+            <Button variant="outline" disabled>
+              Connected
+            </Button>
+          ) : (
+            <Button onClick={handleConnect} variant="default">
+              Connect GitHub
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

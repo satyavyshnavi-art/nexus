@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
-import { verifyRepositoryAccess, createOctokitForUser } from "@/lib/github/client";
+import { verifyRepositoryAccess, createOctokitForUser, getRepository } from "@/lib/github/client";
 import { z } from "zod";
 
 const linkRepoSchema = z.object({
@@ -45,27 +45,15 @@ export async function linkGitHubRepository(
     }
   }
 
-  // 3. Verify user has GitHub account
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { githubAccessToken: true },
-  });
+  // NOTE: We do NOT strictly check for user.githubAccessToken here anymore.
+  // The 'verifyRepositoryAccess' and 'getRepository' functions now handle the fallback
+  // to a system token if the user doesn't have one connected.
 
-  if (!user?.githubAccessToken) {
-    throw new Error(
-      "Please connect your GitHub account first. Sign out and sign in with GitHub."
-    );
-  }
-
-  // 4. Verify repository exists and user has access
+  // 4. Verify repository exists and user (or system) has access
   await verifyRepositoryAccess(session.user.id, data.repoOwner, data.repoName);
 
-  // 5. Get repository ID from GitHub
-  const octokit = await createOctokitForUser(session.user.id);
-  const { data: repo } = await octokit.rest.repos.get({
-    owner: data.repoOwner,
-    repo: data.repoName,
-  });
+  // 5. Get repository ID from GitHub (uses fallback if needed)
+  const repo = await getRepository(session.user.id, data.repoOwner, data.repoName);
 
   // 6. Verify project exists
   const project = await db.project.findUnique({

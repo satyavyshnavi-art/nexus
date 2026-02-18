@@ -266,3 +266,26 @@ export async function updatePassword(
   revalidatePath("/settings");
   return { success: true };
 }
+
+/**
+ * Check if user is connected to GitHub
+ */
+export async function getGitHubConnectionStatus() {
+  const session = await auth();
+  if (!session?.user) {
+    return { connected: false };
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      githubAccessToken: true,
+      githubUsername: true,
+    },
+  });
+
+  return {
+    connected: !!user?.githubAccessToken,
+    username: user?.githubUsername,
+  };
+}

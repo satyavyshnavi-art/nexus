@@ -31,30 +31,48 @@ export async function createOctokitForUser(userId: string): Promise<Octokit> {
 }
 
 /**
+ * Creates an authenticated Octokit instance using the system token (if available)
+ */
+export function createSystemOctokit(): Octokit | null {
+  if (!process.env.GITHUB_ACCESS_TOKEN) {
+    return null;
+  }
+  return new Octokit({
+    auth: process.env.GITHUB_ACCESS_TOKEN,
+    userAgent: 'Nexus-PM/1.0.0',
+  });
+}
+
+/**
  * Verifies that a user has access to a specific repository
- * @param userId - The user's ID
- * @param owner - Repository owner username
- * @param repo - Repository name
- * @returns true if user has access
- * @throws Error if repository not found or access denied
+ * Fallbacks to system token for public repositories check if user token is missing
  */
 export async function verifyRepositoryAccess(
   userId: string,
   owner: string,
   repo: string
 ): Promise<boolean> {
+  let octokit: Octokit;
+
   try {
-    const octokit = await createOctokitForUser(userId);
+    octokit = await createOctokitForUser(userId);
+  } catch (error) {
+    // If user has no token, try system fallback
+    const systemOctokit = createSystemOctokit();
+    if (!systemOctokit) {
+      throw error; // Re-throw "please sign in" if no system token either
+    }
+    octokit = systemOctokit;
+  }
 
-    // Try to get the repository - this will fail if no access
+  try {
     await octokit.rest.repos.get({ owner, repo });
-
     return true;
   } catch (error: any) {
     if (error.status === 404) {
       throw new Error(
-        `Repository "${owner}/${repo}" not found or you don't have access to it. ` +
-        "Make sure the repository exists and you have the necessary permissions."
+        `Repository "${owner}/${repo}" not found or access denied. ` +
+        "Make sure the repository exists and is public (or you have access)."
       );
     }
     if (error.status === 403) {
@@ -67,14 +85,19 @@ export async function verifyRepositoryAccess(
 }
 
 /**
- * Gets repository information
- * @param userId - The user's ID
- * @param owner - Repository owner username
- * @param repo - Repository name
- * @returns Repository data
+ * Gets repository information with fallback
  */
 export async function getRepository(userId: string, owner: string, repo: string) {
-  const octokit = await createOctokitForUser(userId);
+  let octokit: Octokit;
+
+  try {
+    octokit = await createOctokitForUser(userId);
+  } catch (error) {
+    const systemOctokit = createSystemOctokit();
+    if (!systemOctokit) throw error;
+    octokit = systemOctokit;
+  }
+
   const { data } = await octokit.rest.repos.get({ owner, repo });
   return data;
 }
