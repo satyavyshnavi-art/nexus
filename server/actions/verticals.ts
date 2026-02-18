@@ -206,3 +206,41 @@ export async function deleteVertical(verticalId: string) {
   const { revalidatePath } = await import("next/cache");
   revalidatePath("/admin/verticals");
 }
+
+export async function getVerticalsWithProjects() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  return db.vertical.findMany({
+    include: {
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
+          _count: {
+            select: {
+              members: true,
+              sprints: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      _count: {
+        select: {
+          users: true,
+          projects: true
+        },
+      },
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+}
