@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProjectGrid } from "@/components/dashboard/project-grid";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -128,51 +129,7 @@ export default async function DashboardPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Your Projects</h2>
         </div>
 
-        {projects.length === 0 ? (
-          <EmptyState
-            icon={Folders}
-            title="No Projects Yet"
-            description="You haven't been assigned to any projects yet. Contact your admin to get started."
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="group"
-              >
-                <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-white/50 backdrop-blur-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <CardTitle className="group-hover:text-primary transition-colors line-clamp-1 text-lg">
-                        {project.name}
-                      </CardTitle>
-                      <Badge variant="secondary" className="shrink-0 text-xs font-normal bg-purple-50 text-purple-700 border-purple-100">
-                        Active
-                      </Badge>
-                    </div>
-                    <CardDescription className="line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed">
-                      {project.description || "No description provided for this project."}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm pt-2">
-                      <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
-                        <Timer className="h-3.5 w-3.5" />
-                        <span>{project._count.sprints} {project._count.sprints === 1 ? 'sprint' : 'sprints'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{project._count.members} {project._count.members === 1 ? 'member' : 'members'}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+        <ProjectGrid projects={projects} isAdmin={session?.user.role === "admin"} />
       </div>
     </div>
   );
