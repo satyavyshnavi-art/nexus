@@ -18,10 +18,7 @@ async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
       id: taskId,
       sprint: {
         project: {
-          OR: [
-            { members: { some: { userId } } },
-            { vertical: { users: { some: { userId } } } },
-          ],
+          members: { some: { userId } },
         },
       },
     },

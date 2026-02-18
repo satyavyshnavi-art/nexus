@@ -37,10 +37,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
 
     if (!isAdmin) {
         projectWhere.AND.push({
-            OR: [
-                { members: { some: { userId } } },
-                { vertical: { users: { some: { userId } } } },
-            ],
+            members: { some: { userId } },
         });
     }
 
@@ -66,10 +63,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         taskWhere.AND.push({
             sprint: {
                 project: {
-                    OR: [
-                        { members: { some: { userId } } },
-                        { vertical: { users: { some: { userId } } } },
-                    ],
+                    members: { some: { userId } },
                 },
             },
         });
