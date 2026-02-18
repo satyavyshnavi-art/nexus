@@ -64,7 +64,7 @@ components/profile/
 3. View the latest deployment
 
 ### **Expected Deployment URL:**
-- **Production:** https://nexus-[your-domain].vercel.app
+- **Production:** https://nexus-rosy-nine.vercel.app/
 - Or check your Vercel dashboard for the exact URL
 
 ---

@@ -5,13 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TaskTypeSelector } from "./task-type-selector";
 import { PrioritySelector } from "./priority-selector";
 import { AssigneeSelector } from "./assignee-selector";
 import { createTask } from "@/server/actions/tasks";
 import { toast } from "@/lib/hooks/use-toast";
 import { TaskType, TaskPriority } from "@prisma/client";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Loader2 } from "lucide-react";
 
 interface User {
   id: string;
@@ -105,108 +106,117 @@ export function TaskForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="title" required>
-          Title
-        </Label>
-        <Input
-          id="title"
-          value={formData.title}
-          onChange={(e) =>
-            setFormData({ ...formData, title: e.target.value })
-          }
-          placeholder="Add authentication to login page"
-          disabled={isSubmitting}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          placeholder="Detailed description of the ticket..."
-          disabled={isSubmitting}
-          rows={4}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Type</Label>
-        <TaskTypeSelector
-          value={formData.type}
-          onChange={(type) => setFormData({ ...formData, type })}
-          disabled={isSubmitting}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="priority">Priority</Label>
-        <PrioritySelector
-          value={formData.priority}
-          onChange={(priority) => setFormData({ ...formData, priority })}
-          disabled={isSubmitting}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="storyPoints">Story Points</Label>
+          <Label htmlFor="title" className="text-sm font-semibold">
+            Title <span className="text-destructive">*</span>
+          </Label>
           <Input
-            id="storyPoints"
-            type="number"
-            min="0"
-            max="20"
-            value={formData.storyPoints}
+            id="title"
+            value={formData.title}
             onChange={(e) =>
-              setFormData({
-                ...formData,
-                storyPoints: parseInt(e.target.value) || 0,
-              })
+              setFormData({ ...formData, title: e.target.value })
             }
+            placeholder="e.g., Implement authentication middleware"
             disabled={isSubmitting}
+            className="text-base"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assignee">Assignee</Label>
-          <AssigneeSelector
-            members={projectMembers}
-            value={formData.assigneeId}
-            onChange={(assigneeId) =>
-              setFormData({ ...formData, assigneeId })
+          <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
             }
+            placeholder="Detailed description of the ticket..."
             disabled={isSubmitting}
+            rows={4}
+            className="resize-none"
           />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Type</Label>
+            <TaskTypeSelector
+              value={formData.type}
+              onChange={(type) => setFormData({ ...formData, type })}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Priority</Label>
+            <PrioritySelector
+              value={formData.priority}
+              onChange={(priority) => setFormData({ ...formData, priority })}
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="storyPoints" className="text-sm font-medium">Story Points</Label>
+            <Input
+              id="storyPoints"
+              type="number"
+              min="0"
+              max="20"
+              value={formData.storyPoints}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  storyPoints: parseInt(e.target.value) || 0,
+                })
+              }
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assignee" className="text-sm font-medium">Assignee</Label>
+            <AssigneeSelector
+              members={projectMembers}
+              value={formData.assigneeId}
+              onChange={(assigneeId) =>
+                setFormData({ ...formData, assigneeId })
+              }
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
+        {/* Push to GitHub checkbox */}
+        {projectLinked && (
+          <div className="flex items-center space-x-2 rounded-lg border p-4 bg-muted/40">
+            <Checkbox
+              id="pushToGitHub"
+              checked={pushToGitHub}
+              onCheckedChange={(checked) => setPushToGitHub(!!checked)}
+              disabled={isSubmitting}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <label
+                htmlFor="pushToGitHub"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+              >
+                <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                Sync to GitHub
+              </label>
+              <p className="text-xs text-muted-foreground">
+                This ticket will be created as a GitHub issue.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Push to GitHub checkbox */}
-      {projectLinked && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-          <input
-            type="checkbox"
-            id="pushToGitHub"
-            checked={pushToGitHub}
-            onChange={(e) => setPushToGitHub(e.target.checked)}
-            disabled={isSubmitting}
-            className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
-          />
-          <label
-            htmlFor="pushToGitHub"
-            className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none"
-          >
-            <GitBranch className="h-4 w-4 text-muted-foreground" />
-            Push to GitHub
-          </label>
-        </div>
-      )}
-
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-3 pt-6 border-t font-medium">
         {onCancel && (
           <Button
             type="button"
@@ -218,6 +228,7 @@ export function TaskForm({
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSubmitting ? "Creating..." : "Create Ticket"}
         </Button>
       </div>

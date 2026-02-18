@@ -15,6 +15,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createProject } from "@/server/actions/projects";
 import { toast } from "@/lib/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from "lucide-react";
 
 interface Vertical {
   id: string;
@@ -99,10 +101,10 @@ export function ProjectForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-sm font-medium">
-          Project Name <span className="text-red-500">*</span>
+        <Label htmlFor="name" className="text-sm font-semibold">
+          Project Name <span className="text-destructive">*</span>
         </Label>
         <Input
           id="name"
@@ -110,7 +112,7 @@ export function ProjectForm({
           onChange={(e) =>
             setFormData({ ...formData, name: e.target.value })
           }
-          placeholder="Mobile App Development"
+          placeholder="e.g., Mobile App Development"
           disabled={isSubmitting}
         />
       </div>
@@ -123,15 +125,16 @@ export function ProjectForm({
           onChange={(e) =>
             setFormData({ ...formData, description: e.target.value })
           }
-          placeholder="Project description..."
+          placeholder="Brief description of the project goals..."
           disabled={isSubmitting}
           rows={3}
+          className="resize-none"
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="vertical" className="text-sm font-medium">
-          Vertical <span className="text-red-500">*</span>
+          Vertical <span className="text-destructive">*</span>
         </Label>
         <Select
           value={formData.verticalId}
@@ -140,7 +143,7 @@ export function ProjectForm({
           }
           disabled={isSubmitting}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a vertical" />
           </SelectTrigger>
           <SelectContent>
@@ -153,38 +156,55 @@ export function ProjectForm({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">
-          Assign Members ({selectedUserIds.length} selected)
-        </Label>
-        <div className="border rounded-md max-h-48 overflow-y-auto p-2 space-y-2">
-          {users.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-2 text-center">No users found.</p>
-          ) : (
-            users.map((user) => (
-              <div key={user.id} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded">
-                <Checkbox
-                  id={`user-${user.id}`}
-                  checked={selectedUserIds.includes(user.id)}
-                  onCheckedChange={() => toggleUser(user.id)}
-                  disabled={isSubmitting}
-                />
-                <Label
-                  htmlFor={`user-${user.id}`}
-                  className="text-sm font-normal cursor-pointer flex-1"
-                >
-                  {user.name || user.email} <span className="text-muted-foreground ml-1 text-xs">({user.email})</span>
-                </Label>
-              </div>
-            ))
-          )}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium">Assign Members</Label>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {selectedUserIds.length} selected
+          </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Selected members will be able to see and access this project immediately.
+
+        <div className="border rounded-lg overflow-hidden">
+          <ScrollArea className="h-48 w-full bg-muted/20">
+            <div className="p-3 space-y-1">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No other users found.
+                </p>
+              ) : (
+                users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => !isSubmitting && toggleUser(user.id)}
+                  >
+                    <Checkbox
+                      id={`user-${user.id}`}
+                      checked={selectedUserIds.includes(user.id)}
+                      onCheckedChange={() => toggleUser(user.id)}
+                      disabled={isSubmitting}
+                    />
+                    <div className="flex flex-col flex-1 leading-none gap-1">
+                      <Label
+                        htmlFor={`user-${user.id}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {user.name || "Unknown User"}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Selected members will be able to view and contribute to this project.
         </p>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-3 pt-4 border-t">
         {onCancel && (
           <Button
             type="button"
@@ -196,6 +216,7 @@ export function ProjectForm({
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSubmitting ? "Creating..." : "Create Project"}
         </Button>
       </div>
