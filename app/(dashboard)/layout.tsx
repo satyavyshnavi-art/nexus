@@ -5,6 +5,7 @@ import { MobileMenu } from "@/components/layout/mobile-menu";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import Link from "next/link";
 import { CommandMenu } from "@/components/command-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default async function DashboardLayout({
           </div>
           <div className="flex items-center gap-4">
             <CommandMenu isAdmin={session.user.role === "admin"} />
+            <ThemeToggle />
             <UserProfileMenu
               name={session.user.name}
               email={session.user.email || ""}

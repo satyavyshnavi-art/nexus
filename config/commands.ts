@@ -66,16 +66,16 @@ export const staticCommands: CommandGroup[] = [
             },
         ],
     },
-    {
-        group: "Settings",
-        items: [
-            {
-                id: "github-settings",
-                title: "GitHub Integration",
-                url: "/settings/github", // Assuming we might have this or similar
-                icon: Settings,
-                shortcut: "G",
-            },
-        ],
-    },
+    // {
+    //     group: "Settings",
+    //     items: [
+    //         {
+    //             id: "github-settings",
+    //             title: "GitHub Integration",
+    //             url: "/settings/github", // Assuming we might have this or similar
+    //             icon: Settings,
+    //             shortcut: "G",
+    //         },
+    //     ],
+    // },
 ];
