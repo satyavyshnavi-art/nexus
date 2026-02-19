@@ -147,16 +147,16 @@ async function handleIssueAction(taskId: string, action: string) {
             return;
         }
 
-        // GitHub issue reopened → Move task back to "progress"
+        // GitHub issue reopened → Move task back to "todo"
         await db.task.update({
             where: { id: taskId },
             data: {
-                status: "progress",
+                status: "todo",
                 githubStatus: "open",
                 githubSyncedAt: new Date(),
             },
         });
-        console.log(`[GitHub Webhook] ✅ Issue reopened in GitHub → Task ${taskId} moved to In Progress`);
+        console.log(`[GitHub Webhook] ✅ Issue reopened in GitHub → Task ${taskId} moved to To Do`);
 
         // Revalidate project page
         if (task.sprint?.projectId) {
