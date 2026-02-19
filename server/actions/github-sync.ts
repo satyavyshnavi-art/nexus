@@ -84,11 +84,9 @@ export async function syncTaskToGitHub(taskId: string) {
         syncUserId = project.githubLinkedBy;
       } else if (!process.env.GITHUB_ACCESS_TOKEN) {
         // No fallback available
-        console.log(`[Auto-Sync] Skipping sync for task ${taskId}: no GitHub token available`);
         return { success: false, skipped: true };
       }
     } else if (!process.env.GITHUB_ACCESS_TOKEN) {
-      console.log(`[Auto-Sync] Skipping sync for task ${taskId}: no GitHub token available`);
       return { success: false, skipped: true };
     }
   }

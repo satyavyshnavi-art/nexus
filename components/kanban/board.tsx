@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   DragEndEvent,
@@ -16,9 +17,13 @@ import {
 import { Task, TaskStatus, User } from "@prisma/client";
 import { Column } from "./column";
 import { TaskCard } from "./task-card";
-import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
 import { updateTaskStatus } from "@/server/actions/tasks";
 import { toast } from "sonner";
+
+const TaskDetailModal = dynamic(
+  () => import("@/components/tasks/task-detail-modal").then((mod) => mod.TaskDetailModal),
+  { ssr: false }
+);
 
 type TaskWithRelations = Omit<Task, 'githubIssueId'> & {
   githubIssueId: string | null;
@@ -145,18 +150,21 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
         onDragCancel={handleDragCancel}
       >
         <div className={`flex gap-4 overflow-x-auto pb-4 ${isDragging ? "is-dragging" : ""}`}>
-          {columns.map((column) => (
-            <Column
-              key={column.status}
-              status={column.status}
-              title={column.title}
-              tasks={tasks.filter((t) => t.status === column.status)}
-              onTaskClick={handleTaskClick}
-              projectLinked={projectLinked}
-              userHasGitHub={userHasGitHub}
-              isDragging={isDragging}
-            />
-          ))}
+          {columns.map((column) => {
+            const columnTasks = tasks.filter((t) => t.status === column.status);
+            return (
+              <Column
+                key={column.status}
+                status={column.status}
+                title={column.title}
+                tasks={columnTasks}
+                onTaskClick={handleTaskClick}
+                projectLinked={projectLinked}
+                userHasGitHub={userHasGitHub}
+                isDragging={isDragging}
+              />
+            );
+          })}
         </div>
 
         {/* Drag overlay — the floating ghost card */}

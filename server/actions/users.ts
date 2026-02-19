@@ -11,17 +11,28 @@ export async function getAllUsers() {
     throw new Error("Unauthorized");
   }
 
-  return db.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      designation: true,
-      role: true,
-      createdAt: true,
+  const getCachedAllUsers = unstable_cache(
+    async () => {
+      return db.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          designation: true,
+          role: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
     },
-    orderBy: { createdAt: "desc" },
-  });
+    ["all-users"],
+    {
+      revalidate: 30,
+      tags: ["all-users"],
+    }
+  );
+
+  return getCachedAllUsers();
 }
 
 export async function updateUserRole(userId: string, role: UserRole) {
@@ -35,7 +46,8 @@ export async function updateUserRole(userId: string, role: UserRole) {
     data: { role },
   });
 
-  revalidatePath("/");
+  revalidatePath("/admin/verticals");
+  revalidatePath("/team");
   return updated;
 }
 
@@ -151,8 +163,8 @@ export async function updateUserProfile(
   });
 
   // Revalidate caches
-  revalidatePath("/");
   revalidatePath(`/profile/${userId}`);
+  revalidatePath("/team");
 
   return updated;
 }

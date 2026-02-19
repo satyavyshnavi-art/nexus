@@ -37,80 +37,58 @@ export async function getTeamMembers() {
                 },
               },
             },
-          },
-          orderBy: { createdAt: "desc" },
-        });
-
-        // Fetch task stats separately for each user (more efficient than loading all tasks)
-        const usersWithStats = await Promise.all(
-          users.map(async (user) => {
-            try {
-              // Get all tasks for stats calculation
-              const allTasks = await db.task.findMany({
-                where: { assigneeId: user.id },
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  priority: true,
-                  type: true,
-                  sprint: {
-                    select: {
-                      name: true,
-                      status: true,
-                      project: {
-                        select: {
-                          name: true,
-                        },
+            assignedTasks: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                priority: true,
+                type: true,
+                sprint: {
+                  select: {
+                    name: true,
+                    status: true,
+                    project: {
+                      select: {
+                        name: true,
                       },
                     },
                   },
                 },
-                orderBy: { createdAt: "desc" },
-              });
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            _count: {
+              select: {
+                assignedTasks: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
 
-              const activeTasks = allTasks.filter(
-                (task) => task.status !== TaskStatus.done
-              ).length;
-              const completedTasks = allTasks.filter(
-                (task) => task.status === TaskStatus.done
-              ).length;
+        return users.map((user) => {
+          const activeTasks = user.assignedTasks.filter(
+            (task) => task.status !== TaskStatus.done
+          ).length;
+          const completedTasks = user.assignedTasks.filter(
+            (task) => task.status === TaskStatus.done
+          ).length;
 
-              return {
-                ...user,
-                name: user.name ?? "Unknown User",
-                designation: user.designation ?? "Team Member",
-                avatar: user.avatar ?? null,
-                assignedTasks: allTasks.slice(0, 5), // Only keep 5 recent tasks in the result
-                stats: {
-                  projects: user.projectMemberships?.length ?? 0,
-                  activeTasks: activeTasks ?? 0,
-                  completedTasks: completedTasks ?? 0,
-                },
-              };
-            } catch (error) {
-              console.error(`Error fetching tasks for user ${user.id}:`, error);
-              // Return user with default stats if task fetch fails
-              return {
-                ...user,
-                name: user.name ?? "Unknown User",
-                designation: user.designation ?? "Team Member",
-                avatar: user.avatar ?? null,
-                assignedTasks: [],
-                stats: {
-                  projects: user.projectMemberships?.length ?? 0,
-                  activeTasks: 0,
-                  completedTasks: 0,
-                },
-              };
-            }
-          })
-        );
-
-        return usersWithStats;
+          return {
+            ...user,
+            name: user.name ?? "Unknown User",
+            designation: user.designation ?? "Team Member",
+            avatar: user.avatar ?? null,
+            assignedTasks: user.assignedTasks.slice(0, 5),
+            stats: {
+              projects: user.projectMemberships?.length ?? 0,
+              activeTasks,
+              completedTasks,
+            },
+          };
+        });
       } catch (error) {
-        console.error("Error fetching team members:", error);
-        // Return empty array if entire query fails
         return [];
       }
     },
@@ -213,7 +191,6 @@ export async function updateUserRole(userId: string, role: UserRole) {
 
   // Revalidate team page cache
   revalidatePath("/team");
-  revalidatePath("/");
 
   return updated;
 }

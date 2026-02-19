@@ -34,8 +34,8 @@ export async function createProject(data: {
   });
 
   // Revalidate caches
-  revalidatePath("/");
   revalidatePath("/admin/projects");
+  revalidatePath("/admin/verticals");
   revalidatePath(`/admin/verticals/${data.verticalId}`);
 
   return { id: project.id, name: project.name };
@@ -149,10 +149,9 @@ export async function addMemberToProject(projectId: string, userId: string) {
     update: {},
   });
 
-  // Revalidate caches - the affected user's dashboard should update immediately
-  revalidatePath("/"); // Dashboard for all users
-  revalidatePath(`/projects/${projectId}`); // Project page
-  revalidatePath("/admin/projects"); // Admin projects list
+  // Revalidate caches
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/admin/projects");
 
   return result;
 }
@@ -169,10 +168,9 @@ export async function removeMemberFromProject(projectId: string, userId: string)
     },
   });
 
-  // Revalidate caches - the affected user's dashboard should update immediately
-  revalidatePath("/"); // Dashboard for all users
-  revalidatePath(`/projects/${projectId}`); // Project page
-  revalidatePath("/admin/projects"); // Admin projects list
+  // Revalidate caches
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/admin/projects");
 
   return result;
 }
@@ -220,7 +218,6 @@ export async function getUserProjects() {
 
   const isAdmin = session.user.role === "admin";
 
-  console.log(`getUserProjects: Session user ID: ${session.user.id}, Role: ${session.user.role}`);
 
   // Cached query - 30 second cache per user
   const getCachedProjects = unstable_cache(
@@ -244,7 +241,6 @@ export async function getUserProjects() {
         },
         orderBy: { createdAt: "desc" },
       });
-      console.log(`getUserProjects: Found ${results.length} projects for user ${userId}`);
       return results.map(project => ({
         ...project,
         githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
@@ -351,7 +347,7 @@ export async function deleteProject(projectId: string) {
     });
 
     revalidatePath("/admin/projects");
-    revalidatePath("/");
+    revalidatePath("/admin/verticals");
     return project;
   } catch (error) {
     console.error("Failed to delete project:", error);

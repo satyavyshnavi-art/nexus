@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
+import { unstable_cache } from "next/cache";
 
 export async function createVertical(name: string) {
   const session = await auth();
@@ -213,34 +214,45 @@ export async function getVerticalsWithProjects() {
     throw new Error("Unauthorized");
   }
 
-  return db.vertical.findMany({
-    include: {
-      projects: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          createdAt: true,
+  const getCachedVerticalsWithProjects = unstable_cache(
+    async () => {
+      return db.vertical.findMany({
+        include: {
+          projects: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              createdAt: true,
+              _count: {
+                select: {
+                  members: true,
+                  sprints: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
           _count: {
             select: {
-              members: true,
-              sprints: true,
+              users: true,
+              projects: true,
             },
           },
         },
         orderBy: {
-          createdAt: "desc",
+          name: "asc",
         },
-      },
-      _count: {
-        select: {
-          users: true,
-          projects: true
-        },
-      },
+      });
     },
-    orderBy: {
-      name: "asc",
-    },
-  });
+    ["verticals-with-projects"],
+    {
+      revalidate: 30,
+      tags: ["verticals-with-projects"],
+    }
+  );
+
+  return getCachedVerticalsWithProjects();
 }

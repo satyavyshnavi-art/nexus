@@ -64,18 +64,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "github") {
         try {
-          // Check if user exists by GitHub ID
-          let dbUser = await db.user.findUnique({
-            where: { githubId: account.providerAccountId },
-          });
-
-          // If not found, check by email for account linking
-          if (!dbUser && user.email) {
-            dbUser = await db.user.findUnique({
-              where: { email: user.email },
-            });
-          }
-
           // Encrypt tokens before storage
           const encryptedAccessToken = account.access_token
             ? encrypt(account.access_token)
@@ -84,43 +72,70 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             ? encrypt(account.refresh_token)
             : null;
 
-          if (dbUser) {
-            // Update existing user with GitHub data
-            await db.user.update({
-              where: { id: dbUser.id },
-              data: {
-                githubId: account.providerAccountId,
-                githubUsername: (profile as any)?.login as string,
-                githubAccessToken: encryptedAccessToken,
-                githubRefreshToken: encryptedRefreshToken,
-                githubTokenExpiry: account.expires_at
-                  ? new Date(account.expires_at * 1000)
-                  : null,
-              },
+          const githubData = {
+            githubId: account.providerAccountId,
+            githubUsername: (profile as any)?.login as string,
+            githubAccessToken: encryptedAccessToken,
+            githubRefreshToken: encryptedRefreshToken,
+            githubTokenExpiry: account.expires_at
+              ? new Date(account.expires_at * 1000)
+              : null,
+          };
+
+          // Use a single transaction to find/create user and ensure vertical
+          await db.$transaction(async (tx) => {
+            // Check by GitHub ID first, then by email
+            let dbUser = await tx.user.findUnique({
+              where: { githubId: account.providerAccountId },
             });
 
-            // Ensure existing user has a vertical assignment
-            await ensureUserHasVertical(dbUser.id);
-          } else {
-            // Create new user from GitHub
-            const newUser = await db.user.create({
-              data: {
-                email: user.email!,
-                name: user.name || (profile as any)?.login || "GitHub User",
-                githubId: account.providerAccountId,
-                githubUsername: (profile as any)?.login as string,
-                githubAccessToken: encryptedAccessToken,
-                githubRefreshToken: encryptedRefreshToken,
-                githubTokenExpiry: account.expires_at
-                  ? new Date(account.expires_at * 1000)
-                  : null,
-                role: "member", // Default role
-              },
-            });
+            if (!dbUser && user.email) {
+              dbUser = await tx.user.findUnique({
+                where: { email: user.email },
+              });
+            }
 
-            // Automatically assign new GitHub user to a vertical
-            await ensureUserHasVertical(newUser.id);
-          }
+            if (dbUser) {
+              await tx.user.update({
+                where: { id: dbUser.id },
+                data: githubData,
+              });
+
+              // Ensure vertical assignment within transaction
+              const existingMembership = await tx.verticalUser.findFirst({
+                where: { userId: dbUser.id },
+              });
+              if (!existingMembership) {
+                const defaultVertical = await tx.vertical.upsert({
+                  where: { name: "Default" },
+                  update: {},
+                  create: { name: "Default" },
+                });
+                await tx.verticalUser.create({
+                  data: { verticalId: defaultVertical.id, userId: dbUser.id },
+                });
+              }
+            } else {
+              const newUser = await tx.user.create({
+                data: {
+                  email: user.email!,
+                  name: user.name || (profile as any)?.login || "GitHub User",
+                  ...githubData,
+                  role: "member",
+                },
+              });
+
+              // Assign to default vertical within transaction
+              const defaultVertical = await tx.vertical.upsert({
+                where: { name: "Default" },
+                update: {},
+                create: { name: "Default" },
+              });
+              await tx.verticalUser.create({
+                data: { verticalId: defaultVertical.id, userId: newUser.id },
+              });
+            }
+          });
         } catch (error) {
           console.error("GitHub sign-in error:", error);
           return false;
