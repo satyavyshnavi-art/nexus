@@ -19,6 +19,7 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
     <nav className="flex items-center gap-4">
       <Link
         href="/"
+        prefetch={true}
         className="text-sm font-medium hover:text-primary transition-colors"
       >
         Dashboard
@@ -26,6 +27,7 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
 
       <Link
         href="/team"
+        prefetch={true}
         className="text-sm font-medium hover:text-primary transition-colors"
       >
         Team
@@ -41,17 +43,17 @@ export function NavMenu({ isAdmin }: NavMenuProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem asChild>
-              <Link href="/admin/verticals" className="cursor-pointer">
+              <Link href="/admin/verticals" prefetch={true} className="cursor-pointer">
                 Manage Verticals
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/admin/projects" className="cursor-pointer">
+              <Link href="/admin/projects" prefetch={true} className="cursor-pointer">
                 Manage Projects
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/admin/users" className="cursor-pointer">
+              <Link href="/admin/users" prefetch={true} className="cursor-pointer">
                 Manage Users
               </Link>
             </DropdownMenuItem>
