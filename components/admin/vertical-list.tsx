@@ -77,8 +77,8 @@ export function VerticalList({ verticals, allUsers }: VerticalListProps) {
                       <span className="text-sm font-semibold">{vertical._count.users}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
-                    <ArrowRight className="h-4 w-4 text-blue-600" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <ArrowRight className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground">Projects</span>
                       <span className="text-sm font-semibold">{vertical._count.projects}</span>

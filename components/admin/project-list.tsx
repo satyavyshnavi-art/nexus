@@ -162,15 +162,15 @@ export function ProjectList({ projects }: ProjectListProps) {
                   {project.vertical.name}
                 </p>
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
-                    <Users className="h-4 w-4 text-blue-600" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground">Members</span>
                       <span className="text-sm font-semibold">{project._count.members}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg border border-purple-100">
-                    <Timer className="h-4 w-4 text-purple-600" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <Timer className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground">Sprints</span>
                       <span className="text-sm font-semibold">{project._count.sprints}</span>
