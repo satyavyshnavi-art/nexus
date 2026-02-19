@@ -131,6 +131,8 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     data: {
       status: newStatus,
       githubStatus,
+      // Set sync timestamp now so webhook loop prevention works
+      githubSyncedAt: new Date(),
     },
     include: {
       sprint: {
@@ -139,10 +141,12 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     },
   });
 
-  // Trigger GitHub Sync asynchronously (will reopen/close issue as needed)
-  syncTaskToGitHub(taskId).catch(err => {
-    console.error(`[Auto-Sync] Failed to sync updated task status ${taskId}:`, err);
-  });
+  // Only sync to GitHub if the task is linked to a GitHub issue
+  if (updatedTask.githubIssueNumber) {
+    syncTaskToGitHub(taskId).catch(err => {
+      console.error(`[Auto-Sync] Failed to sync task ${taskId} to GitHub:`, err);
+    });
+  }
 
   // Revalidate the project page to reflect the updated task status
   revalidatePath(`/projects/${updatedTask.sprint.projectId}`);

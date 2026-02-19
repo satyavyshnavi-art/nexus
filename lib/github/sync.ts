@@ -1,6 +1,20 @@
 import { TaskType, TaskPriority, TaskStatus } from "@prisma/client";
-import { createOctokitForUser } from "./client";
+import { Octokit } from "@octokit/rest";
+import { createOctokitForUser, createSystemOctokit } from "./client";
 import { db } from "@/server/db";
+
+/**
+ * Gets an Octokit instance with fallback: user token → system token
+ */
+async function getOctokitWithFallback(userId: string): Promise<Octokit> {
+  try {
+    return await createOctokitForUser(userId);
+  } catch {
+    const systemOctokit = createSystemOctokit();
+    if (systemOctokit) return systemOctokit;
+    throw new Error("No GitHub token available. Connect GitHub or set GITHUB_ACCESS_TOKEN.");
+  }
+}
 
 /**
  * Maps Nexus task properties to GitHub issue labels
@@ -183,7 +197,7 @@ export async function updateGitHubIssue(
     throw new Error("Task is not synced to GitHub");
   }
 
-  const octokit = await createOctokitForUser(userId);
+  const octokit = await getOctokitWithFallback(userId);
 
   // Build updated issue body
   const bodyParts = [
@@ -266,7 +280,7 @@ export async function closeGitHubIssue(
     throw new Error("Task is not synced to GitHub");
   }
 
-  const octokit = await createOctokitForUser(userId);
+  const octokit = await getOctokitWithFallback(userId);
 
   try {
     await octokit.rest.issues.update({
