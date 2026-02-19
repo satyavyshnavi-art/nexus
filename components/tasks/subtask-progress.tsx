@@ -121,11 +121,10 @@ export function SubtaskProgress({
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span
-                    className={`text-sm truncate transition-all ${
-                      isCompleted
+                    className={`text-sm truncate transition-all ${isCompleted
                         ? 'line-through text-muted-foreground'
                         : 'text-foreground'
-                    }`}
+                      }`}
                   >
                     {subtask.title}
                   </span>
@@ -135,13 +134,12 @@ export function SubtaskProgress({
                 {!isCompleted && (
                   <div className="flex items-center gap-2 mt-1 text-xs">
                     <span
-                      className={`px-2 py-0.5 rounded-full ${
-                        status === 'progress'
-                          ? 'bg-purple-100 text-purple-800'
+                      className={`px-2 py-0.5 rounded-full ${status === 'progress'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
                           : status === 'review'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-gray-100 text-gray-800'
-                      }`}
+                            ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
                     >
                       {status === 'todo'
                         ? 'Todo'

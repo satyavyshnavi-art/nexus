@@ -41,10 +41,10 @@ interface TaskDetailModalProps {
 }
 
 const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
-  { value: "todo", label: "To Do", color: "bg-gray-100 text-gray-700 border-gray-300" },
-  { value: "progress", label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-300" },
-  { value: "review", label: "Review", color: "bg-amber-100 text-amber-700 border-amber-300" },
-  { value: "done", label: "Done", color: "bg-green-100 text-green-700 border-green-300" },
+  { value: "todo", label: "To Do", color: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/50 dark:text-slate-400 dark:border-slate-800" },
+  { value: "progress", label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800" },
+  { value: "review", label: "Review", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800" },
+  { value: "done", label: "Done", color: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800" },
 ];
 
 const priorityOptions: { value: TaskPriority; label: string }[] = [
@@ -269,15 +269,15 @@ export function TaskDetailModal({
 
           {/* Progress Visualization for Parent Tasks */}
           {progress && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+            <div className="bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-purple-900">Subtask Progress</h3>
-                <Badge variant="outline" className="bg-white">
+                <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-300">Subtask Progress</h3>
+                <Badge variant="outline" className="bg-background">
                   {progress.completed} / {progress.total} completed
                 </Badge>
               </div>
               <div className="space-y-2">
-                <div className="w-full bg-purple-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-purple-100 dark:bg-purple-900/30 rounded-full h-3 overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-purple-500 to-purple-600 h-full transition-all duration-500 ease-out flex items-center justify-end pr-1"
                     style={{ width: `${progress.percentage}%` }}
@@ -289,7 +289,7 @@ export function TaskDetailModal({
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-purple-700">
+                <div className="flex items-center gap-4 text-xs text-purple-700 dark:text-purple-400">
                   <div className="flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     <span>{progress.completed} Done</span>
@@ -305,16 +305,16 @@ export function TaskDetailModal({
                 </div>
               </div>
               <div className="space-y-2 mt-4">
-                <h4 className="text-xs font-medium text-purple-900 uppercase">Subtasks</h4>
+                <h4 className="text-xs font-medium text-purple-900 dark:text-purple-300 uppercase">Subtasks</h4>
                 <div className="space-y-1">
                   {task.childTasks?.map((subtask) => (
                     <div
                       key={subtask.id}
-                      className="flex items-center gap-2 p-2 bg-white rounded border border-purple-100 hover:border-purple-300 transition-colors"
+                      className="flex items-center gap-2 p-2 bg-background rounded border border-purple-100 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
                     >
-                      <div className={`flex-shrink-0 ${subtask.status === "done" ? "text-green-600"
-                        : subtask.status === "progress" ? "text-blue-600"
-                          : "text-gray-400"
+                      <div className={`flex-shrink-0 ${subtask.status === "done" ? "text-green-600 dark:text-green-500"
+                        : subtask.status === "progress" ? "text-blue-600 dark:text-blue-500"
+                          : "text-gray-400 dark:text-gray-500"
                         }`}>
                         {subtask.status === "done" ? (
                           <CheckCircle2 className="h-4 w-4" />
@@ -324,7 +324,7 @@ export function TaskDetailModal({
                           <Circle className="h-4 w-4" />
                         )}
                       </div>
-                      <span className={`text-sm flex-1 ${subtask.status === "done" ? "line-through text-gray-500" : "text-gray-900"}`}>
+                      <span className={`text-sm flex-1 ${subtask.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
                         {subtask.title}
                       </span>
                       <Badge variant="outline" className="text-xs capitalize">
