@@ -41,42 +41,52 @@ export async function createTask(data: {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Verify user has project access
+  const isAdmin = session.user.role === "admin";
+
+  // OPTIMIZED: Single query to get sprint and verify access + assignee in one go
   const sprint = await db.sprint.findUnique({
     where: { id: data.sprintId },
-    include: {
+    select: {
+      id: true,
+      projectId: true,
       project: {
-        include: {
-          members: { where: { userId: session.user.id } },
+        select: {
+          id: true,
+          members: {
+            where: {
+              OR: [
+                { userId: session.user.id }, // User access check
+                ...(data.assigneeId ? [{ userId: data.assigneeId }] : []), // Assignee check
+              ],
+            },
+            select: { userId: true },
+          },
         },
       },
     },
   });
 
-  if (
-    !sprint ||
-    (sprint.project.members.length === 0 && session.user.role !== "admin")
-  ) {
+  if (!sprint) {
+    throw new Error("Sprint not found");
+  }
+
+  // Check user has access (admin or is project member)
+  const hasAccess = isAdmin || sprint.project.members.some(m => m.userId === session.user.id);
+  if (!hasAccess) {
     throw new Error("Unauthorized");
   }
 
-  // Verify assignee is project member
-  if (data.assigneeId) {
-    const isMember = await db.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId: sprint.projectId,
-          userId: data.assigneeId,
-        },
-      },
-    });
-    if (!isMember && session.user.role !== "admin") {
+  // Check assignee is project member (if assignee specified)
+  if (data.assigneeId && !isAdmin) {
+    const assigneeIsMember = sprint.project.members.some(m => m.userId === data.assigneeId);
+    if (!assigneeIsMember) {
       throw new Error("Assignee not a project member");
     }
   }
 
   const { pushToGitHub, ...taskData } = data;
 
+  // Create task
   const task = await db.task.create({
     data: {
       ...taskData,
@@ -84,7 +94,10 @@ export async function createTask(data: {
     },
   });
 
-  // Only sync to GitHub if the user opted in
+  // Revalidate cache immediately for instant UI update
+  revalidatePath(`/projects/${sprint.projectId}`);
+
+  // Only sync to GitHub if the user opted in (async, non-blocking)
   if (pushToGitHub) {
     syncTaskToGitHub(task.id).catch(err => {
       console.error(`[Auto-Sync] Failed to sync new task ${task.id}:`, err);
