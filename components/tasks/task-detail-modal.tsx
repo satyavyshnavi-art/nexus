@@ -12,7 +12,7 @@ import { TaskHeader } from "./task-header";
 import { TaskMetadata } from "./task-metadata";
 import { AttachmentsList } from "./attachments-list";
 import { CommentSection } from "./comment-section";
-import { updateTask, updateTaskStatus } from "@/server/actions/tasks";
+import { updateTask, updateTaskStatus, deleteTask } from "@/server/actions/tasks";
 import { toast } from "@/lib/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,7 @@ export function TaskDetailModal({
     if (!confirm("Are you sure you want to delete this ticket?")) return;
     setIsDeleting(true);
     try {
+      await deleteTask(task.id);
       toast({
         title: "Ticket deleted",
         description: "The ticket has been deleted successfully",

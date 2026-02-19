@@ -344,3 +344,39 @@ export async function getTaskWithProgress(taskId: string) {
     },
   };
 }
+
+export async function deleteTask(taskId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const isAdmin = session.user.role === "admin";
+
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    include: {
+      sprint: {
+        select: { projectId: true },
+      },
+      // Check project membership for permission
+      creator: { select: { id: true } },
+    }
+  });
+
+  if (!task) throw new Error("Task not found");
+
+  // Check permissions: Admin, Project Member, or Task Creator?
+  // Usually admins or project members can delete. Let's start with safe permissions.
+  // Re-using logic: must be admin or project member to access.
+  const hasAccess = await canAccessTask(taskId, session.user.id, isAdmin);
+  if (!hasAccess) throw new Error("Unauthorized");
+
+  // If we want stricter delete permissions (e.g. only admins or creators), we can add that here.
+  // For now, let's allow project members to delete tasks as per general kanban rules often seen.
+
+  await db.task.delete({
+    where: { id: taskId },
+  });
+
+  revalidatePath(`/projects/${task.sprint.projectId}`);
+  return { success: true };
+}
