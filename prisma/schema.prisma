@@ -150,7 +150,7 @@ model Task {
   comments          TaskComment[]
   assignee          User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
   creator           User             @relation("TaskCreator", fields: [createdBy], references: [id])
-  parentTask        Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  parentTask        Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: SetNull)
   childTasks        Task[]           @relation("TaskHierarchy")
   sprint            Sprint           @relation(fields: [sprintId], references: [id], onDelete: Cascade)
 
