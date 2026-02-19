@@ -80,7 +80,7 @@ export function ProjectGrid({ projects, isAdmin }: ProjectGridProps) {
                         href={`/projects/${project.id}`}
                         className="group"
                     >
-                        <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-white/50 backdrop-blur-sm relative">
+                        <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-white/50 dark:bg-card/50 backdrop-blur-sm relative">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                     <CardTitle className="group-hover:text-primary transition-colors line-clamp-1 text-lg pr-8">
