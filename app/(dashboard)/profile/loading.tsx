@@ -5,7 +5,7 @@ export default function ProfileLoading() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-card rounded-lg border p-6">
         <div className="flex items-start gap-6">
           <Skeleton className="h-20 w-20 rounded-full" />
           <div className="flex-1 space-y-3">

@@ -25,16 +25,16 @@ interface TaskCardProps {
 }
 
 const priorityConfig = {
-  low: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
-  medium: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
-  high: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" },
-  critical: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
+  low: { bg: "bg-blue-500/10", text: "text-blue-700 dark:text-blue-400", border: "border-blue-500/20" },
+  medium: { bg: "bg-yellow-500/10", text: "text-yellow-700 dark:text-yellow-400", border: "border-yellow-500/20" },
+  high: { bg: "bg-orange-500/10", text: "text-orange-700 dark:text-orange-400", border: "border-orange-500/20" },
+  critical: { bg: "bg-red-500/10", text: "text-red-700 dark:text-red-400", border: "border-red-500/20" },
 };
 
 const typeConfig = {
-  story: { icon: BookOpen, label: "Story", color: "text-purple-600" },
-  task: { icon: CheckSquare, label: "Task", color: "text-blue-600" },
-  bug: { icon: Bug, label: "Bug", color: "text-red-600" },
+  story: { icon: BookOpen, label: "Story", color: "text-purple-600 dark:text-purple-400" },
+  task: { icon: CheckSquare, label: "Task", color: "text-blue-600 dark:text-blue-400" },
+  bug: { icon: Bug, label: "Bug", color: "text-red-600 dark:text-red-400" },
 };
 
 export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {

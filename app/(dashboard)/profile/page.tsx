@@ -45,7 +45,7 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-8">
       {/* Header Section */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-card rounded-lg border p-6">
         <div className="flex items-start gap-6">
           <Avatar
             src={profile.avatar || undefined}
@@ -197,8 +197,8 @@ export default async function ProfilePage() {
                       </Badge>
                     </div>
                   </div>
-                  <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </CardContent>
@@ -215,8 +215,8 @@ export default async function ProfilePage() {
                       {profile.stats.activeProjects}
                     </span>
                   </div>
-                  <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Briefcase className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                    <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </CardContent>

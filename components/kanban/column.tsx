@@ -82,7 +82,7 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
           ${isOver
             ? `ring-2 shadow-xl scale-[1.02] ${config.dropHighlight}`
             : isDragging
-              ? "border-dashed border-gray-300 shadow-sm"
+              ? "border-dashed border-border shadow-sm"
               : "border-transparent shadow-sm"
           }
         `}

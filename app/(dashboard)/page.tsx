@@ -49,9 +49,9 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-purple-50/50 border border-purple-100 rounded-full backdrop-blur-sm">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            <span className="text-sm font-medium text-purple-700">
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full backdrop-blur-sm">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
               {isAdmin ? `${verticals.length} ${verticals.length === 1 ? 'Vertical' : 'Verticals'}` : `${projects.length} Active ${projects.length === 1 ? 'Project' : 'Projects'}`}
             </span>
           </div>
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
             href={isAdmin ? "/admin/projects" : "#projects"}
             className="group"
           >
-            <Card className="border-l-4 border-l-primary/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm">
+            <Card className="border-l-4 border-l-primary/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-card/80 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -82,15 +82,15 @@ export default async function DashboardPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Card className="border-l-4 border-l-blue-500/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm group">
+              <Card className="border-l-4 border-l-blue-500/80 dark:border-l-blue-400/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-card/80 backdrop-blur-sm group">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground group-hover:text-blue-600 transition-colors">Total Sprints</p>
+                      <p className="text-sm font-medium text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Total Sprints</p>
                       <p className="text-3xl font-bold mt-2">{totalSprints}</p>
                     </div>
-                    <div className="h-14 w-14 bg-blue-100 rounded-2xl flex items-center justify-center group-hover:bg-blue-200 transition-all duration-300 group-hover:scale-110">
-                      <Timer className="h-7 w-7 text-blue-600" />
+                    <div className="h-14 w-14 bg-blue-500/10 rounded-2xl flex items-center justify-center group-hover:bg-blue-500/20 transition-all duration-300 group-hover:scale-110">
+                      <Timer className="h-7 w-7 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -117,15 +117,15 @@ export default async function DashboardPage() {
           </DropdownMenu>
 
           <Link href="/team" className="group">
-            <Card className="border-l-4 border-l-green-500/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white/50 backdrop-blur-sm">
+            <Card className="border-l-4 border-l-green-500/80 dark:border-l-green-400/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-card/80 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground group-hover:text-green-600 transition-colors">Team Members</p>
+                    <p className="text-sm font-medium text-muted-foreground group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">Team Members</p>
                     <p className="text-3xl font-bold mt-2">{totalMembers}</p>
                   </div>
-                  <div className="h-14 w-14 bg-green-100 rounded-2xl flex items-center justify-center group-hover:bg-green-200 transition-all duration-300 group-hover:scale-110">
-                    <Users className="h-7 w-7 text-green-600" />
+                  <div className="h-14 w-14 bg-green-500/10 rounded-2xl flex items-center justify-center group-hover:bg-green-500/20 transition-all duration-300 group-hover:scale-110">
+                    <Users className="h-7 w-7 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </CardContent>
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
             <div className="space-y-6">
               {verticals.map((vertical) => (
                 <Card key={vertical.id} className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-primary/5 to-purple-500/5 border-b">
+                  <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">

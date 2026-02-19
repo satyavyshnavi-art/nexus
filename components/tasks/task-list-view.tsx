@@ -23,17 +23,17 @@ interface TaskListViewProps {
 }
 
 const priorityColors = {
-  low: "bg-gray-100 text-gray-800 border-gray-300",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  high: "bg-orange-100 text-orange-800 border-orange-300",
-  critical: "bg-red-100 text-red-800 border-red-300",
+  low: "bg-muted text-muted-foreground border-border",
+  medium: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+  high: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  critical: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
 const statusColors = {
-  todo: "bg-gray-100 text-gray-800",
-  progress: "bg-blue-100 text-blue-800",
-  review: "bg-yellow-100 text-yellow-800",
-  done: "bg-green-100 text-green-800",
+  todo: "bg-muted text-muted-foreground",
+  progress: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  review: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  done: "bg-green-500/10 text-green-700 dark:text-green-400",
 };
 
 const typeIcons = {
@@ -72,7 +72,7 @@ export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
         icon={CheckSquare}
         title="No Tasks Found"
         description="There are no tasks in this view. Create a new task to get started."
-        className="bg-white/50 backdrop-blur-sm"
+        className="bg-card/50 backdrop-blur-sm"
       />
     );
   }
@@ -170,7 +170,7 @@ export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
                           </span>
                         )}
                         {task._count.attachments > 0 && (
-                          <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                          <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded">
                             📎 <span className="font-medium">{task._count.attachments}</span>
                           </span>
                         )}

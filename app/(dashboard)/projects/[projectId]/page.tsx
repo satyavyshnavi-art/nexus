@@ -69,7 +69,7 @@ export default async function ProjectPage({
         </div>
         {isAdmin && (
           <Link href={`/projects/${projectId}/sprints`}>
-            <Button variant="outline" className="glass hover:bg-white/50">
+            <Button variant="outline" className="glass hover:bg-muted/50">
               <Calendar className="h-4 w-4 mr-2" />
               Manage Sprints
             </Button>
@@ -80,7 +80,7 @@ export default async function ProjectPage({
       {/* Statistics Cards */}
       {taskStats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="border-l-4 border-l-primary bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+          <Card className="border-l-4 border-l-primary bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -93,35 +93,35 @@ export default async function ProjectPage({
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-slate-400 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+          <Card className="border-l-4 border-l-slate-400 dark:border-l-slate-500 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">To Do</p>
-                <p className="text-3xl font-bold text-slate-600">{taskStats.todo}</p>
+                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{taskStats.todo}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-blue-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+          <Card className="border-l-4 border-l-blue-500 dark:border-l-blue-400 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">In Progress</p>
-                <p className="text-3xl font-bold text-blue-600">{taskStats.progress}</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{taskStats.progress}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-amber-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+          <Card className="border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Review</p>
-                <p className="text-3xl font-bold text-amber-600">{taskStats.review}</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{taskStats.review}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+          <Card className="border-l-4 border-l-green-500 dark:border-l-green-400 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
             <CardContent className="pt-6">
               <div className="flex flex-col">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Done</p>
-                <p className="text-3xl font-bold text-green-600">{taskStats.done}</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{taskStats.done}</p>
               </div>
             </CardContent>
           </Card>
@@ -130,7 +130,7 @@ export default async function ProjectPage({
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
-        <TabsList className="bg-white/50 backdrop-blur-sm border">
+        <TabsList className="bg-muted/50 backdrop-blur-sm border">
           <TabsTrigger value="board">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Kanban Board
@@ -188,7 +188,7 @@ export default async function ProjectPage({
               description={sprints.length === 0
                 ? "No sprints created yet. Create a sprint to start organizing tickets and tracking progress."
                 : "Select and activate a sprint from your sprint list to begin working on tickets."}
-              className="bg-white/50 backdrop-blur-sm"
+              className="bg-card/50 backdrop-blur-sm"
             />
           )}
           {/* Custom Empty State Action for Link */}
@@ -232,7 +232,7 @@ export default async function ProjectPage({
               icon={ListTodo}
               title="No Tasks Found"
               description="No tasks yet. Create your first task to get started."
-              className="bg-white/50 backdrop-blur-sm"
+              className="bg-card/50 backdrop-blur-sm"
             />
           )}
         </TabsContent>
@@ -329,10 +329,10 @@ export default async function ProjectPage({
                       </div>
                       <span
                         className={`text-xs px-3 py-1 rounded-full font-medium ${sprint.status === "active"
-                          ? "bg-green-100 text-green-800"
+                          ? "bg-green-500/10 text-green-700 dark:text-green-400"
                           : sprint.status === "completed"
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-blue-100 text-blue-800"
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-blue-500/10 text-blue-700 dark:text-blue-400"
                           }`}
                       >
                         {sprint.status}

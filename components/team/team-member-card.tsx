@@ -124,7 +124,7 @@ export function TeamMemberCard({
                 variant={member.role === UserRole.admin ? "default" : "secondary"}
                 className={
                   member.role === UserRole.admin
-                    ? "bg-purple-500 hover:bg-purple-600 shrink-0"
+                    ? "bg-primary hover:bg-primary/90 shrink-0"
                     : "shrink-0"
                 }
               >

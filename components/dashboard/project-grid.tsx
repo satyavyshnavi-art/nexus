@@ -80,14 +80,14 @@ export function ProjectGrid({ projects, isAdmin }: ProjectGridProps) {
                         href={`/projects/${project.id}`}
                         className="group"
                     >
-                        <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-white/50 dark:bg-card/50 backdrop-blur-sm relative">
+                        <Card className="h-full transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 bg-card/80 backdrop-blur-sm relative">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                     <CardTitle className="group-hover:text-primary transition-colors line-clamp-1 text-lg pr-8">
                                         {project.name}
                                     </CardTitle>
                                     <div className="flex gap-2 shrink-0">
-                                        <Badge variant="secondary" className="text-xs font-normal bg-purple-50 text-purple-700 border-purple-100">
+                                        <Badge variant="secondary" className="text-xs font-normal bg-primary/10 text-primary border-primary/20">
                                             Active
                                         </Badge>
                                     </div>
@@ -112,11 +112,11 @@ export function ProjectGrid({ projects, isAdmin }: ProjectGridProps) {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-4 text-sm pt-2">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground bg-muted px-2 py-1 rounded">
                                         <Timer className="h-3.5 w-3.5" />
                                         <span>{project._count.sprints} {project._count.sprints === 1 ? 'sprint' : 'sprints'}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-muted-foreground bg-gray-50 px-2 py-1 rounded">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground bg-muted px-2 py-1 rounded">
                                         <Users className="h-3.5 w-3.5" />
                                         <span>{project._count.members} {project._count.members === 1 ? 'member' : 'members'}</span>
                                     </div>
