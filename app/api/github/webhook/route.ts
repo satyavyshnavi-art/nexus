@@ -99,19 +99,32 @@ async function handleIssueAction(taskId: string, action: string) {
     // Get current task status to prevent webhook loops
     const task = await db.task.findUnique({
         where: { id: taskId },
-        select: { status: true, githubStatus: true, createdBy: true, title: true },
+        select: {
+            status: true,
+            githubStatus: true,
+            githubSyncedAt: true,
+            createdBy: true,
+            title: true,
+            sprint: {
+                select: { projectId: true }
+            }
+        },
     });
 
     if (!task) return;
 
+    // Prevent webhook loops: if the task was just synced in the last 10 seconds, skip
+    const recentlySync = task.githubSyncedAt &&
+        (Date.now() - task.githubSyncedAt.getTime()) < 10000; // 10 seconds
+
     if (action === "closed") {
-        // If task is already "done" or "review" in Nexus, this close came FROM Nexus — skip
-        if ((task.status === "done" || task.status === "review") && task.githubStatus === "closed") {
-            console.log(`[GitHub Webhook] Task ${taskId} already ${task.status} — skipping (Nexus-originated close)`);
+        // Skip if this close likely came FROM Nexus (recently synced + already closed status)
+        if (recentlySync && (task.status === "done" || task.status === "review") && task.githubStatus === "closed") {
+            console.log(`[GitHub Webhook] Task ${taskId} already ${task.status} (recently synced) — skipping loop`);
             return;
         }
 
-        // Move task to "review" so the ticket creator can verify
+        // GitHub issue closed → Move task to "review" for verification
         await db.task.update({
             where: { id: taskId },
             data: {
@@ -120,8 +133,21 @@ async function handleIssueAction(taskId: string, action: string) {
                 githubSyncedAt: new Date(),
             },
         });
-        console.log(`[GitHub Webhook] Task ${taskId} moved to Review (dev closed issue)`);
+        console.log(`[GitHub Webhook] ✅ Issue closed in GitHub → Task ${taskId} moved to Review`);
+
+        // Revalidate project page
+        if (task.sprint?.projectId) {
+            const { revalidatePath } = await import("next/cache");
+            revalidatePath(`/projects/${task.sprint.projectId}`);
+        }
     } else if (action === "reopened") {
+        // Skip if this reopen likely came FROM Nexus (recently synced + already open status)
+        if (recentlySync && (task.status === "todo" || task.status === "progress") && task.githubStatus === "open") {
+            console.log(`[GitHub Webhook] Task ${taskId} already ${task.status} (recently synced) — skipping loop`);
+            return;
+        }
+
+        // GitHub issue reopened → Move task back to "progress"
         await db.task.update({
             where: { id: taskId },
             data: {
@@ -130,6 +156,12 @@ async function handleIssueAction(taskId: string, action: string) {
                 githubSyncedAt: new Date(),
             },
         });
-        console.log(`[GitHub Webhook] Task ${taskId} moved back to In Progress (issue reopened)`);
+        console.log(`[GitHub Webhook] ✅ Issue reopened in GitHub → Task ${taskId} moved to In Progress`);
+
+        // Revalidate project page
+        if (task.sprint?.projectId) {
+            const { revalidatePath } = await import("next/cache");
+            revalidatePath(`/projects/${task.sprint.projectId}`);
+        }
     }
 }

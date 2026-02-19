@@ -197,12 +197,15 @@ export async function updateGitHubIssue(
   }
 
   bodyParts.push(`**Task ID:** \`${task.id}\``);
+  bodyParts.push(`**Nexus Status:** \`${task.status}\``);
   bodyParts.push(`**Last synced:** ${new Date().toISOString()}`);
 
   const body = bodyParts.join("\n");
 
   // Determine if issue should be closed
-  const state = task.status === "done" ? "closed" : "open";
+  // Close if task is "done" or "review" (dev closed it, waiting for verification)
+  // Open for "todo" and "progress"
+  const state = (task.status === "done" || task.status === "review") ? "closed" : "open";
 
   // Update the issue
   try {

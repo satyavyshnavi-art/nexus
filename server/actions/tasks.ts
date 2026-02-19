@@ -122,15 +122,15 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     throw new Error("Unauthorized");
   }
 
+  // Determine GitHub status based on Nexus status
+  // done/review = closed in GitHub, everything else = open
+  const githubStatus = (newStatus === "done" || newStatus === "review") ? "closed" : "open";
+
   const updatedTask = await db.task.update({
     where: { id: taskId },
     data: {
       status: newStatus,
-      // When marked done, also set githubStatus to closed (issue will be closed on GitHub)
-      // When moved away from done, reset githubStatus to open
-      ...(newStatus === "done"
-        ? { githubStatus: "closed" }
-        : { githubStatus: "open" }),
+      githubStatus,
     },
     include: {
       sprint: {
@@ -139,7 +139,7 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     },
   });
 
-  // Trigger GitHub Sync asynchronously
+  // Trigger GitHub Sync asynchronously (will reopen/close issue as needed)
   syncTaskToGitHub(taskId).catch(err => {
     console.error(`[Auto-Sync] Failed to sync updated task status ${taskId}:`, err);
   });
