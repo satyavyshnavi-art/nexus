@@ -6,6 +6,7 @@ import { updateUserRole } from "@/server/actions/users";
 import { toast } from "@/lib/hooks/use-toast";
 import { UserRole } from "@prisma/client";
 import { Shield, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface UserRoleToggleProps {
   userId: string;
@@ -19,14 +20,14 @@ export function UserRoleToggle({
   userName,
 }: UserRoleToggleProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const router = useRouter();
 
   const handleToggle = async () => {
     const newRole = currentRole === "admin" ? UserRole.member : UserRole.admin;
 
     if (
       !confirm(
-        `Are you sure you want to ${
-          newRole === "admin" ? "promote" : "demote"
+        `Are you sure you want to ${newRole === "admin" ? "promote" : "demote"
         } ${userName} to ${newRole}?`
       )
     ) {
@@ -41,7 +42,7 @@ export function UserRoleToggle({
         description: `${userName} is now a ${newRole}`,
         variant: "success",
       });
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",

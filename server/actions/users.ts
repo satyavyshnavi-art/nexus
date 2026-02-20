@@ -46,9 +46,19 @@ export async function updateUserRole(userId: string, role: UserRole) {
     data: { role },
   });
 
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/");
   revalidatePath("/admin/verticals");
   revalidatePath("/team");
+  revalidatePath("/admin/users");
+
+  // @ts-expect-error - Next.js 15
+  revalidateTag("all-users");
+  // @ts-expect-error - Next.js 15
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15
+  revalidateTag("team-members");
+
   return updated;
 }
 
