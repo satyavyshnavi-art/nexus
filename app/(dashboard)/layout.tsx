@@ -1,12 +1,6 @@
-import { auth, signOut } from "@/lib/auth/config";
+import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import { NavMenu } from "@/components/layout/nav-menu";
-import { MobileMenu } from "@/components/layout/mobile-menu";
-import { UserProfileMenu } from "@/components/layout/user-profile-menu";
-import Link from "next/link";
-import Image from "next/image";
-import { CommandMenu } from "@/components/command-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Sidebar } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -19,53 +13,20 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const isAdmin = session.user.role === "admin";
+
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between h-16">
-          <div className="flex items-center gap-6">
-            <MobileMenu
-              isAdmin={session.user.role === "admin"}
-              userName={session.user.name || session.user.email || "User"}
-            />
-            <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
-              <img
-                src="/logo.svg"
-                alt="Stanza Soft"
-                width={130}
-                height={40}
-                className="dark:hidden"
-                style={{ width: '130px', height: '40px', objectFit: 'contain' }}
-              />
-              <img
-                src="/logo-white.svg"
-                alt="Stanza Soft"
-                width={130}
-                height={40}
-                className="hidden dark:block"
-                style={{ width: '130px', height: '40px', objectFit: 'contain' }}
-              />
-            </Link>
-            <div className="hidden md:block">
-              <NavMenu isAdmin={session.user.role === "admin"} />
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <CommandMenu isAdmin={session.user.role === "admin"} />
-            <ThemeToggle />
-            <UserProfileMenu
-              name={session.user.name}
-              email={session.user.email || ""}
-              role={session.user.role}
-              avatarSrc={null}
-              id={session.user.id}
-              designation={session.user.designation}
-            />
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-col md:flex-row h-screen bg-background">
+      <Sidebar
+        isAdmin={isAdmin}
+        userName={session.user.name || session.user.email || "User"}
+        userEmail={session.user.email || ""}
+        userRole={session.user.role as "admin" | "member"}
+        userId={session.user.id}
+        userDesignation={session.user.designation}
+      />
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>
