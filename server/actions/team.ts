@@ -10,10 +10,13 @@ import { revalidatePath, unstable_cache } from "next/cache";
  * Cached for 30 seconds for performance
  */
 export async function getTeamMembers() {
+  console.log("-> getTeamMembers called");
   const session = await auth();
   if (!session?.user) {
+    console.error("-> getTeamMembers: Unauthorized");
     throw new Error("Unauthorized");
   }
+  console.log("-> getTeamMembers auth passed for:", session.user.id);
 
   const getCachedMembers = unstable_cache(
     async () => {
@@ -68,27 +71,40 @@ export async function getTeamMembers() {
         });
 
         return users.map((user) => {
-          const activeTasks = user.assignedTasks.filter(
-            (task) => task.status !== TaskStatus.done
-          ).length;
-          const completedTasks = user.assignedTasks.filter(
-            (task) => task.status === TaskStatus.done
-          ).length;
+          try {
+            const activeTasks = user.assignedTasks.filter(
+              (task) => task.status !== TaskStatus.done
+            ).length;
+            const completedTasks = user.assignedTasks.filter(
+              (task) => task.status === TaskStatus.done
+            ).length;
 
-          return {
-            ...user,
-            name: user.name ?? "Unknown User",
-            designation: user.designation ?? "Team Member",
-            avatar: user.avatar ?? null,
-            assignedTasks: user.assignedTasks.slice(0, 5),
-            stats: {
-              projects: user.projectMemberships?.length ?? 0,
-              activeTasks,
-              completedTasks,
-            },
-          };
+            return {
+              ...user,
+              name: user.name ?? "Unknown User",
+              designation: user.designation ?? "Team Member",
+              avatar: user.avatar ?? null,
+              assignedTasks: user.assignedTasks.slice(0, 5),
+              stats: {
+                projects: user.projectMemberships?.length ?? 0,
+                activeTasks,
+                completedTasks,
+              },
+            };
+          } catch (mapError) {
+            console.error(`Error mapping user ${user.id}:`, mapError);
+            return {
+              ...user,
+              name: user.name ?? "Unknown User",
+              designation: "Team Member",
+              avatar: null,
+              assignedTasks: [],
+              stats: { projects: 0, activeTasks: 0, completedTasks: 0 },
+            };
+          }
         });
       } catch (error) {
+        console.error("getTeamMembers cache generation error:", error);
         return [];
       }
     },

@@ -150,9 +150,15 @@ export async function addMemberToProject(projectId: string, userId: string) {
   });
 
   // Revalidate caches
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
+  revalidatePath("/team");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-members");
 
   return result;
 }
@@ -170,9 +176,15 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   });
 
   // Revalidate caches
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
+  revalidatePath("/team");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-members");
 
   return result;
 }

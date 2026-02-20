@@ -22,9 +22,13 @@ export async function registerUser(
       data: { email, passwordHash, name },
     });
 
-    const { revalidatePath } = await import("next/cache");
+    const { revalidatePath, revalidateTag } = await import("next/cache");
     revalidatePath("/");
     revalidatePath("/team");
+    // @ts-expect-error - Next.js 15 type mismatch in local environment
+    revalidateTag("team-stats");
+    // @ts-expect-error - Next.js 15 type mismatch in local environment
+    revalidateTag("team-members");
 
     return { success: true, userId: user.id };
   } catch (error) {

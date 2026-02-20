@@ -33,10 +33,14 @@ export async function assignUserToVertical(userId: string, verticalId: string) {
     update: {},
   });
 
-  const { revalidatePath } = await import("next/cache");
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/admin/verticals");
   revalidatePath(`/admin/verticals/${verticalId}`);
   revalidatePath("/team");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-members");
 
   return result;
 }
@@ -101,10 +105,14 @@ export async function removeUserFromVertical(userId: string, verticalId: string)
     },
   });
 
-  const { revalidatePath } = await import("next/cache");
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/admin/verticals");
   revalidatePath(`/admin/verticals/${verticalId}`);
   revalidatePath("/team");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-members");
 
   return result;
 }
