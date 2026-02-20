@@ -22,28 +22,28 @@ export default async function DashboardLayout({
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between h-16">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between h-20">
           <div className="flex items-center gap-6">
             <MobileMenu
               isAdmin={session.user.role === "admin"}
               userName={session.user.name || session.user.email || "User"}
             />
             <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
-              <Image
+              <img
                 src="/logo.svg"
                 alt="Stanza Soft"
-                width={220}
-                height={60}
-                className="h-14 w-auto dark:hidden"
-                priority
+                width={250}
+                height={150}
+                className="dark:hidden"
+                style={{ width: '250px', height: '150px', objectFit: 'contain' }}
               />
-              <Image
+              <img
                 src="/logo-white.svg"
                 alt="Stanza Soft"
-                width={220}
-                height={60}
-                className="h-14 w-auto hidden dark:block"
-                priority
+                width={250}
+                height={150}
+                className="hidden dark:block"
+                style={{ width: '250px', height: '150px', objectFit: 'contain' }}
               />
             </Link>
             <div className="hidden md:block">
