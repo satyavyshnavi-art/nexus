@@ -7,8 +7,8 @@
 
 ## 🌐 Production URLs
 
-**Main Production URL:** https://nexus-rosy-nine.vercel.app
-
+**Main Production URL:** https://pm.stanzasoft.ai
+**Vercel URL:** https://nexus-rosy-nine.vercel.app
 **Latest Deployment:** https://nexus-do63h6aqy-vyshnavis-projects-16b15b9f.vercel.app
 
 ---
