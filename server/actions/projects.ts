@@ -150,6 +150,7 @@ export async function addMemberToProject(projectId: string, userId: string) {
   });
 
   // Revalidate caches
+  revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
 
@@ -169,6 +170,7 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   });
 
   // Revalidate caches
+  revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
 

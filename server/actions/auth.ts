@@ -22,6 +22,10 @@ export async function registerUser(
       data: { email, passwordHash, name },
     });
 
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/");
+    revalidatePath("/team");
+
     return { success: true, userId: user.id };
   } catch (error) {
     console.error("Registration error:", error);

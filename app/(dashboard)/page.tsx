@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/config";
 import { getUserProjects } from "@/server/actions/projects";
 import { getVerticalsWithProjects } from "@/server/actions/verticals";
+import { getTeamStats } from "@/server/actions/team";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,6 +26,8 @@ export default async function DashboardPage() {
   const projects = isAdmin ? [] : await getUserProjects();
   const verticals = isAdmin ? await getVerticalsWithProjects() : [];
 
+  const teamStats = isAdmin ? await getTeamStats() : null;
+
   // Calculate quick stats
   const totalProjects = isAdmin
     ? verticals.reduce((acc, v) => acc + v._count.projects, 0)
@@ -33,7 +36,7 @@ export default async function DashboardPage() {
     ? verticals.reduce((acc, v) => acc + v.projects.reduce((sum, p) => sum + p._count.sprints, 0), 0)
     : projects.reduce((acc, p) => acc + p._count.sprints, 0);
   const totalMembers = isAdmin
-    ? verticals.reduce((acc, v) => acc + v._count.users, 0)
+    ? teamStats?.totalMembers || 0
     : projects.reduce((acc, p) => acc + p._count.members, 0);
 
   return (

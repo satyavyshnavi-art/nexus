@@ -46,6 +46,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
     data: { role },
   });
 
+  revalidatePath("/");
   revalidatePath("/admin/verticals");
   revalidatePath("/team");
   return updated;
