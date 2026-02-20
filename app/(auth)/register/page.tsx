@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerUser } from "@/server/actions/auth";
 import { WorkspaceIllustration } from "@/components/auth/workspace-illustration";
+import { ArrowRight } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,16 +37,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-      {/* Left panel - illustration (hidden on mobile) */}
-      <div className="hidden lg:flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary/90 via-primary to-primary/80 dark:from-primary/80 dark:via-primary/70 dark:to-primary/60 p-12 relative overflow-hidden">
-        {/* Background decorative shapes */}
-        <div className="absolute top-0 left-0 w-72 h-72 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
-        <div className="absolute top-1/3 right-12 w-20 h-20 bg-white/5 rounded-lg rotate-12" />
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[1fr_480px] xl:grid-cols-[1fr_520px]">
+      {/* Left panel - purple gradient with illustration */}
+      <div className="hidden lg:flex flex-col min-h-screen bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#6D28D9] relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
+        <div className="absolute top-1/2 right-0 w-[300px] h-[300px] bg-white/[0.03] rounded-full translate-x-1/2" />
 
-        {/* Logo at top left */}
-        <div className="absolute top-8 left-8">
+        {/* Logo */}
+        <div className="relative z-10 p-8">
           <img
             src="/logo-white.svg"
             alt="Stanza Soft"
@@ -54,14 +54,14 @@ export default function RegisterPage() {
           />
         </div>
 
-        {/* Illustration */}
-        <div className="relative z-10 flex flex-col items-center gap-8">
+        {/* Illustration centered */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-12 pb-12">
           <WorkspaceIllustration />
-          <div className="text-center space-y-3 max-w-sm">
-            <h2 className="text-2xl font-bold text-white">
+          <div className="text-center space-y-4 mt-10 max-w-md">
+            <h2 className="text-3xl font-bold text-white leading-tight">
               Join your team on Nexus
             </h2>
-            <p className="text-white/70 text-sm leading-relaxed">
+            <p className="text-white/60 text-base leading-relaxed">
               Collaborate on sprints, track bugs, and manage tasks with your team — all powered by intelligent AI assistance.
             </p>
           </div>
@@ -69,27 +69,30 @@ export default function RegisterPage() {
       </div>
 
       {/* Right panel - register form */}
-      <div className="min-h-screen flex items-center justify-center p-8 bg-background">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4 lg:hidden">
-              <img src="/logo.svg" alt="Stanza Soft" className="dark:hidden" style={{ width: '160px', height: '55px', objectFit: 'contain' }} />
-              <img src="/logo-white.svg" alt="Stanza Soft" className="hidden dark:block" style={{ width: '160px', height: '55px', objectFit: 'contain' }} />
+      <div className="min-h-screen flex flex-col bg-background">
+        {/* Mobile logo */}
+        <div className="flex justify-center pt-8 pb-4 lg:hidden">
+          <img src="/logo.svg" alt="Stanza Soft" className="dark:hidden" style={{ width: '140px', height: '48px', objectFit: 'contain' }} />
+          <img src="/logo-white.svg" alt="Stanza Soft" className="hidden dark:block" style={{ width: '140px', height: '48px', objectFit: 'contain' }} />
+        </div>
+
+        {/* Form centered */}
+        <div className="flex-1 flex items-center justify-center px-8 py-12">
+          <div className="w-full max-w-sm">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
+              <p className="text-muted-foreground mt-2">Sign up to start using Nexus</p>
             </div>
-            <CardTitle>Create an Account</CardTitle>
-            <CardDescription>
-              Sign up to start using Nexus
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+
+            <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
                   {error}
                 </div>
               )}
+
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
+                <label htmlFor="name" className="text-sm font-semibold">
                   Name
                 </label>
                 <Input
@@ -99,10 +102,12 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
+                  className="h-12 bg-muted/50 border-muted-foreground/20 text-base"
                 />
               </div>
+
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
+                <label htmlFor="email" className="text-sm font-semibold">
                   Email
                 </label>
                 <Input
@@ -112,10 +117,12 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="h-12 bg-muted/50 border-muted-foreground/20 text-base"
                 />
               </div>
+
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
+                <label htmlFor="password" className="text-sm font-semibold">
                   Password
                 </label>
                 <Input
@@ -125,20 +132,29 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  className="h-12 bg-muted/50 border-muted-foreground/20 text-base"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold gap-2"
+                disabled={loading}
+              >
                 {loading ? "Creating account..." : "Create Account"}
+                {!loading && <ArrowRight className="h-4 w-4" />}
               </Button>
-              <p className="text-sm text-center text-muted-foreground">
-                Already have an account?{" "}
-                <Link href="/login" className="text-primary hover:underline">
-                  Login
-                </Link>
-              </p>
             </form>
-          </CardContent>
-        </Card>
+
+            {/* Footer */}
+            <p className="text-sm text-center text-muted-foreground mt-8">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary font-semibold hover:underline">
+                Login
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
