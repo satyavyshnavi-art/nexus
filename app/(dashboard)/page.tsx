@@ -28,6 +28,11 @@ export default async function DashboardPage() {
 
   const teamStats = isAdmin ? await getTeamStats() : null;
 
+  // Flatten all projects from verticals for admin dropdown
+  const allProjects = isAdmin
+    ? verticals.flatMap((v) => v.projects)
+    : projects;
+
   // Calculate quick stats
   const totalProjects = isAdmin
     ? verticals.reduce((acc, v) => acc + v._count.projects, 0)
@@ -102,10 +107,10 @@ export default async function DashboardPage() {
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel>Sprints by Project</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {projects.length === 0 ? (
+              {allProjects.length === 0 ? (
                 <div className="p-2 text-sm text-muted-foreground">No projects found</div>
               ) : (
-                projects.map((project) => (
+                allProjects.map((project) => (
                   <Link key={project.id} href={`/projects/${project.id}/sprints`} className="w-full">
                     <DropdownMenuItem className="cursor-pointer justify-between">
                       <span className="truncate max-w-[140px]">{project.name}</span>
