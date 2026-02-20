@@ -195,6 +195,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
 
       {selectedTask && (
         <TaskDetailModal
+          key={selectedTask.id}
           task={selectedTask}
           projectMembers={projectMembers}
           open={isDetailModalOpen}

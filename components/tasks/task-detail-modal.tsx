@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,7 @@ export function TaskDetailModal({
   open,
   onOpenChange,
 }: TaskDetailModalProps) {
+  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -98,7 +100,7 @@ export function TaskDetailModal({
         variant: "success",
       });
       setHasChanges(false);
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
@@ -121,7 +123,7 @@ export function TaskDetailModal({
         variant: "success",
       });
       onOpenChange(false);
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
