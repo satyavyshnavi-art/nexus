@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,12 @@ import {
   Briefcase,
   CheckCircle2,
   Clock,
-  Calendar,
   Mail,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import { updateUserRole } from "@/server/actions/team";
 import { useToast } from "@/lib/hooks/use-toast";
-import { format } from "date-fns";
+import Link from "next/link";
 
 interface TeamMemberCardProps {
   member: {
@@ -101,128 +100,102 @@ export function TeamMemberCard({
     }
   };
 
-  const memberSince = format(new Date(member.createdAt), "MMM d, yyyy");
   const displayName = member.name || "Unnamed User";
 
   return (
-    <Card className="h-full flex flex-col transition-all duration-200 hover:shadow-lg hover:border-primary/30 group">
-      <CardContent className="flex-1 flex flex-col p-6">
-        {/* Header Section */}
-        <div className="flex items-start gap-4 mb-6">
+    <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/20">
+      <div className="p-4">
+        {/* Top row: Avatar + Info + Role */}
+        <div className="flex items-center gap-3">
           <Avatar
             src={member.avatar || undefined}
             name={displayName}
-            size="xl"
+            size="md"
             isAdmin={member.role === UserRole.admin}
           />
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
               <h3
-                className="font-bold text-xl group-hover:text-primary transition-colors truncate"
+                className="font-semibold text-sm truncate"
                 title={displayName}
               >
                 {displayName}
               </h3>
               <Badge
                 variant={member.role === UserRole.admin ? "default" : "secondary"}
-                className={
-                  member.role === UserRole.admin
-                    ? "bg-primary hover:bg-primary/90 shrink-0"
-                    : "shrink-0"
-                }
+                className="text-[10px] px-1.5 py-0 h-5 shrink-0"
               >
                 {member.role}
               </Badge>
             </div>
-            {member.designation && (
-              <p className="text-sm font-medium text-muted-foreground mb-2 truncate" title={member.designation}>
-                {member.designation}
-              </p>
-            )}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate" title={member.email}>{member.email}</span>
-            </div>
+            <p className="text-xs text-muted-foreground truncate" title={member.designation || member.email}>
+              {member.designation || member.email}
+            </p>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-primary/10 rounded-md flex items-center justify-center shrink-0">
-                <Briefcase className="h-4 w-4 text-primary" />
-              </div>
-              <span className="text-2xl font-bold truncate">{member.stats.projects}</span>
-            </div>
-            <p className="text-xs font-medium text-muted-foreground truncate">Projects</p>
+        {/* Inline stats row */}
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Briefcase className="h-3.5 w-3.5" />
+            <span className="font-semibold text-foreground">{member.stats.projects}</span>
+            <span>projects</span>
           </div>
-
-          <div className="bg-accent border border-accent/50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-accent rounded-md flex items-center justify-center shrink-0">
-                <Clock className="h-4 w-4 text-primary" />
-              </div>
-              <span className="text-2xl font-bold truncate">{member.stats.activeTasks}</span>
-            </div>
-            <p className="text-xs font-medium text-muted-foreground truncate">Active</p>
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="font-semibold text-foreground">{member.stats.activeTasks}</span>
+            <span>active</span>
           </div>
-
-          <div className="bg-secondary border border-secondary/50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="h-8 w-8 bg-secondary rounded-md flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-              </div>
-              <span className="text-2xl font-bold truncate">{member.stats.completedTasks}</span>
-            </div>
-            <p className="text-xs font-medium text-muted-foreground truncate">Completed</p>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span className="font-semibold text-foreground">{member.stats.completedTasks}</span>
+            <span>done</span>
           </div>
         </div>
 
-        {/* Member Since */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pb-4 border-b mt-auto">
-          <Calendar className="h-4 w-4 shrink-0" />
-          <span>Joined {memberSince}</span>
-        </div>
-
-        {/* Expand/Collapse Button */}
-        <Button
-          variant="outline"
-          size="sm"
+        {/* Expand toggle */}
+        <button
+          type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full transition-colors hover:bg-primary hover:text-primary-foreground"
+          className="flex items-center justify-center gap-1 w-full mt-3 pt-2 border-t text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {isExpanded ? (
             <>
-              <ChevronUp className="h-4 w-4 mr-2" />
-              Hide Details
+              <ChevronUp className="h-3.5 w-3.5" />
+              Less
             </>
           ) : (
             <>
-              <ChevronDown className="h-4 w-4 mr-2" />
-              Show Details
+              <ChevronDown className="h-3.5 w-3.5" />
+              Details
             </>
           )}
-        </Button>
+        </button>
 
-        {/* Expanded Details */}
+        {/* Expanded section */}
         {isExpanded && (
-          <div className="space-y-4 pt-4 mt-4 border-t animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="mt-3 pt-3 border-t space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+            {/* Email */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{member.email}</span>
+            </div>
+
             {/* Projects */}
             {member.projectMemberships.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  Projects ({member.projectMemberships.length})
-                </h4>
-                <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  Projects
+                </p>
+                <div className="flex flex-wrap gap-1.5">
                   {member.projectMemberships.map((pm) => (
-                    <div
+                    <Link
                       key={pm.project.id}
-                      className="text-sm p-3 rounded-lg bg-muted/50 border border-muted hover:bg-muted transition-colors"
+                      href={`/projects/${pm.project.id}`}
+                      className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-primary/10 hover:text-primary transition-colors truncate max-w-[160px]"
                     >
-                      <span className="font-medium truncate block">{pm.project.name}</span>
-                    </div>
+                      {pm.project.name}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -231,52 +204,44 @@ export function TeamMemberCard({
             {/* Recent Tasks */}
             {member.assignedTasks.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                   Recent Tasks
-                </h4>
-                <div className="space-y-2">
+                </p>
+                <div className="space-y-1">
                   {member.assignedTasks.slice(0, 3).map((task) => (
                     <div
                       key={task.id}
-                      className="text-sm p-3 rounded-lg bg-muted/50 border border-muted hover:bg-muted transition-colors"
+                      className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/50"
                     >
-                      <p className="font-medium truncate mb-2">{task.title}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-xs">
-                          {task.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                          {task.sprint.project.name}
-                        </span>
-                      </div>
+                      <span className="flex-1 truncate">{task.title}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                        {task.status}
+                      </Badge>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Admin Actions */}
+            {/* Admin action */}
             {isAdmin && member.id !== currentUserId && (
-              <div className="pt-4 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRoleChange}
-                  disabled={isUpdating}
-                  className="w-full"
-                >
-                  {isUpdating
-                    ? "Updating..."
-                    : member.role === UserRole.admin
-                      ? "Change to Member"
-                      : "Make Admin"}
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRoleChange}
+                disabled={isUpdating}
+                className="w-full h-7 text-xs"
+              >
+                {isUpdating
+                  ? "Updating..."
+                  : member.role === UserRole.admin
+                    ? "Change to Member"
+                    : "Make Admin"}
+              </Button>
             )}
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }
