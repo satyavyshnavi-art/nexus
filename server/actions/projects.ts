@@ -346,6 +346,7 @@ export async function deleteProject(projectId: string) {
       where: { id: projectId },
     });
 
+    revalidatePath("/");
     revalidatePath("/admin/projects");
     revalidatePath("/admin/verticals");
     return project;
