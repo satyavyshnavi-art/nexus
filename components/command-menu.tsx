@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { globalSearch, type SearchResult } from "@/server/actions/search";
-import { Loader2, Search, Briefcase, CheckSquare, Users } from "lucide-react";
+import { Loader2, Search, Briefcase, CheckSquare, Users, Zap } from "lucide-react";
 import { staticCommands } from "@/config/commands";
 
 interface CommandMenuProps {
@@ -85,6 +85,7 @@ export function CommandMenu({ isAdmin = false }: CommandMenuProps) {
     const projects = results.filter((r) => r.type === "project");
     const tasks = results.filter((r) => r.type === "task");
     const users = results.filter((r) => r.type === "user");
+    const sprints = results.filter((r) => r.type === "sprint");
 
     return (
         <>
@@ -238,6 +239,31 @@ export function CommandMenu({ isAdmin = false }: CommandMenuProps) {
                                             className="h-6 w-6"
                                         />
                                     </div>
+                                    <div className="flex flex-col">
+                                        <span>{result.title}</span>
+                                        {result.subtitle && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {result.subtitle}
+                                            </span>
+                                        )}
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+
+                    {/* Sprints */}
+                    {sprints.length > 0 && (
+                        <CommandGroup heading="Sprints">
+                            {sprints.map((result) => (
+                                <CommandItem
+                                    key={`${result.type}-${result.id}`}
+                                    value={result.title}
+                                    onSelect={() => handleSelect(result.url)}
+                                    onMouseEnter={() => router.prefetch(result.url)}
+                                    className="cursor-pointer flex items-center w-full min-h-[32px]"
+                                >
+                                    <Zap className="mr-2 h-4 w-4" />
                                     <div className="flex flex-col">
                                         <span>{result.title}</span>
                                         {result.subtitle && (

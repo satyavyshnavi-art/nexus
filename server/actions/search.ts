@@ -97,6 +97,33 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         select: { id: true, name: true, email: true, role: true, avatar: true },
     });
 
+    // 4. Search Sprints
+    const sprintWhere: any = {
+        AND: [
+            { name: { contains: query, mode: "insensitive" } },
+        ],
+    };
+
+    if (!isAdmin) {
+        sprintWhere.AND.push({
+            project: {
+                members: { some: { userId } },
+            },
+        });
+    }
+
+    const sprints = await db.sprint.findMany({
+        where: sprintWhere,
+        take: 5,
+        select: {
+            id: true,
+            name: true,
+            status: true,
+            projectId: true,
+            project: { select: { name: true } },
+        },
+    });
+
     // Format results
     const results: SearchResult[] = [];
 
@@ -128,6 +155,16 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
             subtitle: u.name ? `${u.email} • ${u.role}` : u.role,
             url: `/team-members/${u.id}`,
             avatar: u.avatar,
+        });
+    });
+
+    sprints.forEach((s) => {
+        results.push({
+            type: "sprint",
+            id: s.id,
+            title: s.name,
+            subtitle: `${s.status.charAt(0).toUpperCase() + s.status.slice(1)} • ${s.project.name}`,
+            url: `/projects/${s.projectId}/sprints/${s.id}`,
         });
     });
 

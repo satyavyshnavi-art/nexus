@@ -1,19 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { activateSprint, completeSprint } from "@/server/actions/sprints";
+import { activateSprint } from "@/server/actions/sprints";
 import { toast } from "@/lib/hooks/use-toast";
 import { SprintStatus } from "@prisma/client";
+import { CompleteSprintDialog } from "./complete-sprint-dialog";
 
 interface SprintActionsProps {
   sprintId: string;
   status: SprintStatus;
   sprintName: string;
+  projectId: string;
+  completedTaskCount?: number;
+  incompleteTaskCount?: number;
 }
 
-export function SprintActions({ sprintId, status, sprintName }: SprintActionsProps) {
+export function SprintActions({
+  sprintId,
+  status,
+  sprintName,
+  projectId,
+  completedTaskCount = 0,
+  incompleteTaskCount = 0,
+}: SprintActionsProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   const handleActivate = async () => {
     setIsLoading(true);
@@ -24,32 +38,11 @@ export function SprintActions({ sprintId, status, sprintName }: SprintActionsPro
         description: `${sprintName} is now active`,
         variant: "success",
       });
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to activate sprint",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleComplete = async () => {
-    setIsLoading(true);
-    try {
-      await completeSprint(sprintId);
-      toast({
-        title: "Sprint completed",
-        description: `${sprintName} has been marked as completed`,
-        variant: "success",
-      });
-      window.location.reload();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to complete sprint",
         variant: "destructive",
       });
     } finally {
@@ -67,9 +60,25 @@ export function SprintActions({ sprintId, status, sprintName }: SprintActionsPro
 
   if (status === "active") {
     return (
-      <Button onClick={handleComplete} disabled={isLoading} size="sm" variant="outline">
-        {isLoading ? "Completing..." : "Complete"}
-      </Button>
+      <>
+        <Button
+          onClick={() => setShowCompleteDialog(true)}
+          disabled={isLoading}
+          size="sm"
+          variant="outline"
+        >
+          Complete
+        </Button>
+        <CompleteSprintDialog
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          sprintId={sprintId}
+          sprintName={sprintName}
+          projectId={projectId}
+          completedTaskCount={completedTaskCount}
+          incompleteTaskCount={incompleteTaskCount}
+        />
+      </>
     );
   }
 

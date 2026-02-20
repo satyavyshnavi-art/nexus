@@ -117,8 +117,9 @@ model Sprint {
   name      String
   startDate DateTime     @map("start_date")
   endDate   DateTime     @map("end_date")
-  status    SprintStatus @default(planned)
-  createdBy String       @map("created_by")
+  status      SprintStatus @default(planned)
+  completedAt DateTime?    @map("completed_at")
+  createdBy   String       @map("created_by")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
   creator   User         @relation(fields: [createdBy], references: [id])
