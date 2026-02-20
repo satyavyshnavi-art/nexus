@@ -36,9 +36,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src="/logo.svg" alt="Stanza Soft" className="h-10 w-auto dark:hidden" />
+            <img src="/logo-white.svg" alt="Stanza Soft" className="h-10 w-auto hidden dark:block" />
+          </div>
           <CardTitle>Create an Account</CardTitle>
           <CardDescription>
             Sign up to start using Nexus

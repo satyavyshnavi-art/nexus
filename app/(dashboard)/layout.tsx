@@ -4,6 +4,7 @@ import { NavMenu } from "@/components/layout/nav-menu";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import Link from "next/link";
+import Image from "next/image";
 import { CommandMenu } from "@/components/command-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -27,8 +28,23 @@ export default async function DashboardLayout({
               isAdmin={session.user.role === "admin"}
               userName={session.user.name || session.user.email || "User"}
             />
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-              Nexus
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <Image
+                src="/logo.svg"
+                alt="Stanza Soft"
+                width={140}
+                height={40}
+                className="h-8 w-auto dark:hidden"
+                priority
+              />
+              <Image
+                src="/logo-white.svg"
+                alt="Stanza Soft"
+                width={140}
+                height={40}
+                className="h-8 w-auto hidden dark:block"
+                priority
+              />
             </Link>
             <div className="hidden md:block">
               <NavMenu isAdmin={session.user.role === "admin"} />

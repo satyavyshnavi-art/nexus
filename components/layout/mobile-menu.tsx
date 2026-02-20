@@ -30,7 +30,10 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
       </SheetTrigger>
       <SheetContent side="left">
         <SheetHeader>
-          <SheetTitle>Nexus</SheetTitle>
+          <SheetTitle>
+            <img src="/logo.svg" alt="Stanza Soft" className="h-7 w-auto dark:hidden" />
+            <img src="/logo-white.svg" alt="Stanza Soft" className="h-7 w-auto hidden dark:block" />
+          </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-2 mt-6">
           <Link
