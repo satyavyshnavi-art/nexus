@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { SprintList } from "@/components/sprints/sprint-list";
 import { CreateSprintButton } from "@/components/sprints/create-sprint-button";
+import { AiPlanSprintButton } from "@/components/sprints/ai-plan-sprint-button";
 import Link from "next/link";
 import { ArrowLeft, Zap, Calendar, CheckCircle2 } from "lucide-react";
 
@@ -85,7 +86,12 @@ export default async function SprintsPage({
             Manage sprints for this project
           </p>
         </div>
-        {isAdmin && <CreateSprintButton projectId={projectId} />}
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <AiPlanSprintButton projectId={projectId} />
+            <CreateSprintButton projectId={projectId} />
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue={defaultTab} className="space-y-4">

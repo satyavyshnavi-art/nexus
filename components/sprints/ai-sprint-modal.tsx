@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,11 @@ export function AiSprintModal({
   open,
   onOpenChange,
 }: AiSprintModalProps) {
+  const router = useRouter();
+
   const handleSuccess = () => {
     onOpenChange(false);
-    window.location.reload();
+    router.refresh();
   };
 
   return (

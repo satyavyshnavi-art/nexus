@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { generateStructuredOutput } from "./gemini";
 
-const SprintTaskSchema = z.object({
+const SprintPlanSchema = z.object({
+  sprint_name: z.string().max(80),
+  duration_days: z.number().min(7).max(30),
   stories: z.array(
     z.object({
       title: z.string().max(120),
@@ -11,21 +13,23 @@ const SprintTaskSchema = z.object({
   ),
 });
 
-export type SprintTasksOutput = z.infer<typeof SprintTaskSchema>;
+export type SprintPlanOutput = z.infer<typeof SprintPlanSchema>;
 
-export async function generateSprintTasks(
+export async function generateSprintPlan(
   inputText: string
-): Promise<SprintTasksOutput> {
+): Promise<SprintPlanOutput> {
   if (!process.env.GOOGLE_AI_API_KEY) {
     throw new Error(
       "GOOGLE_AI_API_KEY is not configured. Please add it to your .env file to use AI features."
     );
   }
 
-  const systemPrompt = `You are a sprint planning assistant. Convert feature descriptions into structured sprint backlogs.
+  const systemPrompt = `You are a sprint planning assistant. Given a feature description, generate a complete sprint plan including a sprint name, suggested duration, and a full backlog of user stories with tasks.
 
 You MUST respond with valid JSON matching this exact schema:
 {
+  "sprint_name": "Descriptive Sprint Name (max 80 chars)",
+  "duration_days": 14,
   "stories": [
     {
       "title": "User story title (max 120 chars)",
@@ -36,7 +40,9 @@ You MUST respond with valid JSON matching this exact schema:
 }
 
 Rules:
-- story_points must be a number between 0 and 20
+- sprint_name: A meaningful, concise name for the sprint (e.g. "Authentication & Authorization Sprint"). Max 80 characters.
+- duration_days: Suggested sprint duration between 7 and 30 days. Use 14 for medium features, 7 for small, 21-30 for large.
+- story_points: Number between 0 and 20
 - Maximum 30 stories
 - Maximum 20 tasks per story
 - All titles must be under 120 characters
@@ -46,7 +52,7 @@ Rules:
 
   return generateStructuredOutput(
     systemPrompt,
-    `Create a sprint backlog for the following feature:\n\n${inputText}`,
-    SprintTaskSchema
+    `Create a complete sprint plan for the following feature:\n\n${inputText}`,
+    SprintPlanSchema
   );
 }
