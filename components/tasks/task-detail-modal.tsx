@@ -72,6 +72,8 @@ export function TaskDetailModal({
   const [assigneeId, setAssigneeId] = useState(task.assigneeId || "unassigned");
   const [status, setStatus] = useState(task.status);
   const [hasChanges, setHasChanges] = useState(false);
+  const [subtasks, setSubtasks] = useState(task.childTasks || []);
+  const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
 
   function markChanged() {
     setHasChanges(true);
@@ -135,12 +137,39 @@ export function TaskDetailModal({
     }
   };
 
+  const handleSubtaskToggle = async (subtaskId: string, currentStatus: TaskStatus) => {
+    const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
+    setTogglingSubtask(subtaskId);
+
+    // Optimistic update
+    setSubtasks((prev) =>
+      prev.map((st) => (st.id === subtaskId ? { ...st, status: newStatus } : st))
+    );
+
+    try {
+      await updateTaskStatus(subtaskId, newStatus);
+      router.refresh();
+    } catch (error) {
+      // Revert on failure
+      setSubtasks((prev) =>
+        prev.map((st) => (st.id === subtaskId ? { ...st, status: currentStatus } : st))
+      );
+      toast({
+        title: "Error",
+        description: "Failed to update subtask",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingSubtask(null);
+    }
+  };
+
   // Calculate progress for parent tasks with subtasks
   const calculateProgress = () => {
-    if (!task.childTasks || task.childTasks.length === 0) return null;
-    const total = task.childTasks.length;
-    const completed = task.childTasks.filter(t => t.status === "done").length;
-    const inProgress = task.childTasks.filter(t => t.status === "progress").length;
+    if (subtasks.length === 0) return null;
+    const total = subtasks.length;
+    const completed = subtasks.filter(t => t.status === "done").length;
+    const inProgress = subtasks.filter(t => t.status === "progress").length;
     const percentage = Math.round((completed / total) * 100);
     return { total, completed, inProgress, percentage };
   };
@@ -309,16 +338,21 @@ export function TaskDetailModal({
               <div className="space-y-2 mt-4">
                 <h4 className="text-xs font-medium text-purple-900 dark:text-purple-300 uppercase">Subtasks</h4>
                 <div className="space-y-1">
-                  {task.childTasks?.map((subtask) => (
-                    <div
+                  {subtasks.map((subtask) => (
+                    <button
                       key={subtask.id}
-                      className="flex items-center gap-2 p-2 bg-background rounded border border-purple-100 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                      type="button"
+                      onClick={() => handleSubtaskToggle(subtask.id, subtask.status)}
+                      disabled={togglingSubtask === subtask.id}
+                      className="flex items-center gap-2 p-2 w-full text-left bg-background rounded border border-purple-100 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-600 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <div className={`flex-shrink-0 ${subtask.status === "done" ? "text-green-600 dark:text-green-500"
                         : subtask.status === "progress" ? "text-blue-600 dark:text-blue-500"
                           : "text-gray-400 dark:text-gray-500"
                         }`}>
-                        {subtask.status === "done" ? (
+                        {togglingSubtask === subtask.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : subtask.status === "done" ? (
                           <CheckCircle2 className="h-4 w-4" />
                         ) : subtask.status === "progress" ? (
                           <Clock className="h-4 w-4" />
@@ -332,7 +366,7 @@ export function TaskDetailModal({
                       <Badge variant="outline" className="text-xs capitalize">
                         {subtask.status}
                       </Badge>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
