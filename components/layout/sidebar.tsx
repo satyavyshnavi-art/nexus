@@ -25,6 +25,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Menu,
+  Search,
 } from "lucide-react";
 
 const SIDEBAR_COLLAPSED_KEY = "nexus-sidebar-collapsed";
@@ -55,6 +56,29 @@ const adminNavItems: NavItem[] = [
   { label: "Projects", href: "/admin/projects", icon: Briefcase },
   { label: "Users", href: "/admin/users", icon: UserCog },
 ];
+
+/** Compact search icon button that triggers Cmd+K */
+function SearchTrigger() {
+  const handleClick = () => {
+    // Dispatch Cmd+K to open the CommandMenu dialog
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      bubbles: true,
+    });
+    document.dispatchEvent(event);
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      title="Search (⌘K)"
+      className="flex items-center justify-center w-full h-9 rounded-md border border-input bg-background/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+    >
+      <Search className="h-4 w-4" />
+    </button>
+  );
+}
 
 function isActiveRoute(pathname: string, href: string): boolean {
   if (href === "/") {
@@ -154,13 +178,14 @@ function DesktopSidebar({
       </div>
 
       {/* Search / Command Menu */}
-      <div
-        className={cn(
-          "flex-shrink-0 border-b border-border",
-          collapsed ? "px-2 py-3 flex justify-center" : "px-3 py-3"
+      <div className="flex-shrink-0 border-b border-border px-3 py-3">
+        {collapsed ? (
+          <SearchTrigger />
+        ) : (
+          <div className="overflow-hidden">
+            <CommandMenu isAdmin={isAdmin} />
+          </div>
         )}
-      >
-        <CommandMenu isAdmin={isAdmin} />
       </div>
 
       {/* Navigation */}

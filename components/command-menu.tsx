@@ -91,11 +91,10 @@ export function CommandMenu({ isAdmin = false }: CommandMenuProps) {
             {/* Trigger Button */}
             <button
                 onClick={() => setOpen(true)}
-                className="inline-flex items-center gap-2 whitespace-nowrap rounded-md border border-input bg-background/50 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring lg:w-64 lg:justify-between"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-md border border-input bg-background/50 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-full justify-between"
             >
-                <span className="hidden lg:inline-flex">Search projects...</span>
-                <span className="inline-flex lg:hidden">Search...</span>
-                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium lg:flex">
+                <span className="truncate text-left">Search...</span>
+                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex flex-shrink-0">
                     <span className="text-xs">⌘</span>K
                 </kbd>
             </button>
