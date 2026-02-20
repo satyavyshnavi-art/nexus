@@ -22,7 +22,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between h-20">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between h-16">
           <div className="flex items-center gap-6">
             <MobileMenu
               isAdmin={session.user.role === "admin"}
@@ -32,18 +32,18 @@ export default async function DashboardLayout({
               <img
                 src="/logo.svg"
                 alt="Stanza Soft"
-                width={250}
-                height={150}
+                width={150}
+                height={50}
                 className="dark:hidden"
-                style={{ width: '250px', height: '150px', objectFit: 'contain' }}
+                style={{ width: '150px', height: '50px', objectFit: 'contain' }}
               />
               <img
                 src="/logo-white.svg"
                 alt="Stanza Soft"
-                width={250}
-                height={150}
+                width={150}
+                height={50}
                 className="hidden dark:block"
-                style={{ width: '250px', height: '150px', objectFit: 'contain' }}
+                style={{ width: '150px', height: '50px', objectFit: 'contain' }}
               />
             </Link>
             <div className="hidden md:block">
