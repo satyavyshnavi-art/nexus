@@ -32,17 +32,17 @@ export default async function DashboardLayout({
               <Image
                 src="/logo.svg"
                 alt="Stanza Soft"
-                width={180}
-                height={50}
-                className="h-10 w-auto dark:hidden"
+                width={220}
+                height={60}
+                className="h-14 w-auto dark:hidden"
                 priority
               />
               <Image
                 src="/logo-white.svg"
                 alt="Stanza Soft"
-                width={180}
-                height={50}
-                className="h-10 w-auto hidden dark:block"
+                width={220}
+                height={60}
+                className="h-14 w-auto hidden dark:block"
                 priority
               />
             </Link>

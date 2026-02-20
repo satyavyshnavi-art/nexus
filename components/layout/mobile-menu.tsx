@@ -31,8 +31,8 @@ export function MobileMenu({ isAdmin, userName }: MobileMenuProps) {
       <SheetContent side="left">
         <SheetHeader>
           <SheetTitle>
-            <img src="/logo.svg" alt="Stanza Soft" className="h-9 w-auto dark:hidden" />
-            <img src="/logo-white.svg" alt="Stanza Soft" className="h-9 w-auto hidden dark:block" />
+            <img src="/logo.svg" alt="Stanza Soft" className="h-12 w-auto dark:hidden" />
+            <img src="/logo-white.svg" alt="Stanza Soft" className="h-12 w-auto hidden dark:block" />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-2 mt-6">

@@ -40,8 +40,8 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/logo.svg" alt="Stanza Soft" className="h-14 w-auto dark:hidden" />
-            <img src="/logo-white.svg" alt="Stanza Soft" className="h-14 w-auto hidden dark:block" />
+            <img src="/logo.svg" alt="Stanza Soft" className="h-20 w-auto dark:hidden" />
+            <img src="/logo-white.svg" alt="Stanza Soft" className="h-20 w-auto hidden dark:block" />
           </div>
           <CardTitle>Create an Account</CardTitle>
           <CardDescription>
