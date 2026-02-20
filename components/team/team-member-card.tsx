@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,7 @@ export function TeamMemberCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleRoleChange = async () => {
     if (member.id === currentUserId) {
@@ -86,6 +88,7 @@ export function TeamMemberCard({
         title: "Success",
         description: `Role updated to ${newRole}`,
       });
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -41,6 +42,7 @@ export function MemberAssignment({
 }: MemberAssignmentProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
+  const router = useRouter();
 
   const handleAddMember = async () => {
     if (!selectedUserId) return;
@@ -51,7 +53,8 @@ export function MemberAssignment({
       toast.success("Member added", {
         description: "Member has been added to the project",
       });
-      window.location.reload();
+      setSelectedUserId("");
+      router.refresh();
     } catch (error) {
       toast.error("Failed to add member", {
         description: error instanceof Error ? error.message : "An error occurred",
@@ -67,7 +70,7 @@ export function MemberAssignment({
       toast.success("Member removed", {
         description: "Member has been removed from the project",
       });
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       toast.error("Failed to remove member", {
         description: error instanceof Error ? error.message : "An error occurred",

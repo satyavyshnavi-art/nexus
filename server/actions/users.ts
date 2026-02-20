@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { UserRole } from "@prisma/client";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 export async function getAllUsers() {
   const session = await auth();
@@ -11,28 +11,17 @@ export async function getAllUsers() {
     throw new Error("Unauthorized");
   }
 
-  const getCachedAllUsers = unstable_cache(
-    async () => {
-      return db.user.findMany({
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          designation: true,
-          role: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+  return db.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      designation: true,
+      role: true,
+      createdAt: true,
     },
-    ["all-users"],
-    {
-      revalidate: 30,
-      tags: ["all-users"],
-    }
-  );
-
-  return getCachedAllUsers();
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function updateUserRole(userId: string, role: UserRole) {
@@ -176,6 +165,7 @@ export async function updateUserProfile(
   // Revalidate caches
   revalidatePath(`/profile/${userId}`);
   revalidatePath("/team");
+  revalidatePath("/");
 
   return updated;
 }
