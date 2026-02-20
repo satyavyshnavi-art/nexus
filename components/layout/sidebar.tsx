@@ -295,9 +295,7 @@ function DesktopSidebar({
             avatarSrc={null}
             id={userId}
             designation={userDesignation}
-            className={cn(
-              collapsed && "px-1"
-            )}
+            compact={collapsed}
           />
         </div>
       </div>

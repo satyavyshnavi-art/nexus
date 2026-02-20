@@ -19,6 +19,7 @@ import { Column } from "./column";
 import { TaskCard } from "./task-card";
 import { updateTaskStatus } from "@/server/actions/tasks";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 
 const TaskDetailModal = dynamic(
   () => import("@/components/tasks/task-detail-modal").then((mod) => mod.TaskDetailModal),
@@ -108,6 +109,16 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
+
+    // Celebrate when a task is moved to "done"
+    if (newStatus === "done") {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#7C3AED', '#8B5CF6', '#A78BFA', '#FFD93D', '#6BCB77', '#3B82F6'],
+      });
+    }
 
     setIsUpdating(true);
     try {

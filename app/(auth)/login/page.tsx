@@ -80,18 +80,17 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[1fr_480px] xl:grid-cols-[1fr_520px]">
-      {/* Left panel - purple gradient with illustration */}
-      <div className="hidden lg:flex flex-col min-h-screen bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#6D28D9] relative overflow-hidden">
-        {/* Decorative circles */}
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full translate-x-1/3 translate-y-1/3" />
-        <div className="absolute top-1/2 right-0 w-[300px] h-[300px] bg-white/[0.03] rounded-full translate-x-1/2" />
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
+      {/* Left panel - light illustration side */}
+      <div className="hidden lg:flex flex-col min-h-screen bg-[#F8F7FF] relative overflow-hidden">
+        {/* Subtle decorative shapes */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#EDE9FE] rounded-full -translate-y-1/2 translate-x-1/4 opacity-40" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#E0F2FE] rounded-full translate-y-1/3 -translate-x-1/4 opacity-30" />
 
         {/* Logo */}
         <div className="relative z-10 p-8">
           <img
-            src="/logo-white.svg"
+            src="/logo.svg"
             alt="Stanza Soft"
             style={{ width: '140px', height: '48px', objectFit: 'contain' }}
           />
@@ -101,10 +100,10 @@ function LoginForm() {
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-12 pb-12">
           <WorkspaceIllustration />
           <div className="text-center space-y-4 mt-10 max-w-md">
-            <h2 className="text-3xl font-bold text-white leading-tight">
+            <h2 className="text-3xl font-bold text-gray-800 leading-tight">
               Manage projects with AI-powered intelligence
             </h2>
-            <p className="text-white/60 text-base leading-relaxed">
+            <p className="text-gray-500 text-base leading-relaxed">
               Sprint planning, bug classification, and Kanban boards — all enhanced with AI to help your team ship faster.
             </p>
           </div>

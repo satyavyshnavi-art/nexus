@@ -31,6 +31,8 @@ interface UserProfileMenuProps {
   id?: string;
   /** User designation */
   designation?: string | null;
+  /** Compact mode: show only avatar, no name/chevron (for collapsed sidebar) */
+  compact?: boolean;
 }
 
 export function UserProfileMenu({
@@ -39,6 +41,7 @@ export function UserProfileMenu({
   role = 'member',
   avatarSrc,
   className,
+  compact = false,
   ...otherProps
 }: UserProfileMenuProps) {
   const handleSignOut = async () => {
@@ -53,8 +56,9 @@ export function UserProfileMenu({
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+            'flex items-center rounded-lg text-sm transition-colors',
             'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            compact ? 'justify-center p-2' : 'gap-3 px-3 py-2',
             className
           )}
           aria-label="Open user menu"
@@ -65,15 +69,19 @@ export function UserProfileMenu({
             size="sm"
             isAdmin={role === 'admin'}
           />
-          <div className="hidden flex-col items-start md:flex">
-            <span className="text-sm font-medium">{name}</span>
-            <span className="text-xs text-muted-foreground">{roleLabel}</span>
-          </div>
-          <ChevronDown className="h-4 w-4 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
+          {!compact && (
+            <>
+              <div className="hidden flex-col items-start md:flex">
+                <span className="text-sm font-medium">{name}</span>
+                <span className="text-xs text-muted-foreground">{roleLabel}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56 max-h-[24rem] overflow-y-auto">
+      <DropdownMenuContent align={compact ? 'start' : 'end'} side={compact ? 'right' : 'bottom'} className="w-56 max-h-[24rem] overflow-y-auto">
         {/* User Info Header */}
         <div className="px-2 py-1.5">
           <p className="text-sm font-semibold leading-none">{name}</p>
