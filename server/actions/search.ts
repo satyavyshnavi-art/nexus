@@ -143,7 +143,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
             id: t.id,
             title: t.title,
             subtitle: `${t.status} • ${t.sprint.project.name}`,
-            url: `/projects/${t.sprint.projectId}?task=${t.id}`,
+            url: `/projects/${t.sprint.projectId}`,
         });
     });
 

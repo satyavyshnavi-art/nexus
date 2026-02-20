@@ -1,5 +1,3 @@
-"use server";
-
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { redirect, notFound } from "next/navigation";
