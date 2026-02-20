@@ -73,14 +73,12 @@ export default async function ProjectPage({
             </span>
           </div>
         </div>
-        {isAdmin && (
-          <Link href={`/projects/${projectId}/sprints`}>
-            <Button variant="outline" className="glass hover:bg-muted/50">
-              <Calendar className="h-4 w-4 mr-2" />
-              Manage Sprints
-            </Button>
-          </Link>
-        )}
+        <Link href={`/projects/${projectId}/sprints`}>
+          <Button variant="outline" className="glass hover:bg-muted/50">
+            <Calendar className="h-4 w-4 mr-2" />
+            {isAdmin ? "Manage Sprints" : "View Sprints"}
+          </Button>
+        </Link>
       </div>
 
       {/* Sprint Progress Tracker */}
@@ -203,18 +201,12 @@ export default async function ProjectPage({
             />
           )}
           {/* Custom Empty State Action for Link */}
-          {!activeSprint && isAdmin && (
-            <div className="flex justify-center -mt-20 relative z-10 pointer-events-none">
-              {/* This is a hacky way to inject the button, better to just render the button below the empty state or modify EmptyState to accept ReactNode action */}
-              {/* Let's just render the link below the EmptyState manually for now */}
-            </div>
-          )}
-          {!activeSprint && isAdmin && (
+          {!activeSprint && (
             <div className="flex justify-center mt-4">
               <Link href={`/projects/${projectId}/sprints`}>
                 <Button variant="outline" className="glass">
                   <Calendar className="h-4 w-4 mr-2" />
-                  {sprints.length === 0 ? "Create Sprint" : "Manage Sprints"}
+                  {sprints.length === 0 && isAdmin ? "Create Sprint" : "View Sprints"}
                 </Button>
               </Link>
             </div>
