@@ -10,7 +10,12 @@ export async function createVertical(name: string) {
     throw new Error("Unauthorized");
   }
 
-  return db.vertical.create({ data: { name } });
+  const vertical = await db.vertical.create({ data: { name } });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin/verticals");
+
+  return vertical;
 }
 
 export async function assignUserToVertical(userId: string, verticalId: string) {
@@ -20,13 +25,20 @@ export async function assignUserToVertical(userId: string, verticalId: string) {
   }
 
   // Idempotent insert
-  return db.verticalUser.upsert({
+  const result = await db.verticalUser.upsert({
     where: {
       verticalId_userId: { verticalId, userId },
     },
     create: { verticalId, userId },
     update: {},
   });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin/verticals");
+  revalidatePath(`/admin/verticals/${verticalId}`);
+  revalidatePath("/team");
+
+  return result;
 }
 
 export async function getUserVerticals() {
@@ -83,11 +95,18 @@ export async function removeUserFromVertical(userId: string, verticalId: string)
     throw new Error("Unauthorized");
   }
 
-  return db.verticalUser.delete({
+  const result = await db.verticalUser.delete({
     where: {
       verticalId_userId: { verticalId, userId },
     },
   });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin/verticals");
+  revalidatePath(`/admin/verticals/${verticalId}`);
+  revalidatePath("/team");
+
+  return result;
 }
 
 export async function getVerticalDetails(verticalId: string) {

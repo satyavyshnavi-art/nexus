@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -12,8 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAssignment } from "./user-assignment";
-import { Users, ArrowRight } from "lucide-react";
+import { Users, ArrowRight, Loader2 } from "lucide-react";
 import type { Vertical } from "@prisma/client";
+import { getVerticalWithUsers } from "@/server/actions/verticals";
 
 interface VerticalWithCount extends Vertical {
   _count: {
@@ -136,13 +137,39 @@ function ManageUsersContent({
   verticalId: string;
   allUsers: User[];
 }) {
-  // This would need to fetch assigned users - for simplicity, we'll reload the page
-  // In a production app, you'd fetch this data properly
+  const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        setIsLoading(true);
+        const vertical = await getVerticalWithUsers(verticalId);
+        if (vertical) {
+          setAssignedUsers(vertical.users.map(u => u.user));
+        }
+      } catch (error) {
+        console.error("Failed to fetch assigned users", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchUsers();
+  }, [verticalId]);
+
+  if (isLoading) {
+    return (
+      <div className="py-8 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="py-4">
       <UserAssignment
         verticalId={verticalId}
-        assignedUsers={[]}
+        assignedUsers={assignedUsers}
         availableUsers={allUsers}
       />
     </div>
