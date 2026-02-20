@@ -32,18 +32,18 @@ export default async function DashboardLayout({
               <img
                 src="/logo.svg"
                 alt="Stanza Soft"
-                width={150}
-                height={50}
+                width={130}
+                height={40}
                 className="dark:hidden"
-                style={{ width: '150px', height: '50px', objectFit: 'contain' }}
+                style={{ width: '130px', height: '40px', objectFit: 'contain' }}
               />
               <img
                 src="/logo-white.svg"
                 alt="Stanza Soft"
-                width={150}
-                height={50}
+                width={130}
+                height={40}
                 className="hidden dark:block"
-                style={{ width: '150px', height: '50px', objectFit: 'contain' }}
+                style={{ width: '130px', height: '40px', objectFit: 'contain' }}
               />
             </Link>
             <div className="hidden md:block">
