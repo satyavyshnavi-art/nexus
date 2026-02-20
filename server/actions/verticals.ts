@@ -207,12 +207,12 @@ export async function deleteVertical(verticalId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Check for existing projects
+  // Check for existing projects and users
   const vertical = await db.vertical.findUnique({
     where: { id: verticalId },
     include: {
       _count: {
-        select: { projects: true },
+        select: { projects: true, users: true },
       },
     },
   });
@@ -227,12 +227,32 @@ export async function deleteVertical(verticalId: string) {
     );
   }
 
-  await db.vertical.delete({
-    where: { id: verticalId },
+  // Delete related VerticalUser records first, then the vertical itself
+  // Using a transaction ensures atomicity — either both operations succeed or neither does
+  await db.$transaction(async (tx) => {
+    // Delete all VerticalUser records for this vertical
+    if (vertical._count.users > 0) {
+      await tx.verticalUser.deleteMany({
+        where: { verticalId },
+      });
+    }
+
+    // Now delete the vertical itself
+    await tx.vertical.delete({
+      where: { id: verticalId },
+    });
   });
 
-  const { revalidatePath } = await import("next/cache");
+  const { revalidatePath, revalidateTag } = await import("next/cache");
   revalidatePath("/admin/verticals");
+  revalidatePath("/admin");
+  revalidatePath("/team");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("verticals-with-projects");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-stats");
+  // @ts-expect-error - Next.js 15 type mismatch in local environment
+  revalidateTag("team-members");
 }
 
 export async function getVerticalsWithProjects() {

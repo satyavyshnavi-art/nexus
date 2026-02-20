@@ -172,3 +172,91 @@ export async function getProjectSprints(projectId: string) {
 
   return getCachedProjectSprints(projectId);
 }
+
+export interface SprintProgressData {
+  id: string;
+  name: string;
+  status: SprintStatus;
+  startDate: Date;
+  endDate: Date;
+  totalTasks: number;
+  tasksByStatus: {
+    todo: number;
+    progress: number;
+    review: number;
+    done: number;
+  };
+  completionPercentage: number;
+  storyPoints: {
+    completed: number;
+    total: number;
+  };
+}
+
+export async function getSprintProgress(
+  sprintId: string
+): Promise<SprintProgressData | null> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const getCachedSprintProgress = unstable_cache(
+    async (sprintId: string) => {
+      const sprint = await db.sprint.findUnique({
+        where: { id: sprintId },
+        include: {
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+              storyPoints: true,
+            },
+          },
+        },
+      });
+
+      if (!sprint) return null;
+
+      const totalTasks = sprint.tasks.length;
+      const tasksByStatus = {
+        todo: sprint.tasks.filter((t) => t.status === "todo").length,
+        progress: sprint.tasks.filter((t) => t.status === "progress").length,
+        review: sprint.tasks.filter((t) => t.status === "review").length,
+        done: sprint.tasks.filter((t) => t.status === "done").length,
+      };
+
+      const completionPercentage =
+        totalTasks > 0
+          ? Math.round((tasksByStatus.done / totalTasks) * 100)
+          : 0;
+
+      const totalStoryPoints = sprint.tasks.reduce(
+        (sum, t) => sum + (t.storyPoints ?? 0),
+        0
+      );
+      const completedStoryPoints = sprint.tasks
+        .filter((t) => t.status === "done")
+        .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
+
+      return {
+        id: sprint.id,
+        name: sprint.name,
+        status: sprint.status,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+        totalTasks,
+        tasksByStatus,
+        completionPercentage,
+        storyPoints: {
+          completed: completedStoryPoints,
+          total: totalStoryPoints,
+        },
+      };
+    },
+    [`sprint-progress-${sprintId}`],
+    {
+      revalidate: 30,
+    }
+  );
+
+  return getCachedSprintProgress(sprintId);
+}

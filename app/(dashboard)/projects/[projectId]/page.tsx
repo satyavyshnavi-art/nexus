@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth/config";
 import { getProject } from "@/server/actions/projects";
-import { getActiveSprint, getProjectSprints } from "@/server/actions/sprints";
+import { getActiveSprint, getProjectSprints, getSprintProgress } from "@/server/actions/sprints";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KanbanBoard } from "@/components/kanban/board";
@@ -15,6 +15,7 @@ import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
 import { getLinkedRepository } from "@/server/actions/github-link";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SprintProgress } from "@/components/projects/sprint-progress";
 import { db } from "@/server/db";
 
 export default async function ProjectPage({
@@ -29,6 +30,11 @@ export default async function ProjectPage({
   const activeSprint = await getActiveSprint(projectId);
   const sprints = await getProjectSprints(projectId);
   const linkedRepo = await getLinkedRepository(projectId);
+
+  // Fetch sprint progress for the active sprint
+  const sprintProgress = activeSprint
+    ? await getSprintProgress(activeSprint.id)
+    : null;
 
   const isAdmin = session?.user.role === "admin";
 
@@ -76,6 +82,11 @@ export default async function ProjectPage({
           </Link>
         )}
       </div>
+
+      {/* Sprint Progress Tracker */}
+      {sprintProgress && (
+        <SprintProgress progress={sprintProgress} />
+      )}
 
       {/* Statistics Cards */}
       {taskStats && (
