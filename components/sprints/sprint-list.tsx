@@ -78,6 +78,8 @@ export function SprintList({
                   status={sprint.status}
                   sprintName={sprint.name}
                   projectId={projectId}
+                  startDate={sprint.startDate}
+                  endDate={sprint.endDate}
                   completedTaskCount={counts?.completed ?? 0}
                   incompleteTaskCount={counts?.incomplete ?? 0}
                 />

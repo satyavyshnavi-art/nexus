@@ -38,6 +38,64 @@ export async function createSprint(data: {
   }
 }
 
+export async function updateSprint(
+  sprintId: string,
+  data: { name?: string; startDate?: Date; endDate?: Date }
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  if (data.startDate && data.endDate && data.endDate < data.startDate) {
+    throw new Error("End date must be after start date");
+  }
+
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { id: true, projectId: true, status: true },
+  });
+
+  if (!sprint) throw new Error("Sprint not found");
+  if (sprint.status === "completed") {
+    throw new Error("Cannot edit a completed sprint");
+  }
+
+  const updated = await db.sprint.update({
+    where: { id: sprintId },
+    data,
+  });
+
+  revalidatePath(`/projects/${sprint.projectId}`);
+  revalidatePath(`/projects/${sprint.projectId}/sprints`);
+
+  return updated;
+}
+
+export async function deleteSprint(sprintId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { id: true, projectId: true, status: true },
+  });
+
+  if (!sprint) throw new Error("Sprint not found");
+  if (sprint.status === "active") {
+    throw new Error("Cannot delete an active sprint. Complete it first.");
+  }
+
+  await db.sprint.delete({ where: { id: sprintId } });
+
+  revalidatePath(`/projects/${sprint.projectId}`);
+  revalidatePath(`/projects/${sprint.projectId}/sprints`);
+
+  return { success: true };
+}
+
 export async function activateSprint(sprintId: string) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
