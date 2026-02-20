@@ -28,21 +28,21 @@ export default async function DashboardLayout({
               isAdmin={session.user.role === "admin"}
               userName={session.user.name || session.user.email || "User"}
             />
-            <Link href="/" className="hover:opacity-80 transition-opacity">
+            <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
               <Image
                 src="/logo.svg"
                 alt="Stanza Soft"
-                width={140}
-                height={40}
-                className="h-8 w-auto dark:hidden"
+                width={180}
+                height={50}
+                className="h-10 w-auto dark:hidden"
                 priority
               />
               <Image
                 src="/logo-white.svg"
                 alt="Stanza Soft"
-                width={140}
-                height={40}
-                className="h-8 w-auto hidden dark:block"
+                width={180}
+                height={50}
+                className="h-10 w-auto hidden dark:block"
                 priority
               />
             </Link>
