@@ -252,3 +252,76 @@ export async function getCurrentUserProfile() {
     },
   };
 }
+
+export async function getMyTasksAndProjects() {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  const [assignedTasks, projectMemberships, totalTasks, completedTasks] =
+    await Promise.all([
+      db.task.findMany({
+        where: { assigneeId: userId },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+          type: true,
+          requiredRole: true,
+          labels: true,
+          storyPoints: true,
+          createdAt: true,
+          sprint: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  vertical: {
+                    select: { id: true, name: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.projectMember.findMany({
+        where: { userId },
+        select: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              vertical: {
+                select: { id: true, name: true },
+              },
+              _count: {
+                select: { sprints: true, members: true },
+              },
+            },
+          },
+        },
+      }),
+      db.task.count({ where: { assigneeId: userId } }),
+      db.task.count({
+        where: { assigneeId: userId, status: "done" },
+      }),
+    ]);
+
+  return {
+    assignedTasks,
+    projects: projectMemberships.map((m) => m.project),
+    stats: {
+      totalTasks,
+      completedTasks,
+      activeProjects: projectMemberships.length,
+    },
+  };
+}
