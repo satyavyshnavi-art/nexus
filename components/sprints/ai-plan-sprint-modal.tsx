@@ -53,9 +53,18 @@ export function AiPlanSprintModal({
     try {
       const result = await aiPlanSprint(projectId, inputText);
 
+      if (!result.success) {
+        toast({
+          title: "AI Planning Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Sprint planned!",
-        description: `Created "${result.sprint.name}" with ${result.taskCount} tickets`,
+        description: `Created "${result.sprintName}" with ${result.taskCount} tickets`,
         variant: "success",
       });
 

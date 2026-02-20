@@ -43,6 +43,15 @@ export function AiSprintForm({
     try {
       const result = await aiGenerateSprintTasks(sprintId, inputText);
 
+      if (!result.success) {
+        toast({
+          title: "AI Generation Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Tickets generated!",
         description: `Created ${result.taskCount} tickets with AI`,
