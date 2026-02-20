@@ -37,6 +37,8 @@ export async function createTask(data: {
   assigneeId?: string;
   parentTaskId?: string;
   pushToGitHub?: boolean;
+  requiredRole?: string;
+  labels?: string[];
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -162,6 +164,8 @@ export async function updateTask(
     priority?: TaskPriority;
     storyPoints?: number;
     assigneeId?: string | null;
+    requiredRole?: string;
+    labels?: string[];
   }
 ) {
   const session = await auth();

@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag } from "lucide-react";
+import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
   githubIssueId: string | null;
@@ -297,6 +298,36 @@ export function TaskDetailModal({
               />
             </div>
           </div>
+
+          {/* Role & Labels */}
+          {(task.requiredRole || (task.labels && task.labels.length > 0)) && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {task.requiredRole && (() => {
+                const roleStyle = getRoleColor(task.requiredRole);
+                return (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-medium border ${roleStyle.border} ${roleStyle.bg} ${roleStyle.text}`}
+                  >
+                    {task.requiredRole}
+                  </Badge>
+                );
+              })()}
+              {task.labels && task.labels.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  {task.labels.map((label) => (
+                    <span
+                      key={label}
+                      className="inline-block px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Progress Visualization for Parent Tasks */}
           {progress && (

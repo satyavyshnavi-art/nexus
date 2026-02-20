@@ -85,7 +85,7 @@ export async function getProject(projectId: string) {
           members: {
             include: {
               user: {
-                select: { id: true, name: true, email: true },
+                select: { id: true, name: true, email: true, designation: true },
               },
             },
           },

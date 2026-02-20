@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
 import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp } from "lucide-react";
+import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskCardProps {
   task: Omit<Task, "githubIssueId"> & {
@@ -61,6 +62,7 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
 
   const TypeIcon = typeConfig[task.type].icon;
   const priorityStyle = priorityConfig[task.priority];
+  const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
 
   // The actual card being dragged becomes a placeholder
   if (isSelfDragging) {
@@ -84,7 +86,7 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
         onClick={handleClick}
       >
         <div className="space-y-3">
-          {/* Header: Type Icon + Priority Badge */}
+          {/* Header: Type Icon + Badges */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <TypeIcon className={`h-4 w-4 shrink-0 ${typeConfig[task.type].color}`} />
@@ -92,12 +94,22 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
                 {task.title}
               </span>
             </div>
-            <Badge
-              variant="outline"
-              className={`shrink-0 text-xs font-medium border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}
-            >
-              {task.priority}
-            </Badge>
+            <div className="flex items-center gap-1 shrink-0">
+              {roleStyle && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] font-medium border ${roleStyle.border} ${roleStyle.bg} ${roleStyle.text}`}
+                >
+                  {task.requiredRole}
+                </Badge>
+              )}
+              <Badge
+                variant="outline"
+                className={`text-xs font-medium border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}
+              >
+                {task.priority}
+              </Badge>
+            </div>
           </div>
 
           {/* Description */}
@@ -105,6 +117,20 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
             <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {task.description}
             </p>
+          )}
+
+          {/* Labels */}
+          {task.labels && task.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {task.labels.map((label) => (
+                <span
+                  key={label}
+                  className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-muted text-muted-foreground"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           )}
 
           {/* Footer: Metadata + Assignee */}

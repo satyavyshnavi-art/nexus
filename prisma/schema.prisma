@@ -149,6 +149,8 @@ model Task {
   githubSyncedAt    DateTime?        @map("github_synced_at")
   githubUrl         String?          @map("github_url")
   githubStatus      String?          @map("github_status") // "open" | "closed" - tracks GitHub-side status
+  requiredRole      String?          @map("required_role")
+  labels            String[]         @default([])
   syncLogs          GitHubSyncLog[]
   attachments       TaskAttachment[]
   comments          TaskComment[]
@@ -166,6 +168,7 @@ model Task {
   @@index([sprintId, createdAt(sort: Desc)])
   @@index([githubIssueId])
   @@index([sprintId, githubIssueNumber])
+  @@index([sprintId, requiredRole])
   @@map("tasks")
 }
 
