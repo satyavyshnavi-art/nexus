@@ -56,3 +56,7 @@ export async function loginUser(email: string, password: string) {
 export async function loginWithGitHub() {
   await signIn("github", { redirectTo: "/" });
 }
+
+export async function loginWithGoogle() {
+  await signIn("google", { redirectTo: "/" });
+}

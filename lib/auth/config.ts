@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 import { compare } from "bcrypt";
 import { db } from "@/server/db";
 import type { UserRole } from "@prisma/client";
@@ -18,6 +19,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           scope: "read:user user:email repo", // Include repo access for linking repositories
         },
       },
+    }),
+
+    // Google OAuth provider
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
     // Existing Credentials provider
@@ -138,6 +145,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
         } catch (error) {
           console.error("GitHub sign-in error:", error);
+          return false;
+        }
+      }
+
+      if (account?.provider === "google") {
+        try {
+          await db.$transaction(async (tx) => {
+            let dbUser = user.email
+              ? await tx.user.findUnique({ where: { email: user.email } })
+              : null;
+
+            if (dbUser) {
+              await tx.user.update({
+                where: { id: dbUser.id },
+                data: {
+                  name: dbUser.name || user.name || "Google User",
+                  avatar: dbUser.avatar || user.image || null,
+                },
+              });
+            } else {
+              const newUser = await tx.user.create({
+                data: {
+                  email: user.email!,
+                  name: user.name || "Google User",
+                  avatar: user.image || null,
+                  role: "member",
+                },
+              });
+
+              const defaultVertical = await tx.vertical.upsert({
+                where: { name: "Default" },
+                update: {},
+                create: { name: "Default" },
+              });
+              await tx.verticalUser.create({
+                data: { verticalId: defaultVertical.id, userId: newUser.id },
+              });
+            }
+          });
+        } catch (error) {
+          console.error("Google sign-in error:", error);
           return false;
         }
       }
