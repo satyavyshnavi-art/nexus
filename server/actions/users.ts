@@ -20,7 +20,7 @@ export async function getAllUsers() {
       role: true,
       createdAt: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ role: "asc" }, { createdAt: "desc" }],
   });
 }
 

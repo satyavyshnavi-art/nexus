@@ -152,3 +152,98 @@ export async function updateUserRole(userId: string, role: UserRole) {
 
   return updated;
 }
+
+/**
+ * Delete a user and clean up all related data (Admin only)
+ * Reassigns created items to the admin performing the deletion
+ */
+export async function deleteUser(userId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== UserRole.admin) {
+    throw new Error("Unauthorized: Only admins can delete users");
+  }
+
+  if (session.user.id === userId) {
+    throw new Error("Cannot delete your own account");
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const adminId = session.user.id;
+
+  await db.$transaction(async (tx) => {
+    // Unassign tasks where user is assignee
+    await tx.task.updateMany({
+      where: { assigneeId: userId },
+      data: { assigneeId: null },
+    });
+
+    // Reassign created tasks to admin
+    await tx.task.updateMany({
+      where: { createdBy: userId },
+      data: { createdBy: adminId },
+    });
+
+    // Reassign created sprints to admin
+    await tx.sprint.updateMany({
+      where: { createdBy: userId },
+      data: { createdBy: adminId },
+    });
+
+    // Reassign created projects to admin
+    await tx.project.updateMany({
+      where: { createdBy: userId },
+      data: { createdBy: adminId },
+    });
+
+    // Clear GitHub linked-by references
+    await tx.project.updateMany({
+      where: { githubLinkedBy: userId },
+      data: { githubLinkedBy: null },
+    });
+
+    // Delete user's comments
+    await tx.taskComment.deleteMany({
+      where: { userId },
+    });
+
+    // Delete user's attachments
+    await tx.taskAttachment.deleteMany({
+      where: { uploadedBy: userId },
+    });
+
+    // Delete GitHub sync logs by user
+    await tx.gitHubSyncLog.deleteMany({
+      where: { userId },
+    });
+
+    // VerticalUser and ProjectMember have onDelete: Cascade, but
+    // we delete explicitly to be safe
+    await tx.verticalUser.deleteMany({
+      where: { userId },
+    });
+
+    await tx.projectMember.deleteMany({
+      where: { userId },
+    });
+
+    // Finally, delete the user
+    await tx.user.delete({
+      where: { id: userId },
+    });
+  });
+
+  revalidatePath("/team");
+  revalidatePath("/");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/verticals");
+
+  return { success: true, name: user.name || user.email };
+}

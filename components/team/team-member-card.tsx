@@ -13,11 +13,24 @@ import {
   CheckCircle2,
   Clock,
   Mail,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
-import { updateUserRole } from "@/server/actions/team";
+import { updateUserRole, deleteUser } from "@/server/actions/team";
 import { useToast } from "@/lib/hooks/use-toast";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TeamMemberCardProps {
   member: {
@@ -65,6 +78,7 @@ export function TeamMemberCard({
 }: TeamMemberCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -97,6 +111,27 @@ export function TeamMemberCard({
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteUser(member.id);
+      toast({
+        title: "User removed",
+        description: `${result.name} has been removed`,
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to remove user",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -223,21 +258,64 @@ export function TeamMemberCard({
               </div>
             )}
 
-            {/* Admin action */}
+            {/* Admin actions */}
             {isAdmin && member.id !== currentUserId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRoleChange}
-                disabled={isUpdating}
-                className="w-full h-7 text-xs"
-              >
-                {isUpdating
-                  ? "Updating..."
-                  : member.role === UserRole.admin
-                    ? "Change to Member"
-                    : "Make Admin"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRoleChange}
+                  disabled={isUpdating || isDeleting}
+                  className="flex-1 h-7 text-xs"
+                >
+                  {isUpdating
+                    ? "Updating..."
+                    : member.role === UserRole.admin
+                      ? "Change to Member"
+                      : "Make Admin"}
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={isDeleting}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                      title="Remove user"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove user?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove{" "}
+                        <span className="font-semibold text-foreground">
+                          {displayName}
+                        </span>{" "}
+                        from the system. Their assigned tasks will be unassigned,
+                        and items they created will be reassigned to you. This
+                        action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Remove User
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
         )}
