@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import type { UserRole } from "@prisma/client";
-import { Shield, User, Trash2, Loader2 } from "lucide-react";
+import { Shield, User, Trash2, Loader2, Search, Users } from "lucide-react";
 import { updateUserRole } from "@/server/actions/users";
 import { deleteUser } from "@/server/actions/team";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -37,27 +38,63 @@ interface UserListProps {
 }
 
 export function UserList({ users }: UserListProps) {
-  if (users.length === 0) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-muted-foreground">No users found.</p>
-      </Card>
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter(
+      (user) =>
+        (user.name?.toLowerCase() || "").includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        (user.designation?.toLowerCase() || "").includes(query)
     );
-  }
+  }, [users, searchQuery]);
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground">
-        <div className="col-span-3">Name</div>
-        <div className="col-span-3">Email</div>
-        <div className="col-span-2">Role</div>
-        <div className="col-span-2">Joined</div>
-        <div className="col-span-2">Actions</div>
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search by name, email, or designation..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
-      {users.map((user) => (
-        <UserRow key={user.id} user={user} />
-      ))}
+      {/* Count */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Users className="h-4 w-4" />
+        <span>
+          Showing {filteredUsers.length} of {users.length} users
+        </span>
+      </div>
+
+      {/* User list */}
+      {filteredUsers.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">
+            {searchQuery ? "No users match your search." : "No users found."}
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground">
+            <div className="col-span-3">Name</div>
+            <div className="col-span-3">Email</div>
+            <div className="col-span-2">Role</div>
+            <div className="col-span-2">Joined</div>
+            <div className="col-span-2">Actions</div>
+          </div>
+
+          {filteredUsers.map((user) => (
+            <UserRow key={user.id} user={user} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -152,9 +189,9 @@ function UserRow({ user }: { user: UserData }) {
             {isUpdating ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : user.role === "admin" ? (
-              "Demote"
+              "Remove as Admin"
             ) : (
-              "Promote"
+              "Make Admin"
             )}
           </Button>
 

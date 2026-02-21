@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { getAllUsers } from "@/server/actions/users";
 import { UserList } from "@/components/admin/user-list";
-import { Input } from "@/components/ui/input";
 
 export default async function UsersPage() {
   const session = await auth();
@@ -24,20 +23,7 @@ export default async function UsersPage() {
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <Input
-          type="search"
-          placeholder="Search users..."
-          className="max-w-sm"
-        />
-      </div>
-
-      <div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Total users: {users.length}
-        </p>
-        <UserList users={users} />
-      </div>
+      <UserList users={users} />
     </div>
   );
 }

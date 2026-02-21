@@ -180,7 +180,7 @@ model TaskComment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([taskId, createdAt])
@@ -198,7 +198,7 @@ model TaskAttachment {
   sizeBytes  Int      @map("size_bytes")
   createdAt  DateTime @default(now()) @map("created_at")
   task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  uploader   User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@map("task_attachments")
