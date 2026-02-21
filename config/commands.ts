@@ -40,11 +40,17 @@ export const staticCommands: CommandGroup[] = [
                 shortcut: "T",
             },
             {
+                id: "my-tasks",
+                title: "My Tasks",
+                url: "/my-tasks",
+                icon: User,
+                shortcut: "M",
+            },
+            {
                 id: "profile",
                 title: "My Profile",
                 url: "/profile",
                 icon: User,
-                shortcut: "M",
             },
         ],
     },

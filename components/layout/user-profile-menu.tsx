@@ -71,11 +71,11 @@ export function UserProfileMenu({
           />
           {!compact && (
             <>
-              <div className="hidden flex-col items-start md:flex">
-                <span className="text-sm font-medium">{name}</span>
+              <div className="hidden flex-col items-start md:flex min-w-0 flex-1">
+                <span className="text-sm font-medium truncate max-w-[140px]">{name}</span>
                 <span className="text-xs text-muted-foreground">{roleLabel}</span>
               </div>
-              <ChevronDown className="h-4 w-4 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
+              <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
             </>
           )}
         </button>

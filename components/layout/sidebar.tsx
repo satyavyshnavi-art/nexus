@@ -50,7 +50,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Home },
   { label: "Team", href: "/team", icon: Users },
-  { label: "My Tasks", href: "/profile", icon: CheckSquare },
+  { label: "My Tasks", href: "/my-tasks", icon: CheckSquare },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
