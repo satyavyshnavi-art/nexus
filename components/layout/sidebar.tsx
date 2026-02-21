@@ -26,6 +26,8 @@ import {
   PanelLeft,
   Menu,
   Search,
+  Settings,
+  User,
 } from "lucide-react";
 
 const SIDEBAR_COLLAPSED_KEY = "nexus-sidebar-collapsed";
@@ -49,6 +51,7 @@ const mainNavItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Home },
   { label: "Team", href: "/team", icon: Users },
   { label: "My Tasks", href: "/profile", icon: CheckSquare },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 const adminNavItems: NavItem[] = [

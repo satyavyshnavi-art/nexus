@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import { getMyTasksAndProjects } from "@/server/actions/users";
+import { getCurrentUserProfile, getMyTasksAndProjects } from "@/server/actions/users";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -21,7 +22,12 @@ import {
   Clock,
   Circle,
   Eye,
+  Mail,
+  Calendar,
+  Shield,
+  User,
 } from "lucide-react";
+import { format } from "date-fns";
 
 const typeConfig: Record<string, { icon: typeof CheckSquare; color: string }> = {
   story: { icon: BookOpen, color: "text-purple-600 dark:text-purple-400" },
@@ -43,11 +49,14 @@ const priorityConfig: Record<string, string> = {
   critical: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
-export default async function MyTasksPage() {
+export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const data = await getMyTasksAndProjects();
+  const [profile, data] = await Promise.all([
+    getCurrentUserProfile(),
+    getMyTasksAndProjects(),
+  ]);
 
   const completionRate =
     data.stats.totalTasks > 0
@@ -78,82 +87,82 @@ export default async function MyTasksPage() {
     tasksByProject.get(projectId)!.tasks.push(task);
   });
 
-  // Active tasks (not done)
   const activeTasks = data.assignedTasks.filter((t) => t.status !== "done");
-  // Completed tasks
   const completedTasks = data.assignedTasks.filter((t) => t.status === "done");
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">My Tasks</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your assigned tickets and projects across all verticals
-        </p>
-      </div>
+      {/* Profile Card */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-5">
+            <Avatar
+              src={profile.avatar || undefined}
+              name={profile.name || "User"}
+              size="xl"
+              isAdmin={profile.role === "admin"}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold truncate">
+                  {profile.name || "Unnamed User"}
+                </h1>
+                <Badge variant={profile.role === "admin" ? "default" : "secondary"}>
+                  {profile.role === "admin" ? (
+                    <Shield className="h-3 w-3 mr-1" />
+                  ) : (
+                    <User className="h-3 w-3 mr-1" />
+                  )}
+                  {profile.role}
+                </Badge>
+              </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total Tickets
-                </span>
-                <div className="text-3xl font-bold mt-1">
-                  {data.stats.totalTasks}
+              {profile.designation && (
+                <p className="text-sm text-primary font-medium mt-1">
+                  {profile.designation}
+                </p>
+              )}
+
+              {profile.bio && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {profile.bio}
+                </p>
+              )}
+
+              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>{profile.email}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Joined {format(new Date(profile.createdAt), "MMM d, yyyy")}</span>
                 </div>
               </div>
-              <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Activity className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">
-                  Completed
-                </span>
-                <div className="flex items-end gap-2 mt-1">
-                  <span className="text-3xl font-bold">
-                    {data.stats.completedTasks}
-                  </span>
-                  <Badge variant="secondary" className="mb-1">
-                    {completionRate}%
-                  </Badge>
+              {/* Inline stats */}
+              <div className="flex items-center gap-6 mt-4 pt-4 border-t">
+                <div className="text-center">
+                  <div className="text-xl font-bold">{data.stats.totalTasks}</div>
+                  <div className="text-xs text-muted-foreground">Tickets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{data.stats.completedTasks}</div>
+                  <div className="text-xs text-muted-foreground">Completed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{data.stats.activeProjects}</div>
+                  <div className="text-xs text-muted-foreground">Projects</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-green-600 dark:text-green-400">{completionRate}%</div>
+                  <div className="text-xs text-muted-foreground">Rate</div>
                 </div>
               </div>
-              <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">
-                  Active Projects
-                </span>
-                <div className="text-3xl font-bold mt-1">
-                  {data.stats.activeProjects}
-                </div>
-              </div>
-              <div className="h-10 w-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Assigned Projects */}
       {data.projects.length > 0 && (

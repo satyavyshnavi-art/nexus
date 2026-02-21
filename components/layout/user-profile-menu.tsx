@@ -57,7 +57,7 @@ export function UserProfileMenu({
         <button
           className={cn(
             'flex items-center rounded-lg text-sm transition-colors',
-            'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'hover:bg-accent focus-visible:outline-none',
             compact ? 'justify-center p-2' : 'gap-3 px-3 py-2',
             className
           )}
