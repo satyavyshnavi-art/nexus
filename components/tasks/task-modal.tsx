@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +31,11 @@ export function TaskModal({
   onOpenChange,
   projectLinked = false,
 }: TaskModalProps) {
+  const router = useRouter();
+
   const handleSuccess = () => {
     onOpenChange(false);
-    // Refresh the page to show the new ticket
-    window.location.reload();
+    router.refresh();
   };
 
   return (

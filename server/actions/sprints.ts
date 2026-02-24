@@ -292,33 +292,17 @@ export async function getActiveSprint(projectId: string) {
     },
     include: {
       tasks: {
-        where: {
-          type: "story",
-          parentTaskId: null,
-        },
         include: {
           assignee: { select: { id: true, name: true, email: true } },
           reviewer: { select: { id: true, name: true, email: true } },
+          parentTask: { select: { id: true, title: true } },
           childTasks: {
-            where: {
-              type: { in: ["task", "bug"] },
-            },
-            include: {
-              assignee: { select: { id: true, name: true, email: true } },
-              reviewer: { select: { id: true, name: true, email: true } },
-              childTasks: {
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  priority: true,
-                  type: true,
-                },
-                orderBy: { createdAt: "asc" },
-              },
-              _count: {
-                select: { comments: true, attachments: true, childTasks: true },
-              },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              type: true,
             },
             orderBy: { createdAt: "asc" },
           },
@@ -326,7 +310,7 @@ export async function getActiveSprint(projectId: string) {
             select: { comments: true, attachments: true, childTasks: true },
           },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -336,13 +320,9 @@ export async function getActiveSprint(projectId: string) {
   // Serialize BigInt fields for client components
   return {
     ...sprint,
-    tasks: sprint.tasks.map((story) => ({
-      ...story,
-      githubIssueId: story.githubIssueId?.toString() || null,
-      childTasks: story.childTasks.map((ticket) => ({
-        ...ticket,
-        githubIssueId: ticket.githubIssueId?.toString() || null,
-      })),
+    tasks: sprint.tasks.map((t) => ({
+      ...t,
+      githubIssueId: t.githubIssueId?.toString() || null,
     })),
   };
 }

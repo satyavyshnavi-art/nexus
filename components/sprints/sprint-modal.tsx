@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +17,11 @@ interface SprintModalProps {
 }
 
 export function SprintModal({ projectId, open, onOpenChange }: SprintModalProps) {
+  const router = useRouter();
+
   const handleSuccess = () => {
     onOpenChange(false);
-    // Refresh the page to show the new sprint
-    window.location.reload();
+    router.refresh();
   };
 
   return (

@@ -46,25 +46,21 @@ export default async function ProjectPage({
     : null;
   const userHasGitHub = !!currentUser?.githubAccessToken;
 
-  // Flatten stories → tickets for board and stats
-  // Stories are top-level in activeSprint.tasks, tickets are in childTasks
-  const flatTickets = activeSprint
-    ? activeSprint.tasks.flatMap((story) =>
-        (story.childTasks || []).map((ticket) => ({
-          ...ticket,
-          parentTask: { id: story.id, title: story.title },
-        }))
+  // Filter to show tickets on the board (exclude stories and subtasks)
+  const boardTickets = activeSprint
+    ? activeSprint.tasks.filter(
+        (t) => t.type !== "story" && t.type !== "subtask"
       )
     : [];
 
   // Calculate statistics from tickets only
   const taskStats = activeSprint
     ? {
-      todo: flatTickets.filter((t) => t.status === "todo").length,
-      progress: flatTickets.filter((t) => t.status === "progress").length,
-      review: flatTickets.filter((t) => t.status === "review").length,
-      done: flatTickets.filter((t) => t.status === "done").length,
-      total: flatTickets.length,
+      todo: boardTickets.filter((t) => t.status === "todo").length,
+      progress: boardTickets.filter((t) => t.status === "progress").length,
+      review: boardTickets.filter((t) => t.status === "review").length,
+      done: boardTickets.filter((t) => t.status === "done").length,
+      total: boardTickets.length,
     }
     : null;
 
@@ -196,7 +192,7 @@ export default async function ProjectPage({
               </div>
 
               <KanbanBoard
-                initialTasks={flatTickets}
+                initialTasks={boardTickets}
                 projectMembers={project.members.map((m) => m.user)}
                 projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
                 userHasGitHub={userHasGitHub}
@@ -237,9 +233,9 @@ export default async function ProjectPage({
             )}
           </div>
 
-          {activeSprint && flatTickets.length > 0 ? (
+          {activeSprint && boardTickets.length > 0 ? (
             <TaskListView
-              tasks={flatTickets}
+              tasks={boardTickets}
               projectMembers={project.members.map((m) => m.user)}
             />
           ) : (
@@ -257,7 +253,7 @@ export default async function ProjectPage({
           <TeamTabContent
             projectId={projectId}
             members={project.members}
-            tickets={flatTickets}
+            tickets={boardTickets}
             isAdmin={isAdmin}
           />
         </TabsContent>
