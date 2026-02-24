@@ -367,154 +367,123 @@ export function TaskDetailModal({
             </div>
           )}
 
-          {/* Progress Visualization for Parent Tasks */}
-          {progress && (
-            <div className="bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-300">Subtask Progress</h3>
-                <Badge variant="outline" className="bg-background">
-                  {progress.completed} / {progress.total} completed
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <div className="w-full bg-purple-100 dark:bg-purple-900/30 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-full transition-all duration-500 ease-out flex items-center justify-end pr-1"
-                    style={{ width: `${progress.percentage}%` }}
-                  >
-                    {progress.percentage > 15 && (
-                      <span className="text-[10px] font-bold text-white">
-                        {progress.percentage}%
-                      </span>
-                    )}
-                  </div>
+          {/* Subtasks Section */}
+          <div className={progress ? "bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 space-y-3" : "space-y-3"}>
+            {/* Progress bar (only when subtasks exist) */}
+            {progress && (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-300">Subtask Progress</h3>
+                  <Badge variant="outline" className="bg-background">
+                    {progress.completed} / {progress.total} completed
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-purple-700 dark:text-purple-400">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>{progress.completed} Done</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{progress.inProgress} In Progress</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Circle className="h-3 w-3" />
-                    <span>{progress.total - progress.completed - progress.inProgress} Todo</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2 mt-4">
-                <h4 className="text-xs font-medium text-purple-900 dark:text-purple-300 uppercase">Subtasks</h4>
-                <div className="space-y-1">
-                  {subtasks.map((subtask) => (
-                    <button
-                      key={subtask.id}
-                      type="button"
-                      onClick={() => handleSubtaskToggle(subtask.id, subtask.status)}
-                      disabled={togglingSubtask === subtask.id}
-                      className="flex items-center gap-2 p-2 w-full text-left bg-background rounded border border-purple-100 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-600 transition-colors cursor-pointer disabled:opacity-50"
+                <div className="space-y-2">
+                  <div className="w-full bg-purple-100 dark:bg-purple-900/30 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 to-purple-600 h-full transition-all duration-500 ease-out flex items-center justify-end pr-1"
+                      style={{ width: `${progress.percentage}%` }}
                     >
-                      <div className={`flex-shrink-0 ${subtask.status === "done" ? "text-green-600 dark:text-green-500"
-                        : subtask.status === "progress" ? "text-blue-600 dark:text-blue-500"
-                          : "text-gray-400 dark:text-gray-500"
-                        }`}>
-                        {togglingSubtask === subtask.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : subtask.status === "done" ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : subtask.status === "progress" ? (
-                          <Clock className="h-4 w-4" />
-                        ) : (
-                          <Circle className="h-4 w-4" />
-                        )}
-                      </div>
-                      <span className={`text-sm flex-1 ${subtask.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                        {subtask.title}
-                      </span>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {subtask.status}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-                {/* Add Subtask Input */}
-                {showAddSubtask ? (
-                  <div className="flex items-center gap-2 mt-2">
-                    <Input
-                      value={newSubtaskTitle}
-                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAddSubtask();
-                        if (e.key === "Escape") { setShowAddSubtask(false); setNewSubtaskTitle(""); }
-                      }}
-                      placeholder="Subtask title..."
-                      className="text-sm h-8"
-                      autoFocus
-                      disabled={isAddingSubtask}
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 px-2"
-                      onClick={handleAddSubtask}
-                      disabled={isAddingSubtask || !newSubtaskTitle.trim()}
-                    >
-                      {isAddingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                    </Button>
+                      {progress.percentage > 15 && (
+                        <span className="text-[10px] font-bold text-white">
+                          {progress.percentage}%
+                        </span>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowAddSubtask(true)}
-                    className="flex items-center gap-1.5 mt-2 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Subtask
-                  </button>
-                )}
+                  <div className="flex items-center gap-4 text-xs text-purple-700 dark:text-purple-400">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>{progress.completed} Done</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{progress.inProgress} In Progress</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Circle className="h-3 w-3" />
+                      <span>{progress.total - progress.completed - progress.inProgress} Todo</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2 mt-4">
+                  <h4 className="text-xs font-medium text-purple-900 dark:text-purple-300 uppercase">Subtasks</h4>
+                  <div className="space-y-1">
+                    {subtasks.map((subtask) => (
+                      <button
+                        key={subtask.id}
+                        type="button"
+                        onClick={() => handleSubtaskToggle(subtask.id, subtask.status)}
+                        disabled={togglingSubtask === subtask.id}
+                        className="flex items-center gap-2 p-2 w-full text-left bg-background rounded border border-purple-100 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-600 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <div className={`flex-shrink-0 ${subtask.status === "done" ? "text-green-600 dark:text-green-500"
+                          : subtask.status === "progress" ? "text-blue-600 dark:text-blue-500"
+                            : "text-gray-400 dark:text-gray-500"
+                          }`}>
+                          {togglingSubtask === subtask.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : subtask.status === "done" ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : subtask.status === "progress" ? (
+                            <Clock className="h-4 w-4" />
+                          ) : (
+                            <Circle className="h-4 w-4" />
+                          )}
+                        </div>
+                        <span className={`text-sm flex-1 ${subtask.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                          {subtask.title}
+                        </span>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {subtask.status}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Add Subtask - single consolidated UI */}
+            {showAddSubtask ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); handleAddSubtask(); }
+                    if (e.key === "Escape") { setShowAddSubtask(false); setNewSubtaskTitle(""); }
+                  }}
+                  placeholder="Subtask title..."
+                  className="text-sm h-8"
+                  autoFocus
+                  disabled={isAddingSubtask}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2"
+                  onClick={handleAddSubtask}
+                  disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+                >
+                  {isAddingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
               </div>
-            </div>
-          )}
-
-          {/* Add Subtask button when no subtasks exist */}
-          {!progress && (
-            <button
-              type="button"
-              onClick={() => setShowAddSubtask(true)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Subtask
-            </button>
-          )}
-
-          {/* Inline subtask input when no subtasks exist yet */}
-          {!progress && showAddSubtask && (
-            <div className="flex items-center gap-2">
-              <Input
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddSubtask();
-                  if (e.key === "Escape") { setShowAddSubtask(false); setNewSubtaskTitle(""); }
-                }}
-                placeholder="Subtask title..."
-                className="text-sm h-8"
-                autoFocus
-                disabled={isAddingSubtask}
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2"
-                onClick={handleAddSubtask}
-                disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddSubtask(true)}
+                className={`flex items-center gap-1.5 text-xs transition-colors ${
+                  progress
+                    ? "text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {isAddingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              </Button>
-            </div>
-          )}
+                <Plus className="h-3.5 w-3.5" />
+                Add Subtask
+              </button>
+            )}
+          </div>
 
           <TaskMetadata task={task} createdBy={createdBy} />
           <AttachmentsList taskId={task.id} />

@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
       "@dnd-kit/core",
       "@dnd-kit/sortable",
     ],
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
   },
 };
 

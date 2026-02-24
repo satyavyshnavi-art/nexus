@@ -2,10 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  requestUploadUrl,
-  saveAttachmentMetadata,
-} from "@/server/actions/attachments";
+import { uploadAttachment } from "@/server/actions/attachments";
 import { toast } from "@/lib/hooks/use-toast";
 import { Upload, X } from "lucide-react";
 
@@ -65,39 +62,16 @@ export function FileUpload({ taskId, onSuccess }: FileUploadProps) {
     setUploadProgress(0);
 
     try {
-      // Step 1: Request upload URL
-      const { uploadUrl, key } = await requestUploadUrl({
-        taskId,
-        fileName: selectedFile.name,
-        mimeType: selectedFile.type,
-        fileSize: selectedFile.size,
-      });
-
       setUploadProgress(25);
 
-      // Step 2: Upload file to R2
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        body: selectedFile,
-        headers: {
-          "Content-Type": selectedFile.type,
-        },
-      });
+      // Upload file through server action (avoids CORS issues)
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("taskId", taskId);
 
-      if (!uploadResponse.ok) {
-        throw new Error("Upload failed");
-      }
+      setUploadProgress(50);
 
-      setUploadProgress(75);
-
-      // Step 3: Save metadata
-      await saveAttachmentMetadata({
-        taskId,
-        key,
-        fileName: selectedFile.name,
-        mimeType: selectedFile.type,
-        sizeBytes: selectedFile.size,
-      });
+      await uploadAttachment(formData);
 
       setUploadProgress(100);
 

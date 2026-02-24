@@ -30,6 +30,17 @@ export async function getDownloadUrl(key: string) {
   return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
 }
 
+export async function putObject(key: string, body: Buffer, contentType: string) {
+  const command = new PutObjectCommand({
+    Bucket: process.env.STORAGE_BUCKET_NAME,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+
+  return s3.send(command);
+}
+
 export function getPublicUrl(key: string) {
   // For public access
   return `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET_NAME}/${key}`;

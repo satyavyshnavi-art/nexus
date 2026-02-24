@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { getUploadUrl, getDownloadUrl } from "@/lib/storage/s3-client";
+import { getUploadUrl, getDownloadUrl, putObject } from "@/lib/storage/s3-client";
 import { randomUUID } from "crypto";
 
 export async function requestUploadUrl(data: {
@@ -108,6 +108,86 @@ export async function getAttachmentDownloadUrl(attachmentId: string) {
   if (!attachment) throw new Error("Attachment not found");
 
   return getDownloadUrl(attachment.s3Key);
+}
+
+export async function uploadAttachment(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const file = formData.get("file") as File;
+  const taskId = formData.get("taskId") as string;
+
+  if (!file || !taskId) throw new Error("Missing file or taskId");
+
+  // Validate file size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("File too large. Maximum size is 10MB");
+  }
+
+  // Validate file type
+  const allowedTypes = [
+    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error("Invalid file type");
+  }
+
+  // Verify user has access to task's project
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    include: {
+      sprint: {
+        include: {
+          project: {
+            include: {
+              members: { where: { userId: session.user.id } },
+            },
+          },
+        },
+      },
+      feature: {
+        include: {
+          project: {
+            include: {
+              members: { where: { userId: session.user.id } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const memberCount =
+    (task?.sprint?.project.members.length ?? 0) +
+    (task?.feature?.project.members.length ?? 0);
+
+  if (!task || (memberCount === 0 && session.user.role !== "admin")) {
+    throw new Error("Unauthorized");
+  }
+
+  // Generate unique key and upload
+  const key = `tasks/${taskId}/${randomUUID()}-${file.name}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  await putObject(key, buffer, file.type);
+
+  // Save metadata to DB
+  const attachment = await db.taskAttachment.create({
+    data: {
+      taskId,
+      s3Key: key,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      uploadedBy: session.user.id,
+    },
+  });
+
+  return attachment;
 }
 
 export async function deleteAttachment(attachmentId: string) {
