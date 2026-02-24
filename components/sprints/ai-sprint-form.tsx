@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { aiGenerateSprintTasks } from "@/server/actions/ai-sprint";
+import { aiGenerateTickets, aiConfirmTickets } from "@/server/actions/ai-sprint";
+import type { GeneratedTicketsPlan } from "@/server/actions/ai-sprint";
+import { SprintPlanReview } from "./sprint-plan-review";
 import { toast } from "@/lib/hooks/use-toast";
 import { Sparkles, Loader2 } from "lucide-react";
 
@@ -12,6 +14,7 @@ interface AiSprintFormProps {
   sprintId: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  onStepChange?: (step: "input" | "review") => void;
 }
 
 const EXAMPLE_PROMPT = `Build a user authentication system with:
@@ -25,9 +28,18 @@ export function AiSprintForm({
   sprintId,
   onSuccess,
   onCancel,
+  onStepChange,
 }: AiSprintFormProps) {
+  const [step, setStep] = useState<"input" | "review">("input");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [inputText, setInputText] = useState("");
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedTicketsPlan | null>(null);
+
+  const changeStep = (newStep: "input" | "review") => {
+    setStep(newStep);
+    onStepChange?.(newStep);
+  };
 
   const handleGenerate = async () => {
     if (!inputText.trim()) {
@@ -41,7 +53,7 @@ export function AiSprintForm({
 
     setIsGenerating(true);
     try {
-      const result = await aiGenerateSprintTasks(sprintId, inputText);
+      const result = await aiGenerateTickets(sprintId, inputText);
 
       if (!result.success) {
         toast({
@@ -52,14 +64,8 @@ export function AiSprintForm({
         return;
       }
 
-      toast({
-        title: "Tickets generated!",
-        description: `Created ${result.taskCount} tickets with AI`,
-        variant: "success",
-      });
-
-      setInputText("");
-      onSuccess?.();
+      setGeneratedPlan(result.plan);
+      changeStep("review");
     } catch (error) {
       toast({
         title: "Error",
@@ -74,9 +80,80 @@ export function AiSprintForm({
     }
   };
 
+  const handleConfirm = async (editedPlan: {
+    stories: {
+      title: string;
+      story_points: number;
+      required_role: string;
+      labels: string[];
+      priority: "low" | "medium" | "high" | "critical";
+      tasks: {
+        title: string;
+        required_role: string;
+        labels: string[];
+        priority: "low" | "medium" | "high" | "critical";
+        assignee_id?: string;
+      }[];
+    }[];
+  }) => {
+    setIsConfirming(true);
+    try {
+      const result = await aiConfirmTickets(sprintId, editedPlan.stories);
+
+      if (!result.success) {
+        toast({
+          title: "Failed to add tickets",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Tickets added!",
+        description: `Created ${result.taskCount} tickets with AI`,
+        variant: "success",
+      });
+
+      setInputText("");
+      setGeneratedPlan(null);
+      changeStep("input");
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save tickets",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleBack = () => {
+    changeStep("input");
+  };
+
   const handleUseExample = () => {
     setInputText(EXAMPLE_PROMPT);
   };
+
+  if (step === "review" && generatedPlan) {
+    return (
+      <SprintPlanReview
+        plan={generatedPlan}
+        onConfirm={handleConfirm}
+        onBack={handleBack}
+        isConfirming={isConfirming}
+        mode="tickets"
+        confirmButtonText="Confirm & Add Tickets"
+        confirmingText="Adding..."
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

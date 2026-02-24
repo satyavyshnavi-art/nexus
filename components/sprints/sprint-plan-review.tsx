@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoleDistributionChart } from "./role-distribution-chart";
 import { getRoleColor } from "@/lib/utils/role-colors";
-import type { GeneratedSprintPlan, SuggestedStory, SuggestedTask } from "@/server/actions/ai-sprint";
+import type { GeneratedSprintPlan, GeneratedTicketsPlan, SuggestedStory, SuggestedTask } from "@/server/actions/ai-sprint";
 import {
   ChevronDown,
   ChevronRight,
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 interface SprintPlanReviewProps {
-  plan: GeneratedSprintPlan;
+  plan: GeneratedSprintPlan | GeneratedTicketsPlan;
   onConfirm: (editedPlan: {
     sprint_name: string;
     duration_days: number;
@@ -42,6 +42,9 @@ interface SprintPlanReviewProps {
   }) => void;
   onBack: () => void;
   isConfirming: boolean;
+  mode?: "sprint" | "tickets";
+  confirmButtonText?: string;
+  confirmingText?: string;
 }
 
 const ROLES = ["UI", "Backend", "QA", "DevOps", "Full-Stack", "Design", "Data", "Mobile"];
@@ -59,9 +62,14 @@ export function SprintPlanReview({
   onConfirm,
   onBack,
   isConfirming,
+  mode = "sprint",
+  confirmButtonText = "Confirm & Create Sprint",
+  confirmingText = "Creating...",
 }: SprintPlanReviewProps) {
-  const [sprintName, setSprintName] = useState(plan.sprint_name);
-  const [durationDays, setDurationDays] = useState(plan.duration_days);
+  const isTicketsMode = mode === "tickets";
+  const sprintPlan = plan as GeneratedSprintPlan;
+  const [sprintName, setSprintName] = useState(isTicketsMode ? "" : sprintPlan.sprint_name);
+  const [durationDays, setDurationDays] = useState(isTicketsMode ? 14 : sprintPlan.duration_days);
   const [stories, setStories] = useState<SuggestedStory[]>(plan.stories);
   const [expandedStories, setExpandedStories] = useState<Set<number>>(
     new Set(plan.stories.map((_, i) => i))
@@ -221,27 +229,31 @@ export function SprintPlanReview({
     <div className="space-y-5">
       {/* Sprint Header */}
       <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Sprint Name</Label>
-          <Input
-            value={sprintName}
-            onChange={(e) => setSprintName(e.target.value)}
-            className="text-base font-semibold"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Label className="text-xs text-muted-foreground">Duration</Label>
+        {!isTicketsMode && (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Sprint Name</Label>
             <Input
-              type="number"
-              min={7}
-              max={30}
-              value={durationDays}
-              onChange={(e) => setDurationDays(parseInt(e.target.value) || 14)}
-              className="w-20 h-8 text-sm"
+              value={sprintName}
+              onChange={(e) => setSprintName(e.target.value)}
+              className="text-base font-semibold"
             />
-            <span className="text-xs text-muted-foreground">days</span>
           </div>
+        )}
+        <div className="flex items-center gap-3">
+          {!isTicketsMode && (
+            <div className="flex items-center gap-1.5">
+              <Label className="text-xs text-muted-foreground">Duration</Label>
+              <Input
+                type="number"
+                min={7}
+                max={30}
+                value={durationDays}
+                onChange={(e) => setDurationDays(parseInt(e.target.value) || 14)}
+                className="w-20 h-8 text-sm"
+              />
+              <span className="text-xs text-muted-foreground">days</span>
+            </div>
+          )}
           <span className="text-sm text-muted-foreground">{stories.length} stories</span>
           <span className="text-sm text-muted-foreground">{totalTasks} tasks</span>
           <span className="text-sm text-muted-foreground">{totalPoints} points</span>
@@ -386,12 +398,12 @@ export function SprintPlanReview({
           {isConfirming ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating...
+              {confirmingText}
             </>
           ) : (
             <>
               <Check className="h-4 w-4 mr-2" />
-              Confirm & Create Sprint
+              {confirmButtonText}
             </>
           )}
         </Button>

@@ -267,6 +267,180 @@ export async function aiConfirmSprintPlan(
   }
 }
 
+// --- Ticket Generation (two-step, for existing sprints) ---
+
+export type GeneratedTicketsPlan = {
+  stories: SuggestedStory[];
+  members: { id: string; name: string | null; designation: string | null }[];
+  role_distribution: { role: string; story_points: number; task_count: number }[];
+};
+
+// Step 1: Generate tickets (read-only, no DB writes)
+export async function aiGenerateTickets(
+  sprintId: string,
+  inputText: string
+): Promise<{ success: true; plan: GeneratedTicketsPlan } | { success: false; error: string }> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  // Look up sprint to get projectId
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { projectId: true },
+  });
+
+  if (!sprint) {
+    return { success: false, error: "Sprint not found" };
+  }
+
+  // Fetch project members with designations
+  const project = await db.project.findUnique({
+    where: { id: sprint.projectId },
+    include: {
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, designation: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return { success: false, error: "Project not found" };
+  }
+
+  const members = project.members.map((m) => m.user);
+
+  let result;
+  try {
+    result = await generateSprintTasks(inputText);
+  } catch (error) {
+    console.error("[AI Generate Tickets] Gemini error:", error);
+    const message = error instanceof Error ? error.message : "AI generation failed";
+    return { success: false, error: message };
+  }
+
+  // Enrich stories with assignee suggestions
+  const stories: SuggestedStory[] = result.stories.map((story) => ({
+    title: story.title,
+    story_points: story.story_points,
+    required_role: story.required_role,
+    labels: story.labels,
+    priority: story.priority,
+    tasks: story.tasks.map((task) => ({
+      title: task.title,
+      required_role: task.required_role,
+      labels: task.labels,
+      priority: task.priority,
+      suggested_assignees: matchRoleToMembers(task.required_role, members),
+    })),
+  }));
+
+  // Compute role distribution
+  const roleMap = new Map<string, { story_points: number; task_count: number }>();
+  stories.forEach((story) => {
+    story.tasks.forEach((task) => {
+      const existing = roleMap.get(task.required_role) || { story_points: 0, task_count: 0 };
+      existing.task_count += 1;
+      roleMap.set(task.required_role, existing);
+    });
+    const existing = roleMap.get(story.required_role) || { story_points: 0, task_count: 0 };
+    existing.story_points += story.story_points;
+    roleMap.set(story.required_role, existing);
+  });
+
+  const role_distribution = Array.from(roleMap.entries()).map(([role, data]) => ({
+    role,
+    story_points: data.story_points,
+    task_count: data.task_count,
+  }));
+
+  return {
+    success: true,
+    plan: { stories, members, role_distribution },
+  };
+}
+
+// Step 2: Confirm tickets (writes to DB in existing sprint)
+export async function aiConfirmTickets(
+  sprintId: string,
+  confirmedStories: ConfirmedStory[]
+): Promise<{ success: true; taskCount: number } | { success: false; error: string }> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { projectId: true },
+  });
+
+  if (!sprint) {
+    return { success: false, error: "Sprint not found" };
+  }
+
+  try {
+    const data = await db.$transaction(async (tx) => {
+      const storyData = confirmedStories.map((story) => ({
+        sprintId,
+        title: story.title,
+        type: TaskType.story,
+        storyPoints: story.story_points,
+        priority: story.priority as TaskPriority,
+        requiredRole: story.required_role,
+        labels: story.labels,
+        createdBy: session.user.id,
+      }));
+
+      const storyTasks = await tx.task.createManyAndReturn({
+        data: storyData,
+      });
+
+      const storyIdMap = new Map(
+        storyTasks.map((task, index) => [index, task.id])
+      );
+
+      const childTaskData = confirmedStories.flatMap((story, storyIndex) =>
+        story.tasks.map((task) => ({
+          sprintId,
+          title: task.title,
+          type: TaskType.task,
+          parentTaskId: storyIdMap.get(storyIndex)!,
+          priority: task.priority as TaskPriority,
+          requiredRole: task.required_role,
+          labels: task.labels,
+          assigneeId: task.assignee_id || undefined,
+          createdBy: session.user.id,
+        }))
+      );
+
+      if (childTaskData.length > 0) {
+        await tx.task.createMany({
+          data: childTaskData,
+        });
+      }
+
+      return {
+        success: true as const,
+        taskCount: storyTasks.length + childTaskData.length,
+      };
+    });
+
+    revalidatePath(`/projects/${sprint.projectId}`);
+    revalidatePath(`/projects/${sprint.projectId}/sprints`);
+
+    return data;
+  } catch (error) {
+    console.error("[AI Confirm Tickets] DB error:", error);
+    return { success: false, error: "Failed to save generated tickets" };
+  }
+}
+
 // --- Legacy actions (backward compatible) ---
 
 export async function aiGenerateSprintTasks(
