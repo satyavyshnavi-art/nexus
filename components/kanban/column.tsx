@@ -8,25 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
 import { Circle, Clock, Eye, CheckCircle2 } from "lucide-react";
 
+interface ColumnTask extends Omit<Task, "githubIssueId"> {
+  githubIssueId: string | null;
+  assignee: Pick<User, "id" | "name" | "email"> | null;
+  feature?: { id: string; title: string } | null;
+  childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
+  _count?: {
+    comments: number;
+    attachments: number;
+    childTasks?: number;
+  };
+}
+
 interface ColumnProps {
   status: TaskStatus;
   title: string;
-  tasks: (Omit<Task, "githubIssueId"> & {
-    githubIssueId: string | null;
-    assignee: Pick<User, "id" | "name" | "email"> | null;
-    _count?: {
-      comments: number;
-      attachments: number;
-    };
-  })[];
-  onTaskClick?: (task: Omit<Task, "githubIssueId"> & {
-    githubIssueId: string | null;
-    assignee: Pick<User, "id" | "name" | "email"> | null;
-    _count?: {
-      comments: number;
-      attachments: number;
-    };
-  }) => void;
+  tasks: ColumnTask[];
+  onTaskClick?: (task: ColumnTask) => void;
   projectLinked?: boolean;
   userHasGitHub?: boolean;
   isDragging?: boolean;

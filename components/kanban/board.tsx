@@ -33,6 +33,7 @@ const TaskDetailModal = dynamic(
 type TaskWithRelations = Omit<Task, 'githubIssueId'> & {
   githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
+  feature?: { id: string; title: string } | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
     comments: number;

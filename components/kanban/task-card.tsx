@@ -6,16 +6,19 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
-import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp } from "lucide-react";
+import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp, CheckCircle2, Package } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskCardProps {
   task: Omit<Task, "githubIssueId"> & {
     githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
+    feature?: { id: string; title: string } | null;
+    childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
     _count?: {
       comments: number;
       attachments: number;
+      childTasks?: number;
     };
   };
   onClick?: () => void;
@@ -86,6 +89,14 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
         onClick={handleClick}
       >
         <div className="space-y-3">
+          {/* Feature Badge */}
+          {task.feature && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Package className="h-3 w-3" />
+              <span className="truncate">{task.feature.title}</span>
+            </div>
+          )}
+
           {/* Header: Type Icon + Badges */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -154,6 +165,24 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
                   <span>{task.storyPoints}pt</span>
                 </div>
               )}
+              {/* Subtask Progress */}
+              {task._count && task._count.childTasks && task._count.childTasks > 0 && (() => {
+                const total = task._count.childTasks;
+                const done = task.childTasks?.filter((ct) => ct.status === "done").length ?? 0;
+                const pct = Math.round((done / total) * 100);
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>{done}/{total}</span>
+                    <div className="w-10 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500 rounded-full transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             {task.assignee && (
               <div className="flex items-center gap-1.5">

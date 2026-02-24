@@ -13,14 +13,14 @@ import { TaskHeader } from "./task-header";
 import { TaskMetadata } from "./task-metadata";
 import { AttachmentsList } from "./attachments-list";
 import { CommentSection } from "./comment-section";
-import { updateTask, updateTaskStatus, deleteTask } from "@/server/actions/tasks";
+import { updateTask, updateTaskStatus, deleteTask, createSubtask } from "@/server/actions/tasks";
 import { toast } from "@/lib/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
@@ -75,6 +75,9 @@ export function TaskDetailModal({
   const [hasChanges, setHasChanges] = useState(false);
   const [subtasks, setSubtasks] = useState(task.childTasks || []);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
   function markChanged() {
     setHasChanges(true);
@@ -162,6 +165,41 @@ export function TaskDetailModal({
       });
     } finally {
       setTogglingSubtask(null);
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    const trimmed = newSubtaskTitle.trim();
+    if (!trimmed || isAddingSubtask) return;
+
+    setIsAddingSubtask(true);
+    try {
+      const created = await createSubtask(task.id, { title: trimmed });
+      setSubtasks((prev) => [
+        ...prev,
+        {
+          id: created.id,
+          title: created.title,
+          status: created.status,
+          priority: created.priority,
+          type: created.type,
+        },
+      ]);
+      setNewSubtaskTitle("");
+      toast({
+        title: "Subtask added",
+        description: `"${trimmed}" has been created`,
+        variant: "success",
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create subtask",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingSubtask(false);
     }
   };
 
@@ -400,7 +438,81 @@ export function TaskDetailModal({
                     </button>
                   ))}
                 </div>
+                {/* Add Subtask Input */}
+                {showAddSubtask ? (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Input
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddSubtask();
+                        if (e.key === "Escape") { setShowAddSubtask(false); setNewSubtaskTitle(""); }
+                      }}
+                      placeholder="Subtask title..."
+                      className="text-sm h-8"
+                      autoFocus
+                      disabled={isAddingSubtask}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2"
+                      onClick={handleAddSubtask}
+                      disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+                    >
+                      {isAddingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSubtask(true)}
+                    className="flex items-center gap-1.5 mt-2 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Subtask
+                  </button>
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Add Subtask button when no subtasks exist */}
+          {!progress && (
+            <button
+              type="button"
+              onClick={() => setShowAddSubtask(true)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Subtask
+            </button>
+          )}
+
+          {/* Inline subtask input when no subtasks exist yet */}
+          {!progress && showAddSubtask && (
+            <div className="flex items-center gap-2">
+              <Input
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddSubtask();
+                  if (e.key === "Escape") { setShowAddSubtask(false); setNewSubtaskTitle(""); }
+                }}
+                placeholder="Subtask title..."
+                className="text-sm h-8"
+                autoFocus
+                disabled={isAddingSubtask}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2"
+                onClick={handleAddSubtask}
+                disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+              >
+                {isAddingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
             </div>
           )}
 

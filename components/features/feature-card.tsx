@@ -7,7 +7,18 @@ import {
   updateFeature,
   deleteFeature,
   getFeatureWithTasks,
+  moveTaskToSprint,
+  removeTaskFromSprint,
 } from "@/server/actions/features";
+import { getProjectSprints } from "@/server/actions/sprints";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +56,7 @@ import {
   Clock,
   Eye,
   MessageSquare,
+  ArrowRightCircle,
 } from "lucide-react";
 
 interface FeatureCardProps {
@@ -125,6 +137,8 @@ export function FeatureCard({
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [tasks, setTasks] = useState<FeatureTask[] | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [sprints, setSprints] = useState<{ id: string; name: string; status: string }[] | null>(null);
+  const [isMovingTask, setIsMovingTask] = useState<string | null>(null);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(feature.title);
@@ -142,13 +156,19 @@ export function FeatureCard({
     const nextExpanded = !isExpanded;
     setIsExpanded(nextExpanded);
 
-    // Fetch tasks on first expand
+    // Fetch tasks and sprints on first expand
     if (nextExpanded && tasks === null) {
       setIsLoadingTasks(true);
       try {
-        const featureWithTasks = await getFeatureWithTasks(feature.id);
+        const [featureWithTasks, projectSprints] = await Promise.all([
+          getFeatureWithTasks(feature.id),
+          sprints === null ? getProjectSprints(projectId) : Promise.resolve(null),
+        ]);
         if (featureWithTasks) {
           setTasks(featureWithTasks.tasks);
+        }
+        if (projectSprints) {
+          setSprints(projectSprints.map((s) => ({ id: s.id, name: s.name, status: s.status })));
         }
       } catch {
         toast({
@@ -246,6 +266,42 @@ export function FeatureCard({
       // Silently fail, user can re-expand
     }
     router.refresh();
+  };
+
+  const handleMoveToSprint = async (taskId: string, sprintId: string | null) => {
+    setIsMovingTask(taskId);
+    try {
+      if (sprintId) {
+        await moveTaskToSprint(taskId, sprintId);
+        const sprintName = sprints?.find((s) => s.id === sprintId)?.name || "sprint";
+        toast({
+          title: "Task moved",
+          description: `Task moved to ${sprintName}`,
+          variant: "success",
+        });
+      } else {
+        await removeTaskFromSprint(taskId);
+        toast({
+          title: "Task removed",
+          description: "Task removed from sprint",
+          variant: "success",
+        });
+      }
+      // Refresh tasks to update sprint badges
+      const featureWithTasks = await getFeatureWithTasks(feature.id);
+      if (featureWithTasks) {
+        setTasks(featureWithTasks.tasks);
+      }
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to move task",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMovingTask(null);
+    }
   };
 
   return (
@@ -490,7 +546,13 @@ export function FeatureCard({
               </h4>
               <div className="space-y-1.5">
                 {tasks.map((task) => (
-                  <TaskItem key={task.id} task={task} />
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    sprints={sprints}
+                    isMoving={isMovingTask === task.id}
+                    onMoveToSprint={handleMoveToSprint}
+                  />
                 ))}
               </div>
             </div>
@@ -522,11 +584,22 @@ export function FeatureCard({
 
 // ─── Task Item Sub-component ─────────────────────────────────────────────────
 
-function TaskItem({ task }: { task: FeatureTask }) {
+function TaskItem({
+  task,
+  sprints,
+  isMoving,
+  onMoveToSprint,
+}: {
+  task: FeatureTask;
+  sprints: { id: string; name: string; status: string }[] | null;
+  isMoving: boolean;
+  onMoveToSprint: (taskId: string, sprintId: string | null) => void;
+}) {
   const statusIcon = taskStatusIcons[task.status] || taskStatusIcons.todo;
   const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
 
   const taskPriority = priorityConfig[task.priority] || priorityConfig.medium;
+  const availableSprints = sprints?.filter((s) => s.status === "active" || s.status === "planned") || [];
 
   return (
     <div className="group">
@@ -536,6 +609,62 @@ function TaskItem({ task }: { task: FeatureTask }) {
 
         {/* Title */}
         <span className="flex-1 text-sm truncate">{task.title}</span>
+
+        {/* Move to Sprint Button */}
+        {availableSprints.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+                onClick={(e) => e.stopPropagation()}
+                disabled={isMoving}
+              >
+                {isMoving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : (
+                  <ArrowRightCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-xs">Move to Sprint</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableSprints.map((sprint) => (
+                <DropdownMenuItem
+                  key={sprint.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMoveToSprint(task.id, sprint.id);
+                  }}
+                  disabled={task.sprint?.id === sprint.id}
+                  className="text-xs"
+                >
+                  <span className="flex-1">{sprint.name}</span>
+                  {sprint.status === "active" && (
+                    <Badge variant="secondary" className="text-[9px] px-1 py-0 ml-1">Active</Badge>
+                  )}
+                  {task.sprint?.id === sprint.id && (
+                    <CheckCircle2 className="h-3 w-3 ml-1 text-green-500" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+              {task.sprint && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveToSprint(task.id, null);
+                    }}
+                    className="text-xs text-destructive"
+                  >
+                    Remove from Sprint
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Role Badge */}
         {task.requiredRole && roleStyle && (
