@@ -41,7 +41,7 @@ type TaskWithRelations = Omit<Task, 'githubIssueId'> & {
   githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
   reviewer?: Pick<User, "id" | "name" | "email"> | null;
-  feature?: { id: string; title: string } | null;
+  parentTask?: { id: string; title: string } | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
     comments: number;

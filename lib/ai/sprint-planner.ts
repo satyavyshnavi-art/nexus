@@ -48,15 +48,15 @@ export async function generateSprintPlan(
   const teamContext = teamMembers?.length
     ? `\n\nTeam members and their designations:\n${teamMembers
         .map((m) => `- ${m.name || "Unknown"}: ${m.designation || "Unspecified"}`)
-        .join("\n")}\n\nConsider the team's designations when assigning required_role to tasks and subtasks.`
+        .join("\n")}\n\nConsider the team's designations when assigning required_role to stories and tickets.`
     : "";
 
-  const systemPrompt = `You are a sprint planning assistant. Given a description, generate a complete sprint plan with a flat list of tasks grouped by category.
+  const systemPrompt = `You are a sprint planning assistant. Given a description, generate a complete sprint plan with user stories and their tickets.
 
 **Structure explained:**
-- **Tasks** are technical work units with assigned roles (e.g., "Design Dashboard Layout" → UI, "Build Dashboard APIs" → Backend, "Write Integration Tests" → QA). Each task has story points and a category for grouping.
-- **Subtasks** are daily execution items under a task (e.g., "Create chart component", "Connect REST API endpoint", "Fix responsiveness on mobile"). They break down a task into actionable steps.
-- Group related tasks using the \`category\` field (e.g., "Authentication", "Dashboard UI", "API Development"). Categories are just labels for organizing tasks visually.
+- **Stories** (the "tasks" array) are high-level user stories or epics that describe a feature or capability from the user's perspective (e.g., "User Authentication Flow", "Dashboard Analytics View", "Payment Integration"). Each story has story points and a category for grouping.
+- **Tickets** (the "subtasks" array under each story) are concrete, actionable work items that implement parts of the story (e.g., "Create login API endpoint", "Build chart component", "Write unit tests for auth service"). Each ticket has an assigned role and priority. Tickets are what developers actually work on day-to-day.
+- Group related stories using the \`category\` field (e.g., "Authentication", "Dashboard UI", "API Development"). Categories are just labels for organizing stories visually.
 
 You MUST respond with valid JSON matching this exact schema:
 {
@@ -68,7 +68,7 @@ You MUST respond with valid JSON matching this exact schema:
   ],
   "tasks": [
     {
-      "title": "Task title (max 120 chars)",
+      "title": "Story title — a user story or feature (max 120 chars)",
       "category": "Authentication",
       "required_role": "Backend",
       "labels": ["api", "authentication"],
@@ -76,7 +76,7 @@ You MUST respond with valid JSON matching this exact schema:
       "story_points": 5,
       "subtasks": [
         {
-          "title": "Subtask title (max 120 chars)",
+          "title": "Ticket title — an actionable work item (max 120 chars)",
           "required_role": "Backend",
           "priority": "high"
         }
@@ -88,18 +88,19 @@ You MUST respond with valid JSON matching this exact schema:
 Rules:
 - sprint_name: A meaningful, concise name for the sprint. Max 80 characters.
 - duration_days: Suggested sprint duration between 7 and 30 days. Use 14 for medium features, 7 for small, 21-30 for large.
-- story_points: Number between 0 and 20 per task
-- Maximum 50 tasks total
-- Maximum 10 subtasks per task
+- story_points: Number between 0 and 20 per story (reflects overall complexity of the story)
+- Maximum 50 stories total
+- Maximum 10 tickets per story
 - All titles must be under 120 characters
 - category: A short grouping label (max 80 chars) like "Authentication", "Dashboard UI", "API Development", "Testing", etc.
-- Each task should have at least 1 subtask for actionable daily work
+- Each story should have at least 1 ticket representing a concrete work item
+- Story titles should describe WHAT and WHY (user-facing value), ticket titles should describe HOW (technical implementation)
 - Be concise and actionable
 - Do NOT include any text outside the JSON object
 
 Role Classification:
 - required_role MUST be one of: ${VALID_ROLES.join(", ")}
-- Classify each task and subtask by the primary role needed:
+- Classify each story and ticket by the primary role needed:
   - UI: Frontend components, styling, layouts, client-side logic
   - Backend: APIs, server logic, database queries, authentication
   - QA: Testing, test plans, quality assurance
@@ -108,13 +109,13 @@ Role Classification:
   - Design: UI/UX design, wireframes, prototypes
   - Data: Data modeling, analytics, reporting
   - Mobile: Mobile-specific development
-- role_distribution: Summary of total story points and task count per role across all tasks
+- role_distribution: Summary of total story points and task count per role across all stories
 
 Labels & Priority:
-- labels: Short keyword tags based on the task domain (e.g. "authentication", "api", "database", "ui", "testing")
+- labels: Short keyword tags based on the story domain (e.g. "authentication", "api", "database", "ui", "testing")
 - priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies
 
-If reference images are provided, analyze them for UI layout and requirements to inform your task breakdown.${teamContext}`;
+If reference images are provided, analyze them for UI layout and requirements to inform your story and ticket breakdown.${teamContext}`;
 
   return generateStructuredOutput(
     systemPrompt,

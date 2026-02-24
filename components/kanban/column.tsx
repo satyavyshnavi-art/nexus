@@ -11,7 +11,7 @@ import { Circle, Clock, Eye, CheckCircle2 } from "lucide-react";
 interface ColumnTask extends Omit<Task, "githubIssueId"> {
   githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
-  feature?: { id: string; title: string } | null;
+  parentTask?: { id: string; title: string } | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
     comments: number;

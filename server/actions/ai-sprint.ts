@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { generateSprintTasks } from "@/lib/ai/sprint-generator";
 import { generateSprintPlan, SprintPlanOutput } from "@/lib/ai/sprint-planner";
 import type { ImageInput } from "@/lib/ai/gemini";
 import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
@@ -68,6 +67,8 @@ function matchRoleToMembers(
 }
 
 // --- Types for two-step flow ---
+// Type names kept for backward compatibility with UI components.
+// AI "tasks" map to Stories, AI "subtasks" map to Tickets in the DB.
 
 export type SuggestedSubtask = {
   title: string;
@@ -168,6 +169,8 @@ export async function aiGenerateSprintPlan(
 }
 
 // --- Step 2: Confirm (writes to DB) ---
+// AI "task" -> DB Story (type: "story", parentTaskId: null)
+// AI "subtask" under a task -> DB Ticket (type: "task", parentTaskId: storyId)
 
 export type ConfirmedSubtask = {
   title: string;
@@ -222,43 +225,44 @@ export async function aiConfirmSprintPlan(
 
       let totalTaskCount = 0;
 
-      // Create tasks directly (no feature creation)
+      // Each confirmed "task" becomes a Story in the DB
       for (const task of confirmedPlan.tasks) {
-        const taskLabels = [...task.labels];
-        if (task.category && !taskLabels.includes(task.category)) {
-          taskLabels.push(task.category);
+        const storyLabels = [...task.labels];
+        if (task.category && !storyLabels.includes(task.category)) {
+          storyLabels.push(task.category);
         }
 
-        const taskRecord = await tx.task.create({
+        // Create Story (type: "story", parentTaskId: null)
+        const storyRecord = await tx.task.create({
           data: {
             sprintId: sprint.id,
             title: task.title,
-            type: TaskType.task,
+            type: TaskType.story,
             storyPoints: task.story_points,
             priority: task.priority as TaskPriority,
             requiredRole: task.required_role,
-            labels: taskLabels,
+            labels: storyLabels,
             assigneeId: task.assignee_id || undefined,
             createdBy: session.user.id,
           },
         });
         totalTaskCount++;
 
-        // Create Subtasks as child Tasks (type: task, with parentTaskId)
+        // Each confirmed "subtask" becomes a Ticket (type: "task") under the story
         if (task.subtasks && task.subtasks.length > 0) {
-          const subtaskData = task.subtasks.map((subtask) => ({
+          const ticketData = task.subtasks.map((subtask) => ({
             sprintId: sprint.id,
             title: subtask.title,
             type: TaskType.task,
-            parentTaskId: taskRecord.id,
+            parentTaskId: storyRecord.id,
             priority: subtask.priority as TaskPriority,
             requiredRole: subtask.required_role,
             assigneeId: subtask.assignee_id || undefined,
             createdBy: session.user.id,
           }));
 
-          await tx.task.createMany({ data: subtaskData });
-          totalTaskCount += subtaskData.length;
+          await tx.task.createMany({ data: ticketData });
+          totalTaskCount += ticketData.length;
         }
       }
 
@@ -376,6 +380,8 @@ export async function aiGenerateTickets(
 }
 
 // Step 2: Confirm tickets (writes to DB in existing sprint)
+// AI "task" -> DB Story (type: "story", parentTaskId: null)
+// AI "subtask" under a task -> DB Ticket (type: "task", parentTaskId: storyId)
 export async function aiConfirmTickets(
   sprintId: string,
   confirmedTasks: ConfirmedTask[]
@@ -398,43 +404,44 @@ export async function aiConfirmTickets(
     const data = await db.$transaction(async (tx) => {
       let totalTaskCount = 0;
 
-      // Create tasks directly (no feature creation)
+      // Each confirmed "task" becomes a Story in the DB
       for (const task of confirmedTasks) {
-        const taskLabels = [...task.labels];
-        if (task.category && !taskLabels.includes(task.category)) {
-          taskLabels.push(task.category);
+        const storyLabels = [...task.labels];
+        if (task.category && !storyLabels.includes(task.category)) {
+          storyLabels.push(task.category);
         }
 
-        const taskRecord = await tx.task.create({
+        // Create Story (type: "story", parentTaskId: null)
+        const storyRecord = await tx.task.create({
           data: {
             sprintId,
             title: task.title,
-            type: TaskType.task,
+            type: TaskType.story,
             storyPoints: task.story_points,
             priority: task.priority as TaskPriority,
             requiredRole: task.required_role,
-            labels: taskLabels,
+            labels: storyLabels,
             assigneeId: task.assignee_id || undefined,
             createdBy: session.user.id,
           },
         });
         totalTaskCount++;
 
-        // Create Subtasks as child Tasks (type: task, with parentTaskId)
+        // Each confirmed "subtask" becomes a Ticket (type: "task") under the story
         if (task.subtasks && task.subtasks.length > 0) {
-          const subtaskData = task.subtasks.map((subtask) => ({
+          const ticketData = task.subtasks.map((subtask) => ({
             sprintId,
             title: subtask.title,
             type: TaskType.task,
-            parentTaskId: taskRecord.id,
+            parentTaskId: storyRecord.id,
             priority: subtask.priority as TaskPriority,
             requiredRole: subtask.required_role,
             assigneeId: subtask.assignee_id || undefined,
             createdBy: session.user.id,
           }));
 
-          await tx.task.createMany({ data: subtaskData });
-          totalTaskCount += subtaskData.length;
+          await tx.task.createMany({ data: ticketData });
+          totalTaskCount += ticketData.length;
         }
       }
 
@@ -451,181 +458,5 @@ export async function aiConfirmTickets(
   } catch (error) {
     console.error("[AI Confirm Tickets] DB error:", error);
     return { success: false, error: "Failed to save generated tickets" };
-  }
-}
-
-// --- Legacy actions (backward compatible) ---
-
-export async function aiGenerateSprintTasks(
-  sprintId: string,
-  inputText: string
-) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { success: false as const, error: "Unauthorized" };
-  }
-
-  let result;
-  try {
-    result = await generateSprintTasks(inputText);
-  } catch (error) {
-    console.error("[AI Generate Tasks] Gemini error:", error);
-    const message =
-      error instanceof Error ? error.message : "AI generation failed";
-    return { success: false as const, error: message };
-  }
-
-  const sprint = await db.sprint.findUnique({
-    where: { id: sprintId },
-    select: { projectId: true },
-  });
-
-  if (!sprint) {
-    return { success: false as const, error: "Sprint not found" };
-  }
-
-  try {
-    const data = await db.$transaction(async (tx) => {
-      const storyData = result.stories.map((story) => ({
-        sprintId,
-        title: story.title,
-        type: TaskType.story,
-        storyPoints: story.story_points,
-        priority: story.priority as TaskPriority,
-        requiredRole: story.required_role,
-        labels: story.labels,
-        createdBy: session.user.id,
-      }));
-
-      const storyTasks = await tx.task.createManyAndReturn({
-        data: storyData,
-      });
-
-      const storyIdMap = new Map(
-        storyTasks.map((task, index) => [index, task.id])
-      );
-
-      const childTaskData = result.stories.flatMap((story, storyIndex) =>
-        story.tasks.map((task) => ({
-          sprintId,
-          title: task.title,
-          type: TaskType.task,
-          parentTaskId: storyIdMap.get(storyIndex)!,
-          priority: task.priority as TaskPriority,
-          requiredRole: task.required_role,
-          labels: task.labels,
-          createdBy: session.user.id,
-        }))
-      );
-
-      if (childTaskData.length > 0) {
-        await tx.task.createMany({
-          data: childTaskData,
-        });
-      }
-
-      return {
-        success: true as const,
-        taskCount: storyTasks.length + childTaskData.length,
-      };
-    });
-
-    revalidatePath(`/projects/${sprint.projectId}`);
-    revalidatePath(`/projects/${sprint.projectId}/sprints`);
-
-    return data;
-  } catch (error) {
-    console.error("[AI Generate Tasks] DB error:", error);
-    return { success: false as const, error: "Failed to save generated tasks" };
-  }
-}
-
-export async function aiPlanSprint(projectId: string, inputText: string) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { success: false as const, error: "Unauthorized" };
-  }
-
-  let plan;
-  try {
-    plan = await generateSprintPlan(inputText);
-  } catch (error) {
-    console.error("[AI Plan Sprint] Gemini error:", error);
-    const message =
-      error instanceof Error ? error.message : "AI generation failed";
-    return { success: false as const, error: message };
-  }
-
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(endDate.getDate() + plan.duration_days);
-
-  try {
-    const data = await db.$transaction(async (tx) => {
-      const sprint = await tx.sprint.create({
-        data: {
-          projectId,
-          name: plan.sprint_name,
-          startDate,
-          endDate,
-          status: SprintStatus.planned,
-          createdBy: session.user.id,
-        },
-      });
-
-      let totalTaskCount = 0;
-
-      // Create tasks directly (no feature creation)
-      for (const task of plan.tasks) {
-        const taskLabels = [...task.labels];
-        if (task.category && !taskLabels.includes(task.category)) {
-          taskLabels.push(task.category);
-        }
-
-        const taskRecord = await tx.task.create({
-          data: {
-            sprintId: sprint.id,
-            title: task.title,
-            type: TaskType.task,
-            storyPoints: task.story_points,
-            priority: task.priority as TaskPriority,
-            requiredRole: task.required_role,
-            labels: taskLabels,
-            createdBy: session.user.id,
-          },
-        });
-        totalTaskCount++;
-
-        // Create Subtasks as child Tasks
-        if (task.subtasks && task.subtasks.length > 0) {
-          const subtaskData = task.subtasks.map((subtask) => ({
-            sprintId: sprint.id,
-            title: subtask.title,
-            type: TaskType.task,
-            parentTaskId: taskRecord.id,
-            priority: subtask.priority as TaskPriority,
-            requiredRole: subtask.required_role,
-            createdBy: session.user.id,
-          }));
-
-          await tx.task.createMany({ data: subtaskData });
-          totalTaskCount += subtaskData.length;
-        }
-      }
-
-      return {
-        success: true as const,
-        sprintName: sprint.name,
-        taskCount: totalTaskCount,
-      };
-    });
-
-    revalidatePath(`/projects/${projectId}`);
-    revalidatePath(`/projects/${projectId}/sprints`);
-
-    return data;
-  } catch (error) {
-    console.error("[AI Plan Sprint] DB error:", error);
-    return { success: false as const, error: "Failed to save sprint plan" };
   }
 }

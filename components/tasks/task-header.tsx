@@ -6,10 +6,11 @@ interface TaskHeaderProps {
 }
 
 export function TaskHeader({ task }: TaskHeaderProps) {
-  const typeIcons = {
+  const typeIcons: Record<string, typeof CheckSquare> = {
     task: CheckSquare,
     bug: Bug,
     story: BookOpen,
+    subtask: CheckSquare,
   };
 
   const priorityColors = {

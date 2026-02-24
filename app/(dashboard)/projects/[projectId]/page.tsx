@@ -1,20 +1,18 @@
 import { auth } from "@/lib/auth/config";
 import { getProject } from "@/server/actions/projects";
-import { getActiveSprint, getProjectSprints, getSprintProgress, getPlannedSprints } from "@/server/actions/sprints";
+import { getActiveSprint, getProjectSprints, getSprintProgress } from "@/server/actions/sprints";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KanbanBoard } from "@/components/kanban/board";
 import { Button } from "@/components/ui/button";
 import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
-import { Calendar, Users, LayoutDashboard, ListTodo, Settings, Package } from "lucide-react";
+import { Calendar, Users, LayoutDashboard, ListTodo, Settings } from "lucide-react";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
 import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
 import { getLinkedRepository } from "@/server/actions/github-link";
-import { getBacklogTasks } from "@/server/actions/tasks";
-import { BacklogTaskList } from "@/components/backlog/backlog-task-list";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
@@ -32,9 +30,6 @@ export default async function ProjectPage({
   const activeSprint = await getActiveSprint(projectId);
   const sprints = await getProjectSprints(projectId);
   const linkedRepo = await getLinkedRepository(projectId);
-  const backlogTasks = await getBacklogTasks(projectId);
-  const plannedSprints = await getPlannedSprints(projectId);
-
   // Fetch sprint progress for the active sprint
   const sprintProgress = activeSprint
     ? await getSprintProgress(activeSprint.id)
@@ -51,14 +46,25 @@ export default async function ProjectPage({
     : null;
   const userHasGitHub = !!currentUser?.githubAccessToken;
 
-  // Calculate statistics
+  // Flatten stories → tickets for board and stats
+  // Stories are top-level in activeSprint.tasks, tickets are in childTasks
+  const flatTickets = activeSprint
+    ? activeSprint.tasks.flatMap((story) =>
+        (story.childTasks || []).map((ticket) => ({
+          ...ticket,
+          parentTask: { id: story.id, title: story.title },
+        }))
+      )
+    : [];
+
+  // Calculate statistics from tickets only
   const taskStats = activeSprint
     ? {
-      todo: activeSprint.tasks.filter((t) => t.status === "todo").length,
-      progress: activeSprint.tasks.filter((t) => t.status === "progress").length,
-      review: activeSprint.tasks.filter((t) => t.status === "review").length,
-      done: activeSprint.tasks.filter((t) => t.status === "done").length,
-      total: activeSprint.tasks.length,
+      todo: flatTickets.filter((t) => t.status === "todo").length,
+      progress: flatTickets.filter((t) => t.status === "progress").length,
+      review: flatTickets.filter((t) => t.status === "review").length,
+      done: flatTickets.filter((t) => t.status === "done").length,
+      total: flatTickets.length,
     }
     : null;
 
@@ -146,10 +152,6 @@ export default async function ProjectPage({
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
         <TabsList className="bg-muted/50 backdrop-blur-sm border">
-          <TabsTrigger value="backlog">
-            <Package className="h-4 w-4 mr-2" />
-            Backlog
-          </TabsTrigger>
           <TabsTrigger value="board">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Kanban Board
@@ -167,30 +169,6 @@ export default async function ProjectPage({
             Overview
           </TabsTrigger>
         </TabsList>
-
-        {/* Tab: Backlog */}
-        <TabsContent value="backlog" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Product Backlog</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Tasks waiting to be planned into sprints
-              </p>
-            </div>
-            {isAdmin && activeSprint && (
-              <CreateTaskButton
-                sprintId=""
-                projectMembers={project.members.map((m) => m.user)}
-              />
-            )}
-          </div>
-
-          <BacklogTaskList
-            tasks={backlogTasks}
-            sprints={plannedSprints}
-            isAdmin={isAdmin}
-          />
-        </TabsContent>
 
         {/* Tab: Kanban Board */}
         <TabsContent value="board" className="space-y-4">
@@ -218,7 +196,7 @@ export default async function ProjectPage({
               </div>
 
               <KanbanBoard
-                initialTasks={activeSprint.tasks}
+                initialTasks={flatTickets}
                 projectMembers={project.members.map((m) => m.user)}
                 projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
                 userHasGitHub={userHasGitHub}
@@ -259,9 +237,9 @@ export default async function ProjectPage({
             )}
           </div>
 
-          {activeSprint && activeSprint.tasks.length > 0 ? (
+          {activeSprint && flatTickets.length > 0 ? (
             <TaskListView
-              tasks={activeSprint.tasks}
+              tasks={flatTickets}
               projectMembers={project.members.map((m) => m.user)}
             />
           ) : (
@@ -279,7 +257,7 @@ export default async function ProjectPage({
           <TeamTabContent
             projectId={projectId}
             members={project.members}
-            activeSprint={activeSprint}
+            tickets={flatTickets}
             isAdmin={isAdmin}
           />
         </TabsContent>

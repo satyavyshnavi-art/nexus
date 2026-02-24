@@ -67,10 +67,7 @@ export async function POST(request: NextRequest) {
                 const taskByNumber = await db.task.findFirst({
                     where: {
                         githubIssueNumber: issueNumber,
-                        OR: [
-                            { sprint: { project: { githubRepoOwner: owner, githubRepoName: name } } },
-                            { feature: { project: { githubRepoOwner: owner, githubRepoName: name } } },
-                        ],
+                        sprint: { project: { githubRepoOwner: owner, githubRepoName: name } },
                     },
                     select: { id: true, githubStatus: true },
                 });
@@ -106,9 +103,6 @@ async function handleIssueAction(taskId: string, action: string) {
             sprint: {
                 select: { projectId: true }
             },
-            feature: {
-                select: { projectId: true }
-            },
         },
     });
 
@@ -137,7 +131,7 @@ async function handleIssueAction(taskId: string, action: string) {
         console.log(`[GitHub Webhook] ✅ Issue closed in GitHub → Task ${taskId} moved to Review`);
 
         // Revalidate project page
-        const closedProjectId = task.sprint?.projectId ?? task.feature?.projectId;
+        const closedProjectId = task.sprint?.projectId;
         if (closedProjectId) {
             const { revalidatePath } = await import("next/cache");
             revalidatePath(`/projects/${closedProjectId}`);
@@ -161,7 +155,7 @@ async function handleIssueAction(taskId: string, action: string) {
         console.log(`[GitHub Webhook] ✅ Issue reopened in GitHub → Task ${taskId} moved to To Do`);
 
         // Revalidate project page
-        const reopenedProjectId = task.sprint?.projectId ?? task.feature?.projectId;
+        const reopenedProjectId = task.sprint?.projectId;
         if (reopenedProjectId) {
             const { revalidatePath } = await import("next/cache");
             revalidatePath(`/projects/${reopenedProjectId}`);

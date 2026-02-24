@@ -34,7 +34,6 @@ model User {
   assignedTasks        Task[]           @relation("TaskAssignee")
   createdTasks         Task[]           @relation("TaskCreator")
   reviewedTasks        Task[]           @relation("TaskReviewer")
-  createdFeatures      Feature[]
   verticals            VerticalUser[]
 
   @@index([role])
@@ -84,7 +83,6 @@ model Project {
   creator         User            @relation(fields: [createdBy], references: [id])
   linkedByUser    User?           @relation("GitHubLinkedBy", fields: [githubLinkedBy], references: [id])
   vertical        Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
-  features        Feature[]
   sprints         Sprint[]
 
   @@index([verticalId])
@@ -131,7 +129,6 @@ model Sprint {
 model Task {
   id                String           @id @default(uuid())
   sprintId          String?          @map("sprint_id")
-  featureId         String?          @map("feature_id")
   title             String
   description       String?
   type              TaskType         @default(task)
@@ -157,13 +154,11 @@ model Task {
   assignee          User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
   creator           User             @relation("TaskCreator", fields: [createdBy], references: [id])
   reviewer          User?            @relation("TaskReviewer", fields: [reviewerId], references: [id])
-  parentTask        Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  parentTask        Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: Cascade)
   childTasks        Task[]           @relation("TaskHierarchy")
-  feature           Feature?         @relation(fields: [featureId], references: [id], onDelete: SetNull)
   sprint            Sprint?          @relation(fields: [sprintId], references: [id], onDelete: Cascade)
 
   @@index([sprintId, status])
-  @@index([featureId])
   @@index([assigneeId])
   @@index([parentTaskId])
   @@index([createdBy])
@@ -173,7 +168,6 @@ model Task {
   @@index([sprintId, githubIssueNumber])
   @@index([reviewerId])
   @@index([sprintId, requiredRole])
-  @@index([featureId, status])
   @@map("tasks")
 }
 
@@ -257,32 +251,6 @@ enum TaskType {
   story
   task
   bug
-}
-
-enum FeatureStatus {
-  backlog
-  planning
-  in_progress
-  completed
-}
-
-model Feature {
-  id          String        @id @default(uuid())
-  projectId   String        @map("project_id")
-  title       String
-  description String?
-  status      FeatureStatus @default(backlog)
-  priority    TaskPriority  @default(medium)
-  createdBy   String        @map("created_by")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  creator     User          @relation(fields: [createdBy], references: [id])
-  tasks       Task[]
-
-  @@index([projectId, status])
-  @@index([createdBy])
-  @@map("features")
+  subtask
 }
 

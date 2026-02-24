@@ -15,7 +15,6 @@ import {
   Paperclip,
   TrendingUp,
   CheckCircle2,
-  Package,
   ChevronDown,
   ChevronRight,
   Circle,
@@ -32,7 +31,7 @@ interface TaskCardProps {
     githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
     reviewer?: Pick<User, "id" | "name" | "email"> | null;
-    feature?: { id: string; title: string } | null;
+    parentTask?: { id: string; title: string } | null;
     childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
     _count?: {
       comments: number;
@@ -54,10 +53,11 @@ const priorityConfig = {
   critical: { bg: "bg-red-500/10", text: "text-red-700 dark:text-red-400", border: "border-red-500/20" },
 };
 
-const typeConfig = {
+const typeConfig: Record<string, { icon: typeof BookOpen; label: string; color: string }> = {
   story: { icon: BookOpen, label: "Story", color: "text-purple-600 dark:text-purple-400" },
   task: { icon: CheckSquare, label: "Task", color: "text-blue-600 dark:text-blue-400" },
   bug: { icon: Bug, label: "Bug", color: "text-red-600 dark:text-red-400" },
+  subtask: { icon: CheckSquare, label: "Subtask", color: "text-slate-600 dark:text-slate-400" },
 };
 
 export function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {
@@ -93,7 +93,7 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
     }
   };
 
-  const TypeIcon = typeConfig[task.type].icon;
+  const TypeIcon = (typeConfig[task.type] || typeConfig.task).icon;
   const priorityStyle = priorityConfig[task.priority];
   const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
 
@@ -179,11 +179,11 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
         onClick={handleClick}
       >
         <div className="space-y-3">
-          {/* Feature Badge */}
-          {task.feature && (
+          {/* Story Badge */}
+          {task.parentTask && (
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Package className="h-3 w-3" />
-              <span className="truncate">{task.feature.title}</span>
+              <BookOpen className="h-3 w-3" />
+              <span className="truncate">{task.parentTask.title}</span>
             </div>
           )}
 

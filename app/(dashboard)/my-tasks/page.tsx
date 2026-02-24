@@ -68,7 +68,7 @@ export default async function MyTasksPage() {
   >();
 
   data.assignedTasks.forEach((task) => {
-    const project = task.sprint?.project ?? task.feature?.project;
+    const project = task.sprint?.project;
     if (!project) return; // Skip tasks with no project context
     const projectId = project.id;
     if (!tasksByProject.has(projectId)) {
@@ -302,15 +302,14 @@ function TaskRow({
     requiredRole: string | null;
     storyPoints: number | null;
     sprint: { id: string; name: string; project: { id: string; name: string } } | null;
-    feature?: { id: string; title: string; project: { id: string; name: string } } | null;
   };
 }) {
   const TypeIcon = typeConfig[task.type]?.icon || CheckSquare;
   const typeColor = typeConfig[task.type]?.color || "text-muted-foreground";
   const statusStyle = statusConfig[task.status];
   const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
-  const projectId = task.sprint?.project.id ?? task.feature?.project.id;
-  const contextLabel = task.sprint?.name ?? task.feature?.title;
+  const projectId = task.sprint?.project.id;
+  const contextLabel = task.sprint?.name;
 
   return (
     <Link

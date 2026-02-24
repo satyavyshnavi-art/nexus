@@ -50,24 +50,12 @@ export async function syncTaskToGitHub(taskId: string) {
           },
         },
       },
-      feature: {
-        include: {
-          project: {
-            select: {
-              id: true,
-              githubRepoOwner: true,
-              githubRepoName: true,
-              githubLinkedBy: true,
-            },
-          },
-        },
-      },
     },
   });
 
   if (!task) throw new Error("Task not found");
 
-  const project = task.sprint?.project ?? task.feature?.project;
+  const project = task.sprint?.project;
   if (!project) throw new Error("Task has no associated project");
 
   // 3. Check if project is linked to GitHub
@@ -302,23 +290,17 @@ export async function getProjectSyncStatus(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Get task counts (tasks via sprint OR feature)
+  // Get task counts (tasks via sprint)
   const [syncedCount, unsyncedCount] = await Promise.all([
     db.task.count({
       where: {
-        OR: [
-          { sprint: { projectId } },
-          { feature: { projectId } },
-        ],
+        sprint: { projectId },
         githubIssueNumber: { not: null },
       },
     }),
     db.task.count({
       where: {
-        OR: [
-          { sprint: { projectId } },
-          { feature: { projectId } },
-        ],
+        sprint: { projectId },
         githubIssueNumber: null,
       },
     }),

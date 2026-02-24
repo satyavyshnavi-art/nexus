@@ -208,16 +208,6 @@ export async function getCurrentUserProfile() {
               },
             },
           },
-          feature: {
-            select: {
-              title: true,
-              project: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
         },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -288,21 +278,6 @@ export async function getMyTasksAndProjects() {
               id: true,
               name: true,
               status: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  vertical: {
-                    select: { id: true, name: true },
-                  },
-                },
-              },
-            },
-          },
-          feature: {
-            select: {
-              id: true,
-              title: true,
               project: {
                 select: {
                   id: true,

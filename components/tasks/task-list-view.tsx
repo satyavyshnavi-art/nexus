@@ -36,10 +36,11 @@ const statusColors = {
   done: "bg-green-500/10 text-green-700 dark:text-green-400",
 };
 
-const typeIcons = {
+const typeIcons: Record<string, typeof CheckSquare> = {
   task: CheckSquare,
   bug: Bug,
   story: BookOpen,
+  subtask: CheckSquare,
 };
 
 export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {

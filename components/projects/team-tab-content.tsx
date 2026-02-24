@@ -12,7 +12,7 @@ import {
 import { MemberAssignment } from "@/components/admin/member-assignment";
 import { Users, Loader2 } from "lucide-react";
 import { getProjectMemberData } from "@/server/actions/projects";
-import type { Sprint, Task } from "@prisma/client";
+
 
 interface User {
   id: string;
@@ -26,10 +26,9 @@ interface Member {
   user: User;
 }
 
-interface SprintWithTasks extends Sprint {
-  tasks: (Omit<Task, "githubIssueId"> & {
-    githubIssueId: string | null;
-  })[];
+interface FlatTicket {
+  assigneeId: string | null;
+  status: string;
 }
 
 interface ProjectMemberData {
@@ -46,14 +45,14 @@ interface ProjectMemberData {
 interface TeamTabContentProps {
   projectId: string;
   members: Member[];
-  activeSprint: SprintWithTasks | null;
+  tickets: FlatTicket[];
   isAdmin: boolean;
 }
 
 export function TeamTabContent({
   projectId,
   members,
-  activeSprint,
+  tickets,
   isAdmin,
 }: TeamTabContentProps) {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -95,7 +94,7 @@ export function TeamTabContent({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {members.map((member) => {
-          const memberTasks = activeSprint?.tasks.filter(
+          const memberTasks = tickets.filter(
             (t) => t.assigneeId === member.userId
           );
           return (

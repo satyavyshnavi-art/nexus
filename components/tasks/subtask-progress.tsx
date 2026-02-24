@@ -12,10 +12,11 @@ interface SubtaskProgressProps {
   isLoading?: boolean
 }
 
-const typeIcons = {
+const typeIcons: Record<string, typeof CheckSquare> = {
   task: CheckSquare,
   bug: Bug,
   story: BookOpen,
+  subtask: CheckSquare,
 }
 
 const statusPriority = {

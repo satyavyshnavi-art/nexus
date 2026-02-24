@@ -27,21 +27,10 @@ export async function requestUploadUrl(data: {
           },
         },
       },
-      feature: {
-        include: {
-          project: {
-            include: {
-              members: { where: { userId: session.user.id } },
-            },
-          },
-        },
-      },
     },
   });
 
-  const memberCount =
-    (task?.sprint?.project.members.length ?? 0) +
-    (task?.feature?.project.members.length ?? 0);
+  const memberCount = task?.sprint?.project.members.length ?? 0;
 
   if (!task || (memberCount === 0 && session.user.role !== "admin")) {
     throw new Error("Unauthorized");
@@ -149,21 +138,10 @@ export async function uploadAttachment(formData: FormData) {
           },
         },
       },
-      feature: {
-        include: {
-          project: {
-            include: {
-              members: { where: { userId: session.user.id } },
-            },
-          },
-        },
-      },
     },
   });
 
-  const memberCount =
-    (task?.sprint?.project.members.length ?? 0) +
-    (task?.feature?.project.members.length ?? 0);
+  const memberCount = task?.sprint?.project.members.length ?? 0;
 
   if (!task || (memberCount === 0 && session.user.role !== "admin")) {
     throw new Error("Unauthorized");

@@ -161,7 +161,7 @@ export async function completeSprint(
       where: { id: sprintId },
       include: {
         tasks: {
-          select: { id: true, status: true },
+          select: { id: true, status: true, parentTaskId: true },
         },
       },
     });
@@ -180,7 +180,9 @@ export async function completeSprint(
 
     let movedTaskCount = 0;
 
-    // Move incomplete tasks to target sprint if requested
+    // Move incomplete stories (parentTaskId=null) to target sprint if requested.
+    // Child tasks (tickets/subtasks) cascade via the Prisma relation since they
+    // share the same sprintId — we move them explicitly here.
     if (
       options?.incompleteTaskAction === "moveToNext" &&
       options.targetSprintId &&
@@ -196,12 +198,57 @@ export async function completeSprint(
         throw new Error("Target sprint must be in the same project");
       }
 
-      await tx.task.updateMany({
-        where: {
-          id: { in: incompleteTasks.map((t) => t.id) },
-        },
-        data: { sprintId: options.targetSprintId },
-      });
+      // Get incomplete top-level stories (parentTaskId = null)
+      const incompleteStoryIds = incompleteTasks
+        .filter((t) => t.parentTaskId === null)
+        .map((t) => t.id);
+
+      // Move the stories themselves
+      if (incompleteStoryIds.length > 0) {
+        await tx.task.updateMany({
+          where: {
+            id: { in: incompleteStoryIds },
+          },
+          data: { sprintId: options.targetSprintId },
+        });
+
+        // Move all child tasks (tickets + subtasks) of those stories
+        await tx.task.updateMany({
+          where: {
+            parentTaskId: { in: incompleteStoryIds },
+          },
+          data: { sprintId: options.targetSprintId },
+        });
+
+        // Move grandchild tasks (subtasks under tickets) — find ticket IDs first
+        const ticketIds = sprint.tasks
+          .filter((t) => incompleteStoryIds.includes(t.parentTaskId ?? ""))
+          .map((t) => t.id);
+
+        if (ticketIds.length > 0) {
+          await tx.task.updateMany({
+            where: {
+              parentTaskId: { in: ticketIds },
+            },
+            data: { sprintId: options.targetSprintId },
+          });
+        }
+      }
+
+      // Also move any orphan incomplete tasks that don't have a parent
+      const orphanIncomplete = incompleteTasks
+        .filter(
+          (t) =>
+            t.parentTaskId === null && !incompleteStoryIds.includes(t.id)
+        )
+        .map((t) => t.id);
+
+      if (orphanIncomplete.length > 0) {
+        await tx.task.updateMany({
+          where: { id: { in: orphanIncomplete } },
+          data: { sprintId: options.targetSprintId },
+        });
+      }
 
       movedTaskCount = incompleteTasks.length;
     }
@@ -248,17 +295,33 @@ export async function getActiveSprint(projectId: string) {
         },
         include: {
           tasks: {
+            where: {
+              type: "story",
+              parentTaskId: null,
+            },
             include: {
               assignee: { select: { id: true, name: true, email: true } },
               reviewer: { select: { id: true, name: true, email: true } },
-              feature: { select: { id: true, title: true } },
               childTasks: {
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  priority: true,
-                  type: true,
+                where: {
+                  type: { in: ["task", "bug"] },
+                },
+                include: {
+                  assignee: { select: { id: true, name: true, email: true } },
+                  reviewer: { select: { id: true, name: true, email: true } },
+                  childTasks: {
+                    select: {
+                      id: true,
+                      title: true,
+                      status: true,
+                      priority: true,
+                      type: true,
+                    },
+                    orderBy: { createdAt: "asc" },
+                  },
+                  _count: {
+                    select: { comments: true, attachments: true, childTasks: true },
+                  },
                 },
                 orderBy: { createdAt: "asc" },
               },
@@ -284,9 +347,13 @@ export async function getActiveSprint(projectId: string) {
   // Serialize BigInt fields for client components
   return {
     ...sprint,
-    tasks: sprint.tasks.map((task) => ({
-      ...task,
-      githubIssueId: task.githubIssueId?.toString() || null,
+    tasks: sprint.tasks.map((story) => ({
+      ...story,
+      githubIssueId: story.githubIssueId?.toString() || null,
+      childTasks: story.childTasks.map((ticket) => ({
+        ...ticket,
+        githubIssueId: ticket.githubIssueId?.toString() || null,
+      })),
     })),
   };
 }
@@ -372,6 +439,7 @@ export async function getSprintProgress(
               id: true,
               status: true,
               storyPoints: true,
+              type: true,
             },
           },
         },
@@ -379,12 +447,17 @@ export async function getSprintProgress(
 
       if (!sprint) return null;
 
-      const totalTasks = sprint.tasks.length;
+      // Only count tickets (type = "task" or "bug") for progress, not stories or subtasks
+      const tickets = sprint.tasks.filter(
+        (t) => t.type !== "story" && t.type !== "subtask"
+      );
+
+      const totalTasks = tickets.length;
       const tasksByStatus = {
-        todo: sprint.tasks.filter((t) => t.status === "todo").length,
-        progress: sprint.tasks.filter((t) => t.status === "progress").length,
-        review: sprint.tasks.filter((t) => t.status === "review").length,
-        done: sprint.tasks.filter((t) => t.status === "done").length,
+        todo: tickets.filter((t) => t.status === "todo").length,
+        progress: tickets.filter((t) => t.status === "progress").length,
+        review: tickets.filter((t) => t.status === "review").length,
+        done: tickets.filter((t) => t.status === "done").length,
       };
 
       const completionPercentage =
@@ -392,11 +465,11 @@ export async function getSprintProgress(
           ? Math.round((tasksByStatus.done / totalTasks) * 100)
           : 0;
 
-      const totalStoryPoints = sprint.tasks.reduce(
+      const totalStoryPoints = tickets.reduce(
         (sum, t) => sum + (t.storyPoints ?? 0),
         0
       );
-      const completedStoryPoints = sprint.tasks
+      const completedStoryPoints = tickets
         .filter((t) => t.status === "done")
         .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
 
@@ -494,12 +567,17 @@ export async function getSprintDetail(
 
   if (!sprint) return null;
 
-  const totalTasks = sprint.tasks.length;
+  // Only count tickets (type = "task" or "bug") for progress metrics, not stories or subtasks
+  const tickets = sprint.tasks.filter(
+    (t) => t.type !== "story" && t.type !== "subtask"
+  );
+
+  const totalTasks = tickets.length;
   const tasksByStatus = {
-    todo: sprint.tasks.filter((t) => t.status === "todo").length,
-    progress: sprint.tasks.filter((t) => t.status === "progress").length,
-    review: sprint.tasks.filter((t) => t.status === "review").length,
-    done: sprint.tasks.filter((t) => t.status === "done").length,
+    todo: tickets.filter((t) => t.status === "todo").length,
+    progress: tickets.filter((t) => t.status === "progress").length,
+    review: tickets.filter((t) => t.status === "review").length,
+    done: tickets.filter((t) => t.status === "done").length,
   };
 
   const completionPercentage =
@@ -507,11 +585,11 @@ export async function getSprintDetail(
       ? Math.round((tasksByStatus.done / totalTasks) * 100)
       : 0;
 
-  const totalStoryPoints = sprint.tasks.reduce(
+  const totalStoryPoints = tickets.reduce(
     (sum, t) => sum + (t.storyPoints ?? 0),
     0
   );
-  const completedStoryPoints = sprint.tasks
+  const completedStoryPoints = tickets
     .filter((t) => t.status === "done")
     .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
 
@@ -525,8 +603,8 @@ export async function getSprintDetail(
     Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24))
   );
 
-  // Split tasks
-  const completedTasks: SprintDetailTask[] = sprint.tasks
+  // Split tasks — show only tickets in completed/incomplete lists
+  const completedTasks: SprintDetailTask[] = tickets
     .filter((t) => t.status === "done")
     .map((t) => ({
       id: t.id,
@@ -538,7 +616,7 @@ export async function getSprintDetail(
       assignee: t.assignee,
     }));
 
-  const incompleteTasks: SprintDetailTask[] = sprint.tasks
+  const incompleteTasks: SprintDetailTask[] = tickets
     .filter((t) => t.status !== "done")
     .map((t) => ({
       id: t.id,
@@ -550,9 +628,9 @@ export async function getSprintDetail(
       assignee: t.assignee,
     }));
 
-  // Aggregate team members from task assignees
+  // Aggregate team members from ticket assignees only
   const memberMap = new Map<string, SprintTeamMember>();
-  for (const task of sprint.tasks) {
+  for (const task of tickets) {
     if (!task.assignee) continue;
     const existing = memberMap.get(task.assignee.id);
     if (existing) {
