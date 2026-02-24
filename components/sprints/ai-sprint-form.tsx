@@ -152,24 +152,29 @@ export function AiSprintForm({
   };
 
   const handleConfirm = async (editedPlan: {
-    stories: {
+    features: {
       title: string;
-      story_points: number;
-      required_role: string;
-      labels: string[];
+      description: string;
       priority: "low" | "medium" | "high" | "critical";
       tasks: {
         title: string;
         required_role: string;
         labels: string[];
         priority: "low" | "medium" | "high" | "critical";
+        story_points: number;
         assignee_id?: string;
+        subtasks: {
+          title: string;
+          required_role: string;
+          priority: "low" | "medium" | "high" | "critical";
+          assignee_id?: string;
+        }[];
       }[];
     }[];
   }) => {
     setIsConfirming(true);
     try {
-      const result = await aiConfirmTickets(sprintId, editedPlan.stories);
+      const result = await aiConfirmTickets(sprintId, editedPlan.features);
 
       if (!result.success) {
         toast({

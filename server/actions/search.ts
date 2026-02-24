@@ -61,11 +61,10 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
 
     if (!isAdmin) {
         taskWhere.AND.push({
-            sprint: {
-                project: {
-                    members: { some: { userId } },
-                },
-            },
+            OR: [
+                { sprint: { project: { members: { some: { userId } } } } },
+                { feature: { project: { members: { some: { userId } } } } },
+            ],
         });
     }
 
@@ -77,6 +76,12 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
             title: true,
             status: true,
             sprint: {
+                select: {
+                    projectId: true,
+                    project: { select: { name: true } },
+                },
+            },
+            feature: {
                 select: {
                     projectId: true,
                     project: { select: { name: true } },
@@ -138,12 +143,14 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     });
 
     tasks.forEach((t) => {
+        const projectName = t.sprint?.project.name ?? t.feature?.project.name ?? "Unknown";
+        const projectId = t.sprint?.projectId ?? t.feature?.projectId;
         results.push({
             type: "task",
             id: t.id,
             title: t.title,
-            subtitle: `${t.status} • ${t.sprint.project.name}`,
-            url: `/projects/${t.sprint.projectId}`,
+            subtitle: `${t.status} • ${projectName}`,
+            url: projectId ? `/projects/${projectId}` : "#",
         });
     });
 

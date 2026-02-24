@@ -67,12 +67,10 @@ export async function POST(request: NextRequest) {
                 const taskByNumber = await db.task.findFirst({
                     where: {
                         githubIssueNumber: issueNumber,
-                        sprint: {
-                            project: {
-                                githubRepoOwner: owner,
-                                githubRepoName: name,
-                            },
-                        },
+                        OR: [
+                            { sprint: { project: { githubRepoOwner: owner, githubRepoName: name } } },
+                            { feature: { project: { githubRepoOwner: owner, githubRepoName: name } } },
+                        ],
                     },
                     select: { id: true, githubStatus: true },
                 });
@@ -107,7 +105,10 @@ async function handleIssueAction(taskId: string, action: string) {
             title: true,
             sprint: {
                 select: { projectId: true }
-            }
+            },
+            feature: {
+                select: { projectId: true }
+            },
         },
     });
 
@@ -136,9 +137,10 @@ async function handleIssueAction(taskId: string, action: string) {
         console.log(`[GitHub Webhook] ✅ Issue closed in GitHub → Task ${taskId} moved to Review`);
 
         // Revalidate project page
-        if (task.sprint?.projectId) {
+        const closedProjectId = task.sprint?.projectId ?? task.feature?.projectId;
+        if (closedProjectId) {
             const { revalidatePath } = await import("next/cache");
-            revalidatePath(`/projects/${task.sprint.projectId}`);
+            revalidatePath(`/projects/${closedProjectId}`);
         }
     } else if (action === "reopened") {
         // Skip if this reopen likely came FROM Nexus (recently synced + already open status)
@@ -159,9 +161,10 @@ async function handleIssueAction(taskId: string, action: string) {
         console.log(`[GitHub Webhook] ✅ Issue reopened in GitHub → Task ${taskId} moved to To Do`);
 
         // Revalidate project page
-        if (task.sprint?.projectId) {
+        const reopenedProjectId = task.sprint?.projectId ?? task.feature?.projectId;
+        if (reopenedProjectId) {
             const { revalidatePath } = await import("next/cache");
-            revalidatePath(`/projects/${task.sprint.projectId}`);
+            revalidatePath(`/projects/${reopenedProjectId}`);
         }
     }
 }

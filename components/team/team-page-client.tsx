@@ -38,7 +38,7 @@ interface TeamPageClientProps {
         project: {
           name: string;
         };
-      };
+      } | null;
     }>;
   }>;
   stats: {

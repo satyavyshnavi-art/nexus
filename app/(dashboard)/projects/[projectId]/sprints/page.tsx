@@ -51,13 +51,15 @@ export default async function SprintsPage({
   const taskCounts: Record<string, { completed: number; incomplete: number }> =
     {};
   for (const row of taskCountsRaw) {
-    if (!taskCounts[row.sprintId]) {
-      taskCounts[row.sprintId] = { completed: 0, incomplete: 0 };
+    const sid = row.sprintId;
+    if (!sid) continue;
+    if (!taskCounts[sid]) {
+      taskCounts[sid] = { completed: 0, incomplete: 0 };
     }
     if (row.status === "done") {
-      taskCounts[row.sprintId].completed += row._count.id;
+      taskCounts[sid].completed += row._count.id;
     } else {
-      taskCounts[row.sprintId].incomplete += row._count.id;
+      taskCounts[sid].incomplete += row._count.id;
     }
   }
 

@@ -27,13 +27,23 @@ export async function requestUploadUrl(data: {
           },
         },
       },
+      feature: {
+        include: {
+          project: {
+            include: {
+              members: { where: { userId: session.user.id } },
+            },
+          },
+        },
+      },
     },
   });
 
-  if (
-    !task ||
-    (task.sprint.project.members.length === 0 && session.user.role !== "admin")
-  ) {
+  const memberCount =
+    (task?.sprint?.project.members.length ?? 0) +
+    (task?.feature?.project.members.length ?? 0);
+
+  if (!task || (memberCount === 0 && session.user.role !== "admin")) {
     throw new Error("Unauthorized");
   }
 

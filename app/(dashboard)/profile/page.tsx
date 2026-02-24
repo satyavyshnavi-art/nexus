@@ -161,7 +161,7 @@ export default async function ProfilePage() {
                   </Badge>
                   <span className="flex-1 truncate">{task.title}</span>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {task.sprint.project.name}
+                    {task.sprint?.project.name ?? task.feature?.project.name ?? "Unassigned"}
                   </span>
                 </div>
               ))}

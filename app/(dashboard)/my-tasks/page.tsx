@@ -66,12 +66,14 @@ export default async function MyTasksPage() {
   >();
 
   data.assignedTasks.forEach((task) => {
-    const projectId = task.sprint.project.id;
+    const project = task.sprint?.project ?? task.feature?.project;
+    if (!project) return; // Skip tasks with no project context
+    const projectId = project.id;
     if (!tasksByProject.has(projectId)) {
       tasksByProject.set(projectId, {
         projectId,
-        projectName: task.sprint.project.name,
-        verticalName: task.sprint.project.vertical.name,
+        projectName: project.name,
+        verticalName: project.vertical.name,
         tasks: [],
       });
     }
@@ -275,17 +277,20 @@ function TaskRow({
     type: string;
     requiredRole: string | null;
     storyPoints: number | null;
-    sprint: { id: string; name: string; project: { id: string; name: string } };
+    sprint: { id: string; name: string; project: { id: string; name: string } } | null;
+    feature?: { id: string; title: string; project: { id: string; name: string } } | null;
   };
 }) {
   const TypeIcon = typeConfig[task.type]?.icon || CheckSquare;
   const typeColor = typeConfig[task.type]?.color || "text-muted-foreground";
   const statusStyle = statusConfig[task.status];
   const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
+  const projectId = task.sprint?.project.id ?? task.feature?.project.id;
+  const contextLabel = task.sprint?.name ?? task.feature?.title;
 
   return (
     <Link
-      href={`/projects/${task.sprint.project.id}`}
+      href={projectId ? `/projects/${projectId}` : "#"}
       className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/40 hover:shadow-sm transition-all group"
     >
       <TypeIcon className={`h-4 w-4 shrink-0 ${typeColor}`} />
@@ -322,9 +327,11 @@ function TaskRow({
         {task.priority}
       </Badge>
 
-      <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
-        {task.sprint.name}
-      </span>
+      {contextLabel && (
+        <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
+          {contextLabel}
+        </span>
+      )}
     </Link>
   );
 }

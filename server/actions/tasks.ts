@@ -9,11 +9,12 @@ import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
 
 
-// OPTIMIZED: Fast permission check (1 query instead of nested includes)
+// OPTIMIZED: Fast permission check (supports tasks with sprint, feature, or both)
 async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
-  const result = await db.task.findFirst({
+  // Try sprint-based access first
+  const viaSprintResult = await db.task.findFirst({
     where: {
       id: taskId,
       sprint: {
@@ -25,11 +26,27 @@ async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
     select: { id: true },
   });
 
-  return !!result;
+  if (viaSprintResult) return true;
+
+  // Try feature-based access (for tasks without a sprint, or with a feature)
+  const viaFeatureResult = await db.task.findFirst({
+    where: {
+      id: taskId,
+      feature: {
+        project: {
+          members: { some: { userId } },
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  return !!viaFeatureResult;
 }
 
 export async function createTask(data: {
-  sprintId: string;
+  sprintId?: string;
+  featureId?: string;
   title: string;
   description?: string;
   type: TaskType;
@@ -45,45 +62,99 @@ export async function createTask(data: {
 
   const isAdmin = session.user.role === "admin";
 
-  // OPTIMIZED: Single query to get sprint and verify access + assignee in one go
-  const sprint = await db.sprint.findUnique({
-    where: { id: data.sprintId },
-    select: {
-      id: true,
-      projectId: true,
-      project: {
-        select: {
-          id: true,
-          members: {
-            where: {
-              OR: [
-                { userId: session.user.id }, // User access check
-                ...(data.assigneeId ? [{ userId: data.assigneeId }] : []), // Assignee check
-              ],
+  let projectId: string | null = null;
+  let projectMembers: { userId: string }[] = [];
+
+  // Verify sprint access if sprintId is provided
+  if (data.sprintId) {
+    const sprint = await db.sprint.findUnique({
+      where: { id: data.sprintId },
+      select: {
+        id: true,
+        projectId: true,
+        project: {
+          select: {
+            id: true,
+            members: {
+              where: {
+                OR: [
+                  { userId: session.user.id },
+                  ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                ],
+              },
+              select: { userId: true },
             },
-            select: { userId: true },
           },
         },
       },
-    },
-  });
+    });
 
-  if (!sprint) {
-    throw new Error("Sprint not found");
-  }
-
-  // Check user has access (admin or is project member)
-  const hasAccess = isAdmin || sprint.project.members.some(m => m.userId === session.user.id);
-  if (!hasAccess) {
-    throw new Error("Unauthorized");
-  }
-
-  // Check assignee is project member (if assignee specified)
-  if (data.assigneeId && !isAdmin) {
-    const assigneeIsMember = sprint.project.members.some(m => m.userId === data.assigneeId);
-    if (!assigneeIsMember) {
-      throw new Error("Assignee not a project member");
+    if (!sprint) {
+      throw new Error("Sprint not found");
     }
+
+    projectId = sprint.projectId;
+    projectMembers = sprint.project.members;
+  }
+
+  // Verify feature access if featureId is provided
+  if (data.featureId) {
+    const feature = await db.feature.findUnique({
+      where: { id: data.featureId },
+      select: {
+        id: true,
+        projectId: true,
+        project: {
+          select: {
+            id: true,
+            members: {
+              where: {
+                OR: [
+                  { userId: session.user.id },
+                  ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                ],
+              },
+              select: { userId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!feature) {
+      throw new Error("Feature not found");
+    }
+
+    // If we already have a projectId from sprint, verify they belong to the same project
+    if (projectId && projectId !== feature.projectId) {
+      throw new Error("Sprint and feature must belong to the same project");
+    }
+
+    projectId = feature.projectId;
+    // Merge members if we have both sprint and feature (use the larger set)
+    if (projectMembers.length === 0) {
+      projectMembers = feature.project.members;
+    }
+  }
+
+  // If we have a projectId (from sprint or feature), check access
+  if (projectId) {
+    const hasAccess = isAdmin || projectMembers.some(m => m.userId === session.user.id);
+    if (!hasAccess) {
+      throw new Error("Unauthorized");
+    }
+
+    // Check assignee is project member (if assignee specified)
+    if (data.assigneeId && !isAdmin) {
+      const assigneeIsMember = projectMembers.some(m => m.userId === data.assigneeId);
+      if (!assigneeIsMember) {
+        throw new Error("Assignee not a project member");
+      }
+    }
+  } else if (!isAdmin) {
+    // No sprint or feature — standalone task: only admins can create standalone tasks
+    // Or if you want to allow any authenticated user, remove this check
+    // For now, allow any authenticated user to create standalone tasks
   }
 
   const { pushToGitHub, ...taskData } = data;
@@ -97,7 +168,9 @@ export async function createTask(data: {
   });
 
   // Revalidate cache immediately for instant UI update
-  revalidatePath(`/projects/${sprint.projectId}`);
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
 
   // Only sync to GitHub if the user opted in (async, non-blocking)
   if (pushToGitHub) {
@@ -140,6 +213,9 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
       sprint: {
         select: { projectId: true },
       },
+      feature: {
+        select: { projectId: true },
+      },
     },
   });
 
@@ -151,7 +227,10 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
   }
 
   // Revalidate the project page to reflect the updated task status
-  revalidatePath(`/projects/${updatedTask.sprint.projectId}`);
+  const revalidateProjectId = updatedTask.sprint?.projectId ?? updatedTask.feature?.projectId;
+  if (revalidateProjectId) {
+    revalidatePath(`/projects/${revalidateProjectId}`);
+  }
 
   return updatedTask;
 }
@@ -166,6 +245,7 @@ export async function updateTask(
     assigneeId?: string | null;
     requiredRole?: string;
     labels?: string[];
+    featureId?: string | null;
   }
 ) {
   const session = await auth();
@@ -189,6 +269,9 @@ export async function updateTask(
       sprint: {
         select: { projectId: true },
       },
+      feature: {
+        select: { projectId: true },
+      },
     },
   });
 
@@ -198,7 +281,10 @@ export async function updateTask(
   });
 
   // Revalidate the project page to reflect the updated task
-  revalidatePath(`/projects/${updatedTask.sprint.projectId}`);
+  const revalidateProjectId = updatedTask.sprint?.projectId ?? updatedTask.feature?.projectId;
+  if (revalidateProjectId) {
+    revalidatePath(`/projects/${revalidateProjectId}`);
+  }
 
   return updatedTask;
 }
@@ -256,6 +342,14 @@ export async function getTaskWithProgress(taskId: string) {
             select: {
               id: true,
               name: true,
+              status: true,
+              projectId: true,
+            },
+          },
+          feature: {
+            select: {
+              id: true,
+              title: true,
               status: true,
               projectId: true,
             },
@@ -361,6 +455,9 @@ export async function deleteTask(taskId: string) {
       sprint: {
         select: { projectId: true },
       },
+      feature: {
+        select: { projectId: true },
+      },
       // Check project membership for permission
       creator: { select: { id: true } },
     }
@@ -369,18 +466,127 @@ export async function deleteTask(taskId: string) {
   if (!task) throw new Error("Task not found");
 
   // Check permissions: Admin, Project Member, or Task Creator?
-  // Usually admins or project members can delete. Let's start with safe permissions.
-  // Re-using logic: must be admin or project member to access.
   const hasAccess = await canAccessTask(taskId, session.user.id, isAdmin);
   if (!hasAccess) throw new Error("Unauthorized");
-
-  // If we want stricter delete permissions (e.g. only admins or creators), we can add that here.
-  // For now, let's allow project members to delete tasks as per general kanban rules often seen.
 
   await db.task.delete({
     where: { id: taskId },
   });
 
-  revalidatePath(`/projects/${task.sprint.projectId}`);
+  const revalidateProjectId = task.sprint?.projectId ?? task.feature?.projectId;
+  if (revalidateProjectId) {
+    revalidatePath(`/projects/${revalidateProjectId}`);
+  }
+
   return { success: true };
+}
+
+/**
+ * Creates a subtask (child task) under a parent task.
+ * Inherits featureId and sprintId from the parent task.
+ */
+export async function createSubtask(
+  parentTaskId: string,
+  data: {
+    title: string;
+    description?: string;
+    assigneeId?: string;
+    priority?: TaskPriority;
+  }
+) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const isAdmin = session.user.role === "admin";
+
+  // Fetch the parent task to inherit sprintId and featureId
+  const parentTask = await db.task.findUnique({
+    where: { id: parentTaskId },
+    select: {
+      id: true,
+      sprintId: true,
+      featureId: true,
+      sprint: {
+        select: {
+          projectId: true,
+          project: {
+            select: {
+              members: {
+                where: {
+                  OR: [
+                    { userId: session.user.id },
+                    ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                  ],
+                },
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      },
+      feature: {
+        select: {
+          projectId: true,
+          project: {
+            select: {
+              members: {
+                where: {
+                  OR: [
+                    { userId: session.user.id },
+                    ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                  ],
+                },
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!parentTask) {
+    throw new Error("Parent task not found");
+  }
+
+  // Check access via sprint or feature
+  const projectMembers =
+    parentTask.sprint?.project.members ?? parentTask.feature?.project.members ?? [];
+
+  const hasAccess = isAdmin || projectMembers.some(m => m.userId === session.user.id);
+  if (!hasAccess) {
+    throw new Error("Unauthorized");
+  }
+
+  // Check assignee is project member (if specified)
+  if (data.assigneeId && !isAdmin) {
+    const assigneeIsMember = projectMembers.some(m => m.userId === data.assigneeId);
+    if (!assigneeIsMember) {
+      throw new Error("Assignee not a project member");
+    }
+  }
+
+  // Create the subtask, inheriting sprint and feature from parent
+  const subtask = await db.task.create({
+    data: {
+      title: data.title,
+      description: data.description,
+      assigneeId: data.assigneeId,
+      priority: data.priority ?? "medium",
+      type: "task",
+      sprintId: parentTask.sprintId,
+      featureId: parentTask.featureId,
+      parentTaskId: parentTaskId,
+      createdBy: session.user.id,
+    },
+  });
+
+  // Revalidate cache
+  const revalidateProjectId =
+    parentTask.sprint?.projectId ?? parentTask.feature?.projectId;
+  if (revalidateProjectId) {
+    revalidatePath(`/projects/${revalidateProjectId}`);
+  }
+
+  return subtask;
 }

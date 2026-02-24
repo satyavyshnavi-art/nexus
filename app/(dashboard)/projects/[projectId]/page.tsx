@@ -7,12 +7,13 @@ import { KanbanBoard } from "@/components/kanban/board";
 import { Button } from "@/components/ui/button";
 import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
-import { Calendar, Users, LayoutDashboard, ListTodo, Settings } from "lucide-react";
+import { Calendar, Users, LayoutDashboard, ListTodo, Settings, Package } from "lucide-react";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
 import { GitHubLinkedStatus } from "@/components/projects/github-linked-status";
 import { getLinkedRepository } from "@/server/actions/github-link";
+import { getProjectFeatures } from "@/server/actions/features";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
@@ -30,6 +31,7 @@ export default async function ProjectPage({
   const activeSprint = await getActiveSprint(projectId);
   const sprints = await getProjectSprints(projectId);
   const linkedRepo = await getLinkedRepository(projectId);
+  const features = await getProjectFeatures(projectId);
 
   // Fetch sprint progress for the active sprint
   const sprintProgress = activeSprint
@@ -73,12 +75,20 @@ export default async function ProjectPage({
             </span>
           </div>
         </div>
-        <Link href={`/projects/${projectId}/sprints`}>
-          <Button variant="outline" className="glass hover:bg-muted/50">
-            <Calendar className="h-4 w-4 mr-2" />
-            {isAdmin ? "Manage Sprints" : "View Sprints"}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/projects/${projectId}/backlog`}>
+            <Button variant="outline" className="glass hover:bg-muted/50">
+              <Package className="h-4 w-4 mr-2" />
+              Backlog
+            </Button>
+          </Link>
+          <Link href={`/projects/${projectId}/sprints`}>
+            <Button variant="outline" className="glass hover:bg-muted/50">
+              <Calendar className="h-4 w-4 mr-2" />
+              {isAdmin ? "Manage Sprints" : "View Sprints"}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Sprint Progress Tracker */}
@@ -140,6 +150,10 @@ export default async function ProjectPage({
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
         <TabsList className="bg-muted/50 backdrop-blur-sm border">
+          <TabsTrigger value="backlog">
+            <Package className="h-4 w-4 mr-2" />
+            Backlog
+          </TabsTrigger>
           <TabsTrigger value="board">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Kanban Board
@@ -157,6 +171,77 @@ export default async function ProjectPage({
             Overview
           </TabsTrigger>
         </TabsList>
+
+        {/* Tab: Backlog */}
+        <TabsContent value="backlog" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Product Backlog</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Features and tasks waiting to be planned into sprints
+              </p>
+            </div>
+            <Link href={`/projects/${projectId}/backlog`}>
+              <Button variant="outline" className="glass hover:bg-muted/50">
+                <Package className="h-4 w-4 mr-2" />
+                View Full Backlog
+              </Button>
+            </Link>
+          </div>
+
+          {features && features.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {features.map((feature: any) => {
+                const totalTasks = feature._count?.tasks ?? feature.tasks?.length ?? 0;
+                const doneTasks = feature.tasks
+                  ? feature.tasks.filter((t: any) => t.status === "done").length
+                  : 0;
+                const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+                return (
+                  <Card key={feature.id} className="bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
+                    <CardContent className="pt-6">
+                      <h3 className="font-semibold text-sm truncate">{feature.title}</h3>
+                      {feature.description && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {feature.description}
+                        </p>
+                      )}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>{doneTasks}/{totalTasks} tasks</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="w-full bg-secondary rounded-full h-2">
+                          <div
+                            className="bg-primary rounded-full h-2 transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Package}
+              title="No Features Yet"
+              description="Add features to the product backlog to start planning your project."
+              className="bg-card/50 backdrop-blur-sm"
+            />
+          )}
+
+          <div className="flex justify-center mt-2">
+            <Link href={`/projects/${projectId}/backlog`}>
+              <Button variant="outline" className="glass">
+                <Package className="h-4 w-4 mr-2" />
+                View Full Backlog
+              </Button>
+            </Link>
+          </div>
+        </TabsContent>
 
         {/* Tab: Kanban Board */}
         <TabsContent value="board" className="space-y-4">

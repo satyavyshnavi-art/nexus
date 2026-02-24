@@ -239,9 +239,9 @@ export function AiPlanSprintModal({
                     Intelligent Role-Based Planning
                   </p>
                   <p className="text-sm text-purple-700 dark:text-purple-300">
-                    AI will classify tasks by role (UI, Backend, QA, etc.),
-                    suggest assignees based on team designations, and show a
-                    role distribution summary for balanced sprints.
+                    AI will generate Features with Tasks and Subtasks, classify
+                    by role (UI, Backend, QA, etc.), suggest assignees based on
+                    team designations, and show role distribution for balanced sprints.
                   </p>
                 </div>
               </div>

@@ -7,7 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoleDistributionChart } from "./role-distribution-chart";
 import { getRoleColor } from "@/lib/utils/role-colors";
-import type { GeneratedSprintPlan, GeneratedTicketsPlan, SuggestedStory, SuggestedTask } from "@/server/actions/ai-sprint";
+import type {
+  GeneratedSprintPlan,
+  GeneratedTicketsPlan,
+  SuggestedFeature,
+  SuggestedTask,
+  SuggestedSubtask,
+} from "@/server/actions/ai-sprint";
 import {
   ChevronDown,
   ChevronRight,
@@ -20,23 +26,31 @@ import {
   Pencil,
 } from "lucide-react";
 
+// Legacy alias
+type SuggestedStory = SuggestedFeature;
+
 interface SprintPlanReviewProps {
   plan: GeneratedSprintPlan | GeneratedTicketsPlan;
   onConfirm: (editedPlan: {
     sprint_name: string;
     duration_days: number;
-    stories: {
+    features: {
       title: string;
-      story_points: number;
-      required_role: string;
-      labels: string[];
+      description: string;
       priority: "low" | "medium" | "high" | "critical";
       tasks: {
         title: string;
         required_role: string;
         labels: string[];
         priority: "low" | "medium" | "high" | "critical";
+        story_points: number;
         assignee_id?: string;
+        subtasks: {
+          title: string;
+          required_role: string;
+          priority: "low" | "medium" | "high" | "critical";
+          assignee_id?: string;
+        }[];
       }[];
     }[];
   }) => void;
@@ -70,13 +84,14 @@ export function SprintPlanReview({
   const sprintPlan = plan as GeneratedSprintPlan;
   const [sprintName, setSprintName] = useState(isTicketsMode ? "" : sprintPlan.sprint_name);
   const [durationDays, setDurationDays] = useState(isTicketsMode ? 14 : sprintPlan.duration_days);
-  const [stories, setStories] = useState<SuggestedStory[]>(plan.stories);
-  const [expandedStories, setExpandedStories] = useState<Set<number>>(
-    new Set(plan.stories.map((_, i) => i))
+  const [features, setFeatures] = useState<SuggestedFeature[]>(plan.features);
+  const [expandedFeatures, setExpandedFeatures] = useState<Set<number>>(
+    new Set(plan.features.map((_, i) => i))
   );
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  const toggleStory = (index: number) => {
-    setExpandedStories((prev) => {
+  const toggleFeature = (index: number) => {
+    setExpandedFeatures((prev) => {
       const next = new Set(prev);
       if (next.has(index)) next.delete(index);
       else next.add(index);
@@ -84,19 +99,29 @@ export function SprintPlanReview({
     });
   };
 
-  // --- Story updates ---
+  const toggleTask = (featureIndex: number, taskIndex: number) => {
+    const key = `${featureIndex}-${taskIndex}`;
+    setExpandedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
-  const updateStory = (index: number, field: string, value: string | number) => {
-    setStories((prev) => {
+  // --- Feature updates ---
+
+  const updateFeature = (index: number, field: string, value: string | number) => {
+    setFeatures((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   };
 
-  const removeStory = (index: number) => {
-    setStories((prev) => prev.filter((_, i) => i !== index));
-    setExpandedStories((prev) => {
+  const removeFeature = (index: number) => {
+    setFeatures((prev) => prev.filter((_, i) => i !== index));
+    setExpandedFeatures((prev) => {
       const next = new Set<number>();
       prev.forEach((i) => {
         if (i < index) next.add(i);
@@ -106,15 +131,13 @@ export function SprintPlanReview({
     });
   };
 
-  const addStory = () => {
-    const newIndex = stories.length;
-    setStories((prev) => [
+  const addFeature = () => {
+    const newIndex = features.length;
+    setFeatures((prev) => [
       ...prev,
       {
-        title: "New Story",
-        story_points: 3,
-        required_role: "Full-Stack",
-        labels: [],
+        title: "New Feature",
+        description: "",
         priority: "medium",
         tasks: [
           {
@@ -122,49 +145,53 @@ export function SprintPlanReview({
             required_role: "Full-Stack",
             labels: [],
             priority: "medium",
+            story_points: 3,
+            subtasks: [],
             suggested_assignees: [],
           },
         ],
       },
     ]);
-    setExpandedStories((prev) => new Set([...prev, newIndex]));
+    setExpandedFeatures((prev) => new Set([...prev, newIndex]));
   };
 
   // --- Task updates ---
 
-  const updateTask = (storyIndex: number, taskIndex: number, field: string, value: string) => {
-    setStories((prev) => {
+  const updateTask = (featureIndex: number, taskIndex: number, field: string, value: string | number) => {
+    setFeatures((prev) => {
       const updated = [...prev];
-      const story = { ...updated[storyIndex] };
-      const tasks = [...story.tasks];
-      tasks[taskIndex] = { ...tasks[taskIndex], [field]: value };
-      story.tasks = tasks;
-      updated[storyIndex] = story;
+      const feature = { ...updated[featureIndex] };
+      const tasks = [...feature.tasks];
+      tasks[taskIndex] = { ...tasks[taskIndex], [field]: field === "story_points" ? Number(value) : value };
+      feature.tasks = tasks;
+      updated[featureIndex] = feature;
       return updated;
     });
   };
 
-  const removeTask = (storyIndex: number, taskIndex: number) => {
-    setStories((prev) => {
+  const removeTask = (featureIndex: number, taskIndex: number) => {
+    setFeatures((prev) => {
       const updated = [...prev];
-      const story = { ...updated[storyIndex] };
-      story.tasks = story.tasks.filter((_, i) => i !== taskIndex);
-      updated[storyIndex] = story;
+      const feature = { ...updated[featureIndex] };
+      feature.tasks = feature.tasks.filter((_, i) => i !== taskIndex);
+      updated[featureIndex] = feature;
       return updated;
     });
   };
 
-  const addTask = (storyIndex: number) => {
-    setStories((prev) => {
+  const addTask = (featureIndex: number) => {
+    setFeatures((prev) => {
       const updated = [...prev];
-      const story = { ...updated[storyIndex] };
-      story.tasks = [
-        ...story.tasks,
+      const feature = { ...updated[featureIndex] };
+      feature.tasks = [
+        ...feature.tasks,
         {
           title: "New Task",
-          required_role: story.required_role,
+          required_role: "Full-Stack",
           labels: [],
-          priority: story.priority,
+          priority: feature.priority,
+          story_points: 3,
+          subtasks: [],
           suggested_assignees: plan.members.map((m) => ({
             userId: m.id,
             name: m.name || "Unknown",
@@ -172,58 +199,128 @@ export function SprintPlanReview({
           })),
         },
       ];
-      updated[storyIndex] = story;
+      updated[featureIndex] = feature;
       return updated;
     });
+  };
+
+  // --- Subtask updates ---
+
+  const updateSubtask = (featureIndex: number, taskIndex: number, subtaskIndex: number, field: string, value: string) => {
+    setFeatures((prev) => {
+      const updated = [...prev];
+      const feature = { ...updated[featureIndex] };
+      const tasks = [...feature.tasks];
+      const task = { ...tasks[taskIndex] };
+      const subtasks = [...task.subtasks];
+      subtasks[subtaskIndex] = { ...subtasks[subtaskIndex], [field]: value };
+      task.subtasks = subtasks;
+      tasks[taskIndex] = task;
+      feature.tasks = tasks;
+      updated[featureIndex] = feature;
+      return updated;
+    });
+  };
+
+  const removeSubtask = (featureIndex: number, taskIndex: number, subtaskIndex: number) => {
+    setFeatures((prev) => {
+      const updated = [...prev];
+      const feature = { ...updated[featureIndex] };
+      const tasks = [...feature.tasks];
+      const task = { ...tasks[taskIndex] };
+      task.subtasks = task.subtasks.filter((_, i) => i !== subtaskIndex);
+      tasks[taskIndex] = task;
+      feature.tasks = tasks;
+      updated[featureIndex] = feature;
+      return updated;
+    });
+  };
+
+  const addSubtask = (featureIndex: number, taskIndex: number) => {
+    setFeatures((prev) => {
+      const updated = [...prev];
+      const feature = { ...updated[featureIndex] };
+      const tasks = [...feature.tasks];
+      const task = { ...tasks[taskIndex] };
+      task.subtasks = [
+        ...task.subtasks,
+        {
+          title: "New Subtask",
+          required_role: task.required_role,
+          priority: task.priority,
+          suggested_assignees: plan.members.map((m) => ({
+            userId: m.id,
+            name: m.name || "Unknown",
+            confidence: "low" as const,
+          })),
+        },
+      ];
+      tasks[taskIndex] = task;
+      feature.tasks = tasks;
+      updated[featureIndex] = feature;
+      return updated;
+    });
+    // Auto-expand the task to show the new subtask
+    const key = `${featureIndex}-${taskIndex}`;
+    setExpandedTasks((prev) => new Set([...prev, key]));
   };
 
   // Recompute role distribution from current state
   const roleDistribution = useMemo(() => {
     const map = new Map<string, { story_points: number; task_count: number }>();
-    stories.forEach((story) => {
-      story.tasks.forEach((task) => {
+    features.forEach((feature) => {
+      feature.tasks.forEach((task) => {
         const role = task.required_role;
         const existing = map.get(role) || { story_points: 0, task_count: 0 };
+        existing.story_points += task.story_points;
         existing.task_count += 1;
         map.set(role, existing);
       });
-      const storyRole = story.required_role;
-      const existing = map.get(storyRole) || { story_points: 0, task_count: 0 };
-      existing.story_points += story.story_points;
-      map.set(storyRole, existing);
     });
     return Array.from(map.entries()).map(([role, data]) => ({
       role,
       story_points: data.story_points,
       task_count: data.task_count,
     }));
-  }, [stories]);
+  }, [features]);
 
   const handleConfirm = () => {
-    // Filter out stories with no tasks
-    const validStories = stories.filter((s) => s.tasks.length > 0);
+    // Filter out features with no tasks
+    const validFeatures = features.filter((f) => f.tasks.length > 0);
     onConfirm({
       sprint_name: sprintName,
       duration_days: durationDays,
-      stories: validStories.map((story) => ({
-        title: story.title,
-        story_points: story.story_points,
-        required_role: story.required_role,
-        labels: story.labels,
-        priority: story.priority,
-        tasks: story.tasks.map((task) => ({
+      features: validFeatures.map((feature) => ({
+        title: feature.title,
+        description: feature.description,
+        priority: feature.priority,
+        tasks: feature.tasks.map((task) => ({
           title: task.title,
           required_role: task.required_role,
           labels: task.labels,
           priority: task.priority,
+          story_points: task.story_points,
           assignee_id: task.selected_assignee_id,
+          subtasks: task.subtasks.map((subtask) => ({
+            title: subtask.title,
+            required_role: subtask.required_role,
+            priority: subtask.priority,
+            assignee_id: subtask.selected_assignee_id,
+          })),
         })),
       })),
     });
   };
 
-  const totalTasks = stories.reduce((sum, s) => sum + s.tasks.length, 0);
-  const totalPoints = stories.reduce((sum, s) => sum + s.story_points, 0);
+  const totalTasks = features.reduce((sum, f) => sum + f.tasks.length, 0);
+  const totalSubtasks = features.reduce(
+    (sum, f) => sum + f.tasks.reduce((tSum, t) => tSum + t.subtasks.length, 0),
+    0
+  );
+  const totalPoints = features.reduce(
+    (sum, f) => sum + f.tasks.reduce((tSum, t) => tSum + t.story_points, 0),
+    0
+  );
 
   return (
     <div className="space-y-5">
@@ -239,7 +336,7 @@ export function SprintPlanReview({
             />
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {!isTicketsMode && (
             <div className="flex items-center gap-1.5">
               <Label className="text-xs text-muted-foreground">Duration</Label>
@@ -254,8 +351,9 @@ export function SprintPlanReview({
               <span className="text-xs text-muted-foreground">days</span>
             </div>
           )}
-          <span className="text-sm text-muted-foreground">{stories.length} stories</span>
+          <span className="text-sm text-muted-foreground">{features.length} features</span>
           <span className="text-sm text-muted-foreground">{totalTasks} tasks</span>
+          <span className="text-sm text-muted-foreground">{totalSubtasks} subtasks</span>
           <span className="text-sm text-muted-foreground">{totalPoints} points</span>
         </div>
       </div>
@@ -267,26 +365,26 @@ export function SprintPlanReview({
         </div>
       )}
 
-      {/* Stories & Tasks */}
+      {/* Features, Tasks & Subtasks */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Stories & Tasks</h4>
-          <Button variant="outline" size="sm" onClick={addStory} className="h-7 text-xs">
+          <h4 className="text-sm font-medium">Features & Tasks</h4>
+          <Button variant="outline" size="sm" onClick={addFeature} className="h-7 text-xs">
             <Plus className="h-3 w-3 mr-1" />
-            Add Story
+            Add Feature
           </Button>
         </div>
         <div className="space-y-2">
-          {stories.map((story, storyIndex) => {
-            const isExpanded = expandedStories.has(storyIndex);
+          {features.map((feature, featureIndex) => {
+            const isExpanded = expandedFeatures.has(featureIndex);
 
             return (
-              <div key={storyIndex} className="border rounded-lg overflow-hidden">
-                {/* Story header — click chevron to expand/collapse */}
+              <div key={featureIndex} className="border rounded-lg overflow-hidden">
+                {/* Feature header */}
                 <div className="flex items-center gap-2 p-3 bg-muted/30">
                   <button
                     type="button"
-                    onClick={() => toggleStory(storyIndex)}
+                    onClick={() => toggleFeature(featureIndex)}
                     className="shrink-0 p-0.5 hover:bg-muted rounded"
                   >
                     {isExpanded ? (
@@ -298,39 +396,15 @@ export function SprintPlanReview({
 
                   {/* Editable title */}
                   <Input
-                    value={story.title}
-                    onChange={(e) => updateStory(storyIndex, "title", e.target.value)}
+                    value={feature.title}
+                    onChange={(e) => updateFeature(featureIndex, "title", e.target.value)}
                     className="h-7 text-sm font-medium flex-1 bg-background"
                   />
 
-                  {/* Story points */}
-                  <Input
-                    type="number"
-                    min={0}
-                    max={20}
-                    value={story.story_points}
-                    onChange={(e) =>
-                      updateStory(storyIndex, "story_points", parseInt(e.target.value) || 0)
-                    }
-                    className="h-7 w-16 text-xs text-center bg-background"
-                    title="Story points"
-                  />
-
-                  {/* Role select */}
-                  <select
-                    value={story.required_role}
-                    onChange={(e) => updateStory(storyIndex, "required_role", e.target.value)}
-                    className="h-7 text-xs border rounded px-1.5 bg-background"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-
                   {/* Priority select */}
                   <select
-                    value={story.priority}
-                    onChange={(e) => updateStory(storyIndex, "priority", e.target.value)}
+                    value={feature.priority}
+                    onChange={(e) => updateFeature(featureIndex, "priority", e.target.value)}
                     className="h-7 text-xs border rounded px-1.5 bg-background capitalize"
                   >
                     {PRIORITIES.map((p) => (
@@ -338,39 +412,94 @@ export function SprintPlanReview({
                     ))}
                   </select>
 
-                  {/* Remove story */}
+                  {/* Task count badge */}
+                  <Badge variant="secondary" className="text-[10px] shrink-0">
+                    {feature.tasks.length} tasks
+                  </Badge>
+
+                  {/* Remove feature */}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeStory(storyIndex)}
+                    onClick={() => removeFeature(featureIndex)}
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                    title="Remove story"
+                    title="Remove feature"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
 
+                {/* Feature description (editable, shown when expanded) */}
+                {isExpanded && (
+                  <div className="px-3 py-2 pl-9 border-t bg-muted/10">
+                    <Input
+                      value={feature.description}
+                      onChange={(e) => updateFeature(featureIndex, "description", e.target.value)}
+                      placeholder="Feature description..."
+                      className="h-7 text-xs text-muted-foreground bg-transparent border-transparent hover:border-input focus:border-input"
+                    />
+                  </div>
+                )}
+
                 {/* Tasks */}
                 {isExpanded && (
                   <div className="border-t">
                     <div className="divide-y">
-                      {story.tasks.map((task, taskIndex) => (
-                        <TaskRow
-                          key={taskIndex}
-                          task={task}
-                          members={plan.members}
-                          onUpdate={(field, value) =>
-                            updateTask(storyIndex, taskIndex, field, value)
-                          }
-                          onRemove={() => removeTask(storyIndex, taskIndex)}
-                        />
-                      ))}
+                      {feature.tasks.map((task, taskIndex) => {
+                        const taskKey = `${featureIndex}-${taskIndex}`;
+                        const isTaskExpanded = expandedTasks.has(taskKey);
+
+                        return (
+                          <div key={taskIndex}>
+                            <TaskRow
+                              task={task}
+                              members={plan.members}
+                              isExpanded={isTaskExpanded}
+                              hasSubtasks={task.subtasks.length > 0}
+                              onToggle={() => toggleTask(featureIndex, taskIndex)}
+                              onUpdate={(field, value) =>
+                                updateTask(featureIndex, taskIndex, field, value)
+                              }
+                              onRemove={() => removeTask(featureIndex, taskIndex)}
+                            />
+                            {/* Subtasks */}
+                            {isTaskExpanded && (
+                              <div className="border-t bg-muted/5">
+                                <div className="divide-y">
+                                  {task.subtasks.map((subtask, subtaskIndex) => (
+                                    <SubtaskRow
+                                      key={subtaskIndex}
+                                      subtask={subtask}
+                                      members={plan.members}
+                                      onUpdate={(field, value) =>
+                                        updateSubtask(featureIndex, taskIndex, subtaskIndex, field, value)
+                                      }
+                                      onRemove={() => removeSubtask(featureIndex, taskIndex, subtaskIndex)}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="px-3 py-1.5 pl-16 border-t bg-muted/10">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => addSubtask(featureIndex, taskIndex)}
+                                    className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                                  >
+                                    <Plus className="h-2.5 w-2.5 mr-1" />
+                                    Add Subtask
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                     <div className="px-3 py-2 pl-9 border-t bg-muted/20">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => addTask(storyIndex)}
+                        onClick={() => addTask(featureIndex)}
                         className="h-7 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <Plus className="h-3 w-3 mr-1" />
@@ -393,7 +522,7 @@ export function SprintPlanReview({
         </Button>
         <Button
           onClick={handleConfirm}
-          disabled={isConfirming || stories.length === 0}
+          disabled={isConfirming || features.length === 0}
         >
           {isConfirming ? (
             <>
@@ -417,12 +546,18 @@ export function SprintPlanReview({
 function TaskRow({
   task,
   members,
+  isExpanded,
+  hasSubtasks,
+  onToggle,
   onUpdate,
   onRemove,
 }: {
   task: SuggestedTask;
   members: { id: string; name: string | null; designation: string | null }[];
-  onUpdate: (field: string, value: string) => void;
+  isExpanded: boolean;
+  hasSubtasks: boolean;
+  onToggle: () => void;
+  onUpdate: (field: string, value: string | number) => void;
   onRemove: () => void;
 }) {
   const topSuggestion = task.suggested_assignees[0];
@@ -432,11 +567,36 @@ function TaskRow({
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 pl-9 bg-background">
+      {/* Expand/collapse for subtasks */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="shrink-0 p-0.5 hover:bg-muted rounded"
+        title={hasSubtasks ? "Toggle subtasks" : "No subtasks yet (click to expand)"}
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
+      </button>
+
       {/* Editable title */}
       <Input
         value={task.title}
         onChange={(e) => onUpdate("title", e.target.value)}
         className="h-7 text-sm flex-1 bg-transparent border-transparent hover:border-input focus:border-input"
+      />
+
+      {/* Story points */}
+      <Input
+        type="number"
+        min={0}
+        max={20}
+        value={task.story_points}
+        onChange={(e) => onUpdate("story_points", parseInt(e.target.value) || 0)}
+        className="h-7 w-14 text-xs text-center bg-background"
+        title="Story points"
       />
 
       {/* Role select */}
@@ -487,6 +647,13 @@ function TaskRow({
           ))}
       </select>
 
+      {/* Subtask count badge */}
+      {task.subtasks.length > 0 && (
+        <Badge variant="outline" className="text-[10px] shrink-0">
+          {task.subtasks.length}
+        </Badge>
+      )}
+
       {/* Remove task */}
       <Button
         variant="ghost"
@@ -496,6 +663,97 @@ function TaskRow({
         title="Remove task"
       >
         <Trash2 className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
+
+// --- Editable Subtask Row ---
+
+function SubtaskRow({
+  subtask,
+  members,
+  onUpdate,
+  onRemove,
+}: {
+  subtask: SuggestedSubtask;
+  members: { id: string; name: string | null; designation: string | null }[];
+  onUpdate: (field: string, value: string) => void;
+  onRemove: () => void;
+}) {
+  const topSuggestion = subtask.suggested_assignees[0];
+  const defaultAssignee =
+    subtask.selected_assignee_id ||
+    (topSuggestion?.confidence === "high" ? topSuggestion.userId : "unassigned");
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 pl-16 bg-background/50">
+      <span className="text-muted-foreground text-[10px] shrink-0">--</span>
+
+      {/* Editable title */}
+      <Input
+        value={subtask.title}
+        onChange={(e) => onUpdate("title", e.target.value)}
+        className="h-6 text-xs flex-1 bg-transparent border-transparent hover:border-input focus:border-input"
+      />
+
+      {/* Role select */}
+      <select
+        value={subtask.required_role}
+        onChange={(e) => onUpdate("required_role", e.target.value)}
+        className="h-6 text-[10px] border rounded px-1 bg-background shrink-0"
+      >
+        {ROLES.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+
+      {/* Priority select */}
+      <select
+        value={subtask.priority}
+        onChange={(e) => onUpdate("priority", e.target.value)}
+        className="h-6 text-[10px] border rounded px-1 bg-background capitalize shrink-0"
+      >
+        {PRIORITIES.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
+
+      {/* Assignee dropdown */}
+      <select
+        value={defaultAssignee}
+        onChange={(e) => onUpdate("selected_assignee_id", e.target.value === "unassigned" ? "" : e.target.value)}
+        className="h-6 text-[10px] border rounded px-1 bg-background max-w-[100px] truncate shrink-0"
+      >
+        <option value="unassigned">Unassigned</option>
+        {subtask.suggested_assignees.map((suggestion) => (
+          <option key={suggestion.userId} value={suggestion.userId}>
+            {suggestion.name}
+            {suggestion.confidence === "high"
+              ? " ★"
+              : suggestion.confidence === "medium"
+              ? " ☆"
+              : ""}
+          </option>
+        ))}
+        {members
+          .filter((m) => !subtask.suggested_assignees.some((s) => s.userId === m.id))
+          .map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name || "Unknown"}
+            </option>
+          ))}
+      </select>
+
+      {/* Remove subtask */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+        title="Remove subtask"
+      >
+        <Trash2 className="h-2.5 w-2.5" />
       </Button>
     </div>
   );

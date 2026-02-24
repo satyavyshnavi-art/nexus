@@ -64,7 +64,7 @@ interface TeamMemberCardProps {
         project: {
           name: string;
         };
-      };
+      } | null;
     }>;
   };
   isAdmin: boolean;
