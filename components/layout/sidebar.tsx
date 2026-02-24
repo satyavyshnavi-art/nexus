@@ -270,20 +270,19 @@ function DesktopSidebar({
         )}
       </nav>
 
-      {/* Bottom section: Theme + Notifications + User */}
+      {/* Bottom section: Theme + User */}
       <div className="mt-auto border-t border-border flex-shrink-0">
-        {/* Theme toggle + Notifications */}
+        {/* Theme toggle */}
         <div
           className={cn(
             "flex items-center border-b border-border",
-            collapsed ? "justify-center px-2 py-3 gap-1" : "px-4 py-3"
+            collapsed ? "justify-center px-2 py-3" : "px-4 py-3"
           )}
         >
           <ThemeToggle />
           {!collapsed && (
-            <span className="ml-3 text-sm text-muted-foreground flex-1">Theme</span>
+            <span className="ml-3 text-sm text-muted-foreground">Theme</span>
           )}
-          <NotificationBell compact={collapsed} />
         </div>
 
         {/* User profile */}
