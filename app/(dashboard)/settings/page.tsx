@@ -4,8 +4,7 @@ import { getUserSettings } from "@/server/actions/settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountSettings } from "@/components/settings/account-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
-import { AppearanceSettings } from "@/components/settings/appearance-settings";
-import { User, Bell, Palette } from "lucide-react";
+import { User, Bell } from "lucide-react";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -30,8 +29,6 @@ export default async function SettingsPage() {
       commentNotifications: true,
       sprintNotifications: true,
       dailyDigest: false,
-      theme: "system",
-      viewDensity: "comfortable",
     };
   }
 
@@ -45,7 +42,7 @@ export default async function SettingsPage() {
       </div>
 
       <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Account
@@ -53,10 +50,6 @@ export default async function SettingsPage() {
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
             Notifications
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Appearance
           </TabsTrigger>
         </TabsList>
 
@@ -81,13 +74,6 @@ export default async function SettingsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="appearance">
-          <AppearanceSettings
-            userId={session.user.id}
-            initialTheme={settings.theme ?? "system"}
-            initialViewDensity={settings.viewDensity ?? "comfortable"}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import { CommandMenu } from "@/components/command-menu";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import {
   Sheet,
   SheetContent,
@@ -269,19 +270,20 @@ function DesktopSidebar({
         )}
       </nav>
 
-      {/* Bottom section: Theme + User */}
+      {/* Bottom section: Theme + Notifications + User */}
       <div className="mt-auto border-t border-border flex-shrink-0">
-        {/* Theme toggle */}
+        {/* Theme toggle + Notifications */}
         <div
           className={cn(
             "flex items-center border-b border-border",
-            collapsed ? "justify-center px-2 py-3" : "px-4 py-3"
+            collapsed ? "justify-center px-2 py-3 gap-1" : "px-4 py-3"
           )}
         >
           <ThemeToggle />
           {!collapsed && (
-            <span className="ml-3 text-sm text-muted-foreground">Theme</span>
+            <span className="ml-3 text-sm text-muted-foreground flex-1">Theme</span>
           )}
+          <NotificationBell compact={collapsed} />
         </div>
 
         {/* User profile */}
@@ -355,6 +357,7 @@ function MobileSidebar({
         </div>
         <div className="flex items-center gap-2">
           <CommandMenu isAdmin={isAdmin} />
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </header>

@@ -7,6 +7,7 @@ import { classifyBugPriority } from "@/lib/ai/bug-classifier";
 import { unstable_cache, revalidatePath } from "next/cache";
 import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
+import { createNotification } from "@/server/actions/notifications";
 
 
 // OPTIMIZED: Fast permission check (1 query instead of nested includes)
@@ -96,6 +97,17 @@ export async function createTask(data: {
     },
   });
 
+  // Notify assignee (non-blocking)
+  if (data.assigneeId && data.assigneeId !== session.user.id) {
+    createNotification({
+      userId: data.assigneeId,
+      type: "task_assigned",
+      title: "New task assigned to you",
+      message: `"${task.title}" was assigned to you by ${session.user.name || "a team member"}`,
+      link: `/projects/${sprint.projectId}`,
+    });
+  }
+
   // Revalidate cache immediately for instant UI update
   revalidatePath(`/projects/${sprint.projectId}`);
 
@@ -182,6 +194,12 @@ export async function updateTask(
     throw new Error("Unauthorized");
   }
 
+  // Fetch current task to detect assignee change
+  const currentTask = await db.task.findUnique({
+    where: { id: taskId },
+    select: { assigneeId: true, title: true },
+  });
+
   const updatedTask = await db.task.update({
     where: { id: taskId },
     data,
@@ -191,6 +209,21 @@ export async function updateTask(
       },
     },
   });
+
+  // Notify new assignee if changed (non-blocking)
+  if (
+    data.assigneeId &&
+    data.assigneeId !== currentTask?.assigneeId &&
+    data.assigneeId !== session.user.id
+  ) {
+    createNotification({
+      userId: data.assigneeId,
+      type: "task_assigned",
+      title: "Task assigned to you",
+      message: `"${updatedTask.title}" was assigned to you by ${session.user.name || "a team member"}`,
+      link: `/projects/${updatedTask.sprint.projectId}`,
+    });
+  }
 
   // Trigger GitHub Sync asynchronously
   syncTaskToGitHub(taskId).catch(err => {
