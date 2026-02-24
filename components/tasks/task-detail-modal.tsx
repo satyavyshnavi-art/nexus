@@ -13,19 +13,20 @@ import { TaskHeader } from "./task-header";
 import { TaskMetadata } from "./task-metadata";
 import { AttachmentsList } from "./attachments-list";
 import { CommentSection } from "./comment-section";
-import { updateTask, updateTaskStatus, deleteTask, createSubtask } from "@/server/actions/tasks";
+import { updateTask, updateTaskStatus, deleteTask, createSubtask, assignReviewer } from "@/server/actions/tasks";
 import { toast } from "@/lib/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus, Eye } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
   githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
+  reviewer?: Pick<User, "id" | "name" | "email"> | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
     comments: number;
@@ -71,6 +72,7 @@ export function TaskDetailModal({
   const [priority, setPriority] = useState(task.priority);
   const [storyPoints, setStoryPoints] = useState(task.storyPoints || 0);
   const [assigneeId, setAssigneeId] = useState(task.assigneeId || "unassigned");
+  const [reviewerId, setReviewerId] = useState(task.reviewerId || "none");
   const [status, setStatus] = useState(task.status);
   const [hasChanges, setHasChanges] = useState(false);
   const [subtasks, setSubtasks] = useState(task.childTasks || []);
@@ -98,6 +100,13 @@ export function TaskDetailModal({
       // Update status if changed
       if (status !== task.status) {
         await updateTaskStatus(task.id, status);
+      }
+
+      // Update reviewer if changed
+      const newReviewerId = reviewerId === "none" ? undefined : reviewerId;
+      const oldReviewerId = task.reviewerId || undefined;
+      if (newReviewerId !== oldReviewerId && newReviewerId) {
+        await assignReviewer(task.id, newReviewerId);
       }
 
       toast({
@@ -295,7 +304,7 @@ export function TaskDetailModal({
             </div>
 
             {/* Story Points + Assignee row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Story Points</Label>
                 <Input
@@ -315,6 +324,25 @@ export function TaskDetailModal({
                   className="w-full px-3 py-2 rounded-md text-sm border cursor-pointer"
                 >
                   <option value="unassigned">Unassigned</option>
+                  {projectMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="h-3 w-3 text-amber-500" />
+                  Reviewer
+                </Label>
+                <select
+                  value={reviewerId}
+                  onChange={(e) => { setReviewerId(e.target.value); markChanged(); }}
+                  className="w-full px-3 py-2 rounded-md text-sm border cursor-pointer"
+                >
+                  <option value="none">No Reviewer</option>
                   {projectMembers.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name || member.email}

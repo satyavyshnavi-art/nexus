@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { generateSprintTasks } from "@/lib/ai/sprint-generator";
 import { generateSprintPlan, SprintPlanOutput } from "@/lib/ai/sprint-planner";
 import type { ImageInput } from "@/lib/ai/gemini";
-import { TaskType, TaskPriority, SprintStatus, FeatureStatus } from "@prisma/client";
+import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
 
 // --- Role Matching Helper ---
 
@@ -79,6 +79,7 @@ export type SuggestedSubtask = {
 
 export type SuggestedTask = {
   title: string;
+  category: string;
   required_role: string;
   labels: string[];
   priority: "low" | "medium" | "high" | "critical";
@@ -88,21 +89,11 @@ export type SuggestedTask = {
   selected_assignee_id?: string;
 };
 
-export type SuggestedFeature = {
-  title: string;
-  description: string;
-  priority: "low" | "medium" | "high" | "critical";
-  tasks: SuggestedTask[];
-};
-
-// Legacy alias for backward compatibility
-export type SuggestedStory = SuggestedFeature;
-
 export type GeneratedSprintPlan = {
   sprint_name: string;
   duration_days: number;
   role_distribution: { role: string; story_points: number; task_count: number }[];
-  features: SuggestedFeature[];
+  tasks: SuggestedTask[];
   members: { id: string; name: string | null; designation: string | null }[];
 };
 
@@ -147,25 +138,21 @@ export async function aiGenerateSprintPlan(
     return { success: false, error: message };
   }
 
-  // Enrich features with assignee suggestions
-  const features: SuggestedFeature[] = aiPlan.features.map((feature) => ({
-    title: feature.title,
-    description: feature.description,
-    priority: feature.priority,
-    tasks: feature.tasks.map((task) => ({
-      title: task.title,
-      required_role: task.required_role,
-      labels: task.labels,
-      priority: task.priority,
-      story_points: task.story_points,
-      subtasks: task.subtasks.map((subtask) => ({
-        title: subtask.title,
-        required_role: subtask.required_role,
-        priority: subtask.priority,
-        suggested_assignees: matchRoleToMembers(subtask.required_role, members),
-      })),
-      suggested_assignees: matchRoleToMembers(task.required_role, members),
+  // Enrich tasks with assignee suggestions
+  const tasks: SuggestedTask[] = aiPlan.tasks.map((task) => ({
+    title: task.title,
+    category: task.category || "General",
+    required_role: task.required_role,
+    labels: task.labels,
+    priority: task.priority,
+    story_points: task.story_points,
+    subtasks: task.subtasks.map((subtask) => ({
+      title: subtask.title,
+      required_role: subtask.required_role,
+      priority: subtask.priority,
+      suggested_assignees: matchRoleToMembers(subtask.required_role, members),
     })),
+    suggested_assignees: matchRoleToMembers(task.required_role, members),
   }));
 
   return {
@@ -174,7 +161,7 @@ export async function aiGenerateSprintPlan(
       sprint_name: aiPlan.sprint_name,
       duration_days: aiPlan.duration_days,
       role_distribution: aiPlan.role_distribution,
-      features,
+      tasks,
       members,
     },
   };
@@ -191,6 +178,7 @@ export type ConfirmedSubtask = {
 
 export type ConfirmedTask = {
   title: string;
+  category: string;
   required_role: string;
   labels: string[];
   priority: "low" | "medium" | "high" | "critical";
@@ -199,20 +187,10 @@ export type ConfirmedTask = {
   subtasks: ConfirmedSubtask[];
 };
 
-export type ConfirmedFeature = {
-  title: string;
-  description: string;
-  priority: "low" | "medium" | "high" | "critical";
-  tasks: ConfirmedTask[];
-};
-
-// Legacy alias for backward compatibility
-export type ConfirmedStory = ConfirmedFeature;
-
 export type ConfirmedPlan = {
   sprint_name: string;
   duration_days: number;
-  features: ConfirmedFeature[];
+  tasks: ConfirmedTask[];
 };
 
 export async function aiConfirmSprintPlan(
@@ -244,54 +222,43 @@ export async function aiConfirmSprintPlan(
 
       let totalTaskCount = 0;
 
-      for (const feature of confirmedPlan.features) {
-        // Create Feature record
-        const featureRecord = await tx.feature.create({
+      // Create tasks directly (no feature creation)
+      for (const task of confirmedPlan.tasks) {
+        const taskLabels = [...task.labels];
+        if (task.category && !taskLabels.includes(task.category)) {
+          taskLabels.push(task.category);
+        }
+
+        const taskRecord = await tx.task.create({
           data: {
-            projectId,
-            title: feature.title,
-            description: feature.description || null,
-            priority: feature.priority as TaskPriority,
-            status: FeatureStatus.planning,
+            sprintId: sprint.id,
+            title: task.title,
+            type: TaskType.task,
+            storyPoints: task.story_points,
+            priority: task.priority as TaskPriority,
+            requiredRole: task.required_role,
+            labels: taskLabels,
+            assigneeId: task.assignee_id || undefined,
             createdBy: session.user.id,
           },
         });
+        totalTaskCount++;
 
-        // Create Tasks under the feature (tasks go into the sprint)
-        for (const task of feature.tasks) {
-          const taskRecord = await tx.task.create({
-            data: {
-              sprintId: sprint.id,
-              featureId: featureRecord.id,
-              title: task.title,
-              type: TaskType.task,
-              storyPoints: task.story_points,
-              priority: task.priority as TaskPriority,
-              requiredRole: task.required_role,
-              labels: task.labels,
-              assigneeId: task.assignee_id || undefined,
-              createdBy: session.user.id,
-            },
-          });
-          totalTaskCount++;
+        // Create Subtasks as child Tasks (type: task, with parentTaskId)
+        if (task.subtasks && task.subtasks.length > 0) {
+          const subtaskData = task.subtasks.map((subtask) => ({
+            sprintId: sprint.id,
+            title: subtask.title,
+            type: TaskType.task,
+            parentTaskId: taskRecord.id,
+            priority: subtask.priority as TaskPriority,
+            requiredRole: subtask.required_role,
+            assigneeId: subtask.assignee_id || undefined,
+            createdBy: session.user.id,
+          }));
 
-          // Create Subtasks as child Tasks (type: task, with parentTaskId)
-          if (task.subtasks && task.subtasks.length > 0) {
-            const subtaskData = task.subtasks.map((subtask) => ({
-              sprintId: sprint.id,
-              featureId: featureRecord.id,
-              title: subtask.title,
-              type: TaskType.task,
-              parentTaskId: taskRecord.id,
-              priority: subtask.priority as TaskPriority,
-              requiredRole: subtask.required_role,
-              assigneeId: subtask.assignee_id || undefined,
-              createdBy: session.user.id,
-            }));
-
-            await tx.task.createMany({ data: subtaskData });
-            totalTaskCount += subtaskData.length;
-          }
+          await tx.task.createMany({ data: subtaskData });
+          totalTaskCount += subtaskData.length;
         }
       }
 
@@ -315,7 +282,7 @@ export async function aiConfirmSprintPlan(
 // --- Ticket Generation (two-step, for existing sprints) ---
 
 export type GeneratedTicketsPlan = {
-  features: SuggestedFeature[];
+  tasks: SuggestedTask[];
   members: { id: string; name: string | null; designation: string | null }[];
   role_distribution: { role: string; story_points: number; task_count: number }[];
 };
@@ -370,36 +337,30 @@ export async function aiGenerateTickets(
     return { success: false, error: message };
   }
 
-  // Enrich features with assignee suggestions
-  const features: SuggestedFeature[] = aiPlan.features.map((feature) => ({
-    title: feature.title,
-    description: feature.description,
-    priority: feature.priority,
-    tasks: feature.tasks.map((task) => ({
-      title: task.title,
-      required_role: task.required_role,
-      labels: task.labels,
-      priority: task.priority,
-      story_points: task.story_points,
-      subtasks: task.subtasks.map((subtask) => ({
-        title: subtask.title,
-        required_role: subtask.required_role,
-        priority: subtask.priority,
-        suggested_assignees: matchRoleToMembers(subtask.required_role, members),
-      })),
-      suggested_assignees: matchRoleToMembers(task.required_role, members),
+  // Enrich tasks with assignee suggestions
+  const tasks: SuggestedTask[] = aiPlan.tasks.map((task) => ({
+    title: task.title,
+    category: task.category || "General",
+    required_role: task.required_role,
+    labels: task.labels,
+    priority: task.priority,
+    story_points: task.story_points,
+    subtasks: task.subtasks.map((subtask) => ({
+      title: subtask.title,
+      required_role: subtask.required_role,
+      priority: subtask.priority,
+      suggested_assignees: matchRoleToMembers(subtask.required_role, members),
     })),
+    suggested_assignees: matchRoleToMembers(task.required_role, members),
   }));
 
   // Compute role distribution
   const roleMap = new Map<string, { story_points: number; task_count: number }>();
-  features.forEach((feature) => {
-    feature.tasks.forEach((task) => {
-      const existing = roleMap.get(task.required_role) || { story_points: 0, task_count: 0 };
-      existing.story_points += task.story_points;
-      existing.task_count += 1;
-      roleMap.set(task.required_role, existing);
-    });
+  tasks.forEach((task) => {
+    const existing = roleMap.get(task.required_role) || { story_points: 0, task_count: 0 };
+    existing.story_points += task.story_points;
+    existing.task_count += 1;
+    roleMap.set(task.required_role, existing);
   });
 
   const role_distribution = Array.from(roleMap.entries()).map(([role, data]) => ({
@@ -410,14 +371,14 @@ export async function aiGenerateTickets(
 
   return {
     success: true,
-    plan: { features, members, role_distribution },
+    plan: { tasks, members, role_distribution },
   };
 }
 
 // Step 2: Confirm tickets (writes to DB in existing sprint)
 export async function aiConfirmTickets(
   sprintId: string,
-  confirmedFeatures: ConfirmedFeature[]
+  confirmedTasks: ConfirmedTask[]
 ): Promise<{ success: true; taskCount: number } | { success: false; error: string }> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -437,54 +398,43 @@ export async function aiConfirmTickets(
     const data = await db.$transaction(async (tx) => {
       let totalTaskCount = 0;
 
-      for (const feature of confirmedFeatures) {
-        // Create Feature record
-        const featureRecord = await tx.feature.create({
+      // Create tasks directly (no feature creation)
+      for (const task of confirmedTasks) {
+        const taskLabels = [...task.labels];
+        if (task.category && !taskLabels.includes(task.category)) {
+          taskLabels.push(task.category);
+        }
+
+        const taskRecord = await tx.task.create({
           data: {
-            projectId: sprint.projectId,
-            title: feature.title,
-            description: feature.description || null,
-            priority: feature.priority as TaskPriority,
-            status: FeatureStatus.planning,
+            sprintId,
+            title: task.title,
+            type: TaskType.task,
+            storyPoints: task.story_points,
+            priority: task.priority as TaskPriority,
+            requiredRole: task.required_role,
+            labels: taskLabels,
+            assigneeId: task.assignee_id || undefined,
             createdBy: session.user.id,
           },
         });
+        totalTaskCount++;
 
-        // Create Tasks under the feature (tasks go into the sprint)
-        for (const task of feature.tasks) {
-          const taskRecord = await tx.task.create({
-            data: {
-              sprintId,
-              featureId: featureRecord.id,
-              title: task.title,
-              type: TaskType.task,
-              storyPoints: task.story_points,
-              priority: task.priority as TaskPriority,
-              requiredRole: task.required_role,
-              labels: task.labels,
-              assigneeId: task.assignee_id || undefined,
-              createdBy: session.user.id,
-            },
-          });
-          totalTaskCount++;
+        // Create Subtasks as child Tasks (type: task, with parentTaskId)
+        if (task.subtasks && task.subtasks.length > 0) {
+          const subtaskData = task.subtasks.map((subtask) => ({
+            sprintId,
+            title: subtask.title,
+            type: TaskType.task,
+            parentTaskId: taskRecord.id,
+            priority: subtask.priority as TaskPriority,
+            requiredRole: subtask.required_role,
+            assigneeId: subtask.assignee_id || undefined,
+            createdBy: session.user.id,
+          }));
 
-          // Create Subtasks as child Tasks (type: task, with parentTaskId)
-          if (task.subtasks && task.subtasks.length > 0) {
-            const subtaskData = task.subtasks.map((subtask) => ({
-              sprintId,
-              featureId: featureRecord.id,
-              title: subtask.title,
-              type: TaskType.task,
-              parentTaskId: taskRecord.id,
-              priority: subtask.priority as TaskPriority,
-              requiredRole: subtask.required_role,
-              assigneeId: subtask.assignee_id || undefined,
-              createdBy: session.user.id,
-            }));
-
-            await tx.task.createMany({ data: subtaskData });
-            totalTaskCount += subtaskData.length;
-          }
+          await tx.task.createMany({ data: subtaskData });
+          totalTaskCount += subtaskData.length;
         }
       }
 
@@ -625,52 +575,41 @@ export async function aiPlanSprint(projectId: string, inputText: string) {
 
       let totalTaskCount = 0;
 
-      for (const feature of plan.features) {
-        // Create Feature record
-        const featureRecord = await tx.feature.create({
+      // Create tasks directly (no feature creation)
+      for (const task of plan.tasks) {
+        const taskLabels = [...task.labels];
+        if (task.category && !taskLabels.includes(task.category)) {
+          taskLabels.push(task.category);
+        }
+
+        const taskRecord = await tx.task.create({
           data: {
-            projectId,
-            title: feature.title,
-            description: feature.description || null,
-            priority: feature.priority as TaskPriority,
-            status: FeatureStatus.planning,
+            sprintId: sprint.id,
+            title: task.title,
+            type: TaskType.task,
+            storyPoints: task.story_points,
+            priority: task.priority as TaskPriority,
+            requiredRole: task.required_role,
+            labels: taskLabels,
             createdBy: session.user.id,
           },
         });
+        totalTaskCount++;
 
-        // Create Tasks under the feature
-        for (const task of feature.tasks) {
-          const taskRecord = await tx.task.create({
-            data: {
-              sprintId: sprint.id,
-              featureId: featureRecord.id,
-              title: task.title,
-              type: TaskType.task,
-              storyPoints: task.story_points,
-              priority: task.priority as TaskPriority,
-              requiredRole: task.required_role,
-              labels: task.labels,
-              createdBy: session.user.id,
-            },
-          });
-          totalTaskCount++;
+        // Create Subtasks as child Tasks
+        if (task.subtasks && task.subtasks.length > 0) {
+          const subtaskData = task.subtasks.map((subtask) => ({
+            sprintId: sprint.id,
+            title: subtask.title,
+            type: TaskType.task,
+            parentTaskId: taskRecord.id,
+            priority: subtask.priority as TaskPriority,
+            requiredRole: subtask.required_role,
+            createdBy: session.user.id,
+          }));
 
-          // Create Subtasks as child Tasks
-          if (task.subtasks && task.subtasks.length > 0) {
-            const subtaskData = task.subtasks.map((subtask) => ({
-              sprintId: sprint.id,
-              featureId: featureRecord.id,
-              title: subtask.title,
-              type: TaskType.task,
-              parentTaskId: taskRecord.id,
-              priority: subtask.priority as TaskPriority,
-              requiredRole: subtask.required_role,
-              createdBy: session.user.id,
-            }));
-
-            await tx.task.createMany({ data: subtaskData });
-            totalTaskCount += subtaskData.length;
-          }
+          await tx.task.createMany({ data: subtaskData });
+          totalTaskCount += subtaskData.length;
         }
       }
 

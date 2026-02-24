@@ -22,8 +22,15 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { getRoleColor, getRoleDotColor } from "@/lib/utils/role-colors";
-import { LayoutGrid, Users, X } from "lucide-react";
+import { LayoutGrid, Users, X, Eye } from "lucide-react";
 
 const TaskDetailModal = dynamic(
   () => import("@/components/tasks/task-detail-modal").then((mod) => mod.TaskDetailModal),
@@ -33,6 +40,7 @@ const TaskDetailModal = dynamic(
 type TaskWithRelations = Omit<Task, 'githubIssueId'> & {
   githubIssueId: string | null;
   assignee: Pick<User, "id" | "name" | "email"> | null;
+  reviewer?: Pick<User, "id" | "name" | "email"> | null;
   feature?: { id: string; title: string } | null;
   childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
   _count?: {
@@ -77,6 +85,8 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("status");
   const [roleFilters, setRoleFilters] = useState<Set<string>>(new Set());
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [pendingReviewTask, setPendingReviewTask] = useState<{ id: string; oldStatus: TaskStatus } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -154,6 +164,13 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
 
+    // If moving to review, show reviewer picker dialog
+    if (newStatus === "review") {
+      setPendingReviewTask({ id: taskId, oldStatus });
+      setReviewDialogOpen(true);
+      return;
+    }
+
     // Celebrate when a task is moved to "done"
     if (newStatus === "done") {
       confetti({
@@ -180,6 +197,40 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
       setIsUpdating(false);
     }
   }, [isUpdating, tasks, router]);
+
+  const handleReviewConfirm = useCallback(async (reviewerId?: string) => {
+    if (!pendingReviewTask) return;
+    setReviewDialogOpen(false);
+    setIsUpdating(true);
+    try {
+      await updateTaskStatus(pendingReviewTask.id, "review" as TaskStatus, reviewerId);
+      toast.success("Ticket moved to Review");
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to move ticket");
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === pendingReviewTask.id ? { ...t, status: pendingReviewTask.oldStatus } : t
+        )
+      );
+    } finally {
+      setIsUpdating(false);
+      setPendingReviewTask(null);
+    }
+  }, [pendingReviewTask, router]);
+
+  const handleReviewCancel = useCallback(() => {
+    if (pendingReviewTask) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === pendingReviewTask.id ? { ...t, status: pendingReviewTask.oldStatus } : t
+        )
+      );
+    }
+    setReviewDialogOpen(false);
+    setPendingReviewTask(null);
+  }, [pendingReviewTask]);
 
   const handleDragCancel = useCallback(() => {
     setActiveTask(null);
@@ -445,6 +496,48 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
           onOpenChange={setIsDetailModalOpen}
         />
       )}
+
+      {/* Reviewer picker dialog */}
+      <Dialog open={reviewDialogOpen} onOpenChange={(open) => { if (!open) handleReviewCancel(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-amber-500" />
+              Assign Reviewer
+            </DialogTitle>
+            <DialogDescription>
+              Select a team member to review this task, or skip to move without a reviewer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {projectMembers.map((member) => (
+              <button
+                key={member.id}
+                onClick={() => handleReviewConfirm(member.id)}
+                className="flex items-center gap-3 w-full p-3 rounded-lg border hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all text-left"
+              >
+                <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <span className="text-sm font-medium text-amber-600">
+                    {(member.name?.charAt(0) || member.email.charAt(0)).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{member.name || member.email}</p>
+                  <p className="text-xs text-muted-foreground">{member.email}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={handleReviewCancel}>
+              Cancel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => handleReviewConfirm()}>
+              Skip (No Reviewer)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Global styles for drag state */}
       <style jsx global>{`

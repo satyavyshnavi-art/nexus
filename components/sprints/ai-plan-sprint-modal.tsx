@@ -16,7 +16,6 @@ import {
   aiGenerateSprintPlan,
   aiConfirmSprintPlan,
   type GeneratedSprintPlan,
-  type ConfirmedPlan,
 } from "@/server/actions/ai-sprint";
 import { SprintPlanReview } from "./sprint-plan-review";
 import { toast } from "@/lib/hooks/use-toast";
@@ -160,10 +159,46 @@ export function AiPlanSprintModal({
     }
   };
 
-  const handleConfirm = async (editedPlan: ConfirmedPlan) => {
+  const handleConfirm = async (editedPlan: {
+    sprint_name: string;
+    duration_days: number;
+    tasks: {
+      title: string;
+      category: string;
+      required_role: string;
+      labels: string[];
+      priority: "low" | "medium" | "high" | "critical";
+      story_points: number;
+      assignee_id?: string;
+      subtasks: {
+        title: string;
+        required_role: string;
+        priority: "low" | "medium" | "high" | "critical";
+        assignee_id?: string;
+      }[];
+    }[];
+  }) => {
     setIsConfirming(true);
     try {
-      const result = await aiConfirmSprintPlan(projectId, editedPlan);
+      const result = await aiConfirmSprintPlan(projectId, {
+        sprint_name: editedPlan.sprint_name,
+        duration_days: editedPlan.duration_days,
+        tasks: editedPlan.tasks.map((t) => ({
+          title: t.title,
+          category: t.category,
+          required_role: t.required_role,
+          labels: t.labels,
+          priority: t.priority,
+          story_points: t.story_points,
+          assignee_id: t.assignee_id,
+          subtasks: t.subtasks.map((s) => ({
+            title: s.title,
+            required_role: s.required_role,
+            priority: s.priority,
+            assignee_id: s.assignee_id,
+          })),
+        })),
+      });
 
       if (!result.success) {
         toast({
@@ -239,7 +274,7 @@ export function AiPlanSprintModal({
                     Intelligent Role-Based Planning
                   </p>
                   <p className="text-sm text-purple-700 dark:text-purple-300">
-                    AI will generate Features with Tasks and Subtasks, classify
+                    AI will generate Tasks with Subtasks grouped by category, classify
                     by role (UI, Backend, QA, etc.), suggest assignees based on
                     team designations, and show role distribution for balanced sprints.
                   </p>

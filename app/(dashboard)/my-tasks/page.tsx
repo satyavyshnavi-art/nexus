@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { getMyTasksAndProjects } from "@/server/actions/users";
+import { getReviewTasks } from "@/server/actions/tasks";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -48,6 +49,7 @@ export default async function MyTasksPage() {
   if (!session?.user) redirect("/login");
 
   const data = await getMyTasksAndProjects();
+  const reviewTasks = await getReviewTasks(session.user.id);
 
   const completionRate =
     data.stats.totalTasks > 0
@@ -181,6 +183,28 @@ export default async function MyTasksPage() {
                     <span>{project._count.members} members</span>
                   </div>
                 </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending My Review */}
+      {reviewTasks.length > 0 && (
+        <Card className="border-l-4 border-l-amber-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Eye className="h-5 w-5 text-amber-500" />
+              Pending My Review
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                {reviewTasks.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              {reviewTasks.map((task) => (
+                <TaskRow key={task.id} task={task} />
               ))}
             </div>
           </CardContent>

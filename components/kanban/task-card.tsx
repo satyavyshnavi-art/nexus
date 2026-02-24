@@ -5,14 +5,33 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { memo } from "react";
-import { BookOpen, CheckSquare, Bug, MessageSquare, Paperclip, TrendingUp, CheckCircle2, Package } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import {
+  BookOpen,
+  CheckSquare,
+  Bug,
+  MessageSquare,
+  Paperclip,
+  TrendingUp,
+  CheckCircle2,
+  Package,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  Plus,
+  Loader2,
+  Eye,
+} from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
+import { updateTaskStatus, createSubtask } from "@/server/actions/tasks";
+import { useRouter } from "next/navigation";
 
 interface TaskCardProps {
   task: Omit<Task, "githubIssueId"> & {
     githubIssueId: string | null;
     assignee: Pick<User, "id" | "name" | "email"> | null;
+    reviewer?: Pick<User, "id" | "name" | "email"> | null;
     feature?: { id: string; title: string } | null;
     childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
     _count?: {
@@ -41,7 +60,18 @@ const typeConfig = {
   bug: { icon: Bug, label: "Bug", color: "text-red-600 dark:text-red-400" },
 };
 
-export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {
+export function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {
+  const router = useRouter();
+
+  const [subtasksExpanded, setSubtasksExpanded] = useState(false);
+  const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [subtasks, setSubtasks] = useState<Pick<Task, "id" | "title" | "status" | "priority" | "type">[]>(
+    task.childTasks || []
+  );
+
   const {
     attributes,
     listeners,
@@ -66,6 +96,66 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
   const TypeIcon = typeConfig[task.type].icon;
   const priorityStyle = priorityConfig[task.priority];
   const roleStyle = task.requiredRole ? getRoleColor(task.requiredRole) : null;
+
+  const totalSubtasks = subtasks.length;
+  const doneSubtasks = subtasks.filter((st) => st.status === "done").length;
+  const subtaskPct = totalSubtasks > 0 ? Math.round((doneSubtasks / totalSubtasks) * 100) : 0;
+
+  const handleToggleSubtaskStatus = async (
+    e: React.MouseEvent,
+    subtaskId: string,
+    currentStatus: string
+  ) => {
+    e.stopPropagation();
+    setTogglingSubtask(subtaskId);
+    try {
+      const newStatus = currentStatus === "done" ? "todo" : "done";
+      await updateTaskStatus(subtaskId, newStatus as any);
+      setSubtasks((prev) =>
+        prev.map((st) =>
+          st.id === subtaskId ? { ...st, status: newStatus as any } : st
+        )
+      );
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to toggle subtask status:", err);
+    } finally {
+      setTogglingSubtask(null);
+    }
+  };
+
+  const handleAddSubtask = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setShowAddSubtask(false);
+      setNewSubtaskTitle("");
+      return;
+    }
+    if (e.key === "Enter" && newSubtaskTitle.trim()) {
+      e.stopPropagation();
+      setIsAddingSubtask(true);
+      try {
+        const created = await createSubtask(task.id, { title: newSubtaskTitle.trim() });
+        setSubtasks((prev) => [
+          ...prev,
+          {
+            id: created.id,
+            title: created.title,
+            status: created.status,
+            priority: created.priority,
+            type: created.type,
+          },
+        ]);
+        setNewSubtaskTitle("");
+        setShowAddSubtask(false);
+        router.refresh();
+      } catch (err) {
+        console.error("Failed to create subtask:", err);
+      } finally {
+        setIsAddingSubtask(false);
+      }
+    }
+  };
 
   // The actual card being dragged becomes a placeholder
   if (isSelfDragging) {
@@ -144,6 +234,129 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
             </div>
           )}
 
+          {/* Expandable Subtask Section */}
+          {totalSubtasks > 0 && (
+            <div
+              className="rounded-md border bg-muted/30 px-2 py-1.5"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {/* Subtask Header (always visible) */}
+              <button
+                type="button"
+                className="flex items-center gap-1.5 w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubtasksExpanded((prev) => !prev);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {subtasksExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all"
+                    style={{ width: `${subtaskPct}%` }}
+                  />
+                </div>
+                <span>
+                  {doneSubtasks}/{totalSubtasks}
+                </span>
+              </button>
+
+              {/* Expanded Subtask List */}
+              {subtasksExpanded && (
+                <div
+                  className="mt-1.5 space-y-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {subtasks.map((st) => (
+                    <div
+                      key={st.id}
+                      className="flex items-center gap-1.5 text-xs group"
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        className="shrink-0 hover:scale-110 transition-transform"
+                        disabled={togglingSubtask === st.id}
+                        onClick={(e) => handleToggleSubtaskStatus(e, st.id, st.status)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        {togglingSubtask === st.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        ) : st.status === "done" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        ) : (
+                          <Circle className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                        )}
+                      </button>
+                      <span
+                        className={`truncate ${
+                          st.status === "done"
+                            ? "line-through text-muted-foreground"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {st.title}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Add Subtask */}
+                  {showAddSubtask ? (
+                    <div
+                      className="flex items-center gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      {isAddingSubtask ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      )}
+                      <Input
+                        autoFocus
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        onKeyDown={handleAddSubtask}
+                        onBlur={() => {
+                          if (!newSubtaskTitle.trim()) {
+                            setShowAddSubtask(false);
+                            setNewSubtaskTitle("");
+                          }
+                        }}
+                        placeholder="Subtask title..."
+                        className="h-6 text-xs px-1.5 py-0"
+                        disabled={isAddingSubtask}
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAddSubtask(true);
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add subtask</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Footer: Metadata + Assignee */}
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -165,37 +378,31 @@ export const TaskCard = memo(function TaskCard({ task, onClick, isDragging = fal
                   <span>{task.storyPoints}pt</span>
                 </div>
               )}
-              {/* Subtask Progress */}
-              {task._count && task._count.childTasks && task._count.childTasks > 0 && (() => {
-                const total = task._count.childTasks;
-                const done = task.childTasks?.filter((ct) => ct.status === "done").length ?? 0;
-                const pct = Math.round((done / total) * 100);
-                return (
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>{done}/{total}</span>
-                    <div className="w-10 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
-            {task.assignee && (
-              <div className="flex items-center gap-1.5">
-                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-medium text-primary">
-                    {(task.assignee.name?.charAt(0) || task.assignee.email.charAt(0)).toUpperCase()}
-                  </span>
+            <div className="flex items-center gap-2">
+              {task.reviewer && task.status === "review" && (
+                <div className="flex items-center gap-1">
+                  <Eye className="h-3 w-3 text-amber-500" />
+                  <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center">
+                    <span className="text-[10px] font-medium text-amber-600">
+                      {(task.reviewer.name?.charAt(0) || task.reviewer.email.charAt(0)).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {task.assignee && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-medium text-primary">
+                      {(task.assignee.name?.charAt(0) || task.assignee.email.charAt(0)).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </Card>
     </div>
   );
-});
+}

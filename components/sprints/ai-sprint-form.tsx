@@ -152,29 +152,42 @@ export function AiSprintForm({
   };
 
   const handleConfirm = async (editedPlan: {
-    features: {
+    sprint_name: string;
+    duration_days: number;
+    tasks: {
       title: string;
-      description: string;
+      category: string;
+      required_role: string;
+      labels: string[];
       priority: "low" | "medium" | "high" | "critical";
-      tasks: {
+      story_points: number;
+      assignee_id?: string;
+      subtasks: {
         title: string;
         required_role: string;
-        labels: string[];
         priority: "low" | "medium" | "high" | "critical";
-        story_points: number;
         assignee_id?: string;
-        subtasks: {
-          title: string;
-          required_role: string;
-          priority: "low" | "medium" | "high" | "critical";
-          assignee_id?: string;
-        }[];
       }[];
     }[];
   }) => {
     setIsConfirming(true);
     try {
-      const result = await aiConfirmTickets(sprintId, editedPlan.features);
+      const confirmedTasks = editedPlan.tasks.map((t) => ({
+        title: t.title,
+        category: t.category,
+        required_role: t.required_role,
+        labels: t.labels,
+        priority: t.priority,
+        story_points: t.story_points,
+        assignee_id: t.assignee_id,
+        subtasks: t.subtasks.map((s) => ({
+          title: s.title,
+          required_role: s.required_role,
+          priority: s.priority,
+          assignee_id: s.assignee_id,
+        })),
+      }));
+      const result = await aiConfirmTickets(sprintId, confirmedTasks);
 
       if (!result.success) {
         toast({

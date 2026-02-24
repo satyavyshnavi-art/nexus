@@ -33,6 +33,7 @@ model User {
   comments             TaskComment[]
   assignedTasks        Task[]           @relation("TaskAssignee")
   createdTasks         Task[]           @relation("TaskCreator")
+  reviewedTasks        Task[]           @relation("TaskReviewer")
   createdFeatures      Feature[]
   verticals            VerticalUser[]
 
@@ -147,6 +148,7 @@ model Task {
   githubSyncedAt    DateTime?        @map("github_synced_at")
   githubUrl         String?          @map("github_url")
   githubStatus      String?          @map("github_status") // "open" | "closed" - tracks GitHub-side status
+  reviewerId        String?          @map("reviewer_id")
   requiredRole      String?          @map("required_role")
   labels            String[]         @default([])
   syncLogs          GitHubSyncLog[]
@@ -154,6 +156,7 @@ model Task {
   comments          TaskComment[]
   assignee          User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
   creator           User             @relation("TaskCreator", fields: [createdBy], references: [id])
+  reviewer          User?            @relation("TaskReviewer", fields: [reviewerId], references: [id])
   parentTask        Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: SetNull)
   childTasks        Task[]           @relation("TaskHierarchy")
   feature           Feature?         @relation(fields: [featureId], references: [id], onDelete: SetNull)
@@ -168,6 +171,7 @@ model Task {
   @@index([sprintId, createdAt(sort: Desc)])
   @@index([githubIssueId])
   @@index([sprintId, githubIssueNumber])
+  @@index([reviewerId])
   @@index([sprintId, requiredRole])
   @@index([featureId, status])
   @@map("tasks")

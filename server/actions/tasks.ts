@@ -182,7 +182,7 @@ export async function createTask(data: {
   return task;
 }
 
-export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
+export async function updateTaskStatus(taskId: string, newStatus: TaskStatus, reviewerId?: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -206,8 +206,8 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus) {
     data: {
       status: newStatus,
       githubStatus,
-      // Set sync timestamp now so webhook loop prevention works
       githubSyncedAt: new Date(),
+      ...(newStatus === "review" && reviewerId ? { reviewerId } : {}),
     },
     include: {
       sprint: {
@@ -589,4 +589,121 @@ export async function createSubtask(
   }
 
   return subtask;
+}
+
+export async function assignReviewer(taskId: string, reviewerId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const hasAccess = await canAccessTask(
+    taskId,
+    session.user.id,
+    session.user.role === "admin"
+  );
+  if (!hasAccess) throw new Error("Unauthorized");
+
+  const updatedTask = await db.task.update({
+    where: { id: taskId },
+    data: { reviewerId },
+    include: {
+      sprint: { select: { projectId: true } },
+      feature: { select: { projectId: true } },
+    },
+  });
+
+  const revalidateProjectId = updatedTask.sprint?.projectId ?? updatedTask.feature?.projectId;
+  if (revalidateProjectId) {
+    revalidatePath(`/projects/${revalidateProjectId}`);
+  }
+
+  return updatedTask;
+}
+
+export async function getReviewTasks(userId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  return db.task.findMany({
+    where: {
+      reviewerId: userId,
+      status: "review",
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      priority: true,
+      type: true,
+      requiredRole: true,
+      storyPoints: true,
+      sprint: {
+        select: {
+          id: true,
+          name: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              vertical: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+      feature: {
+        select: {
+          id: true,
+          title: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              vertical: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+      assignee: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+export async function getBacklogTasks(projectId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  return db.task.findMany({
+    where: {
+      sprintId: null,
+      parentTaskId: null,
+      OR: [
+        { feature: { projectId } },
+        // Also catch tasks that were created for this project but have no feature
+        // by checking if they have no feature and no sprint (orphaned tasks won't show)
+      ],
+    },
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      status: true,
+      priority: true,
+      storyPoints: true,
+      requiredRole: true,
+      labels: true,
+      createdAt: true,
+      assignee: {
+        select: { id: true, name: true, email: true },
+      },
+      feature: {
+        select: { id: true, title: true },
+      },
+      _count: {
+        select: { childTasks: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 }

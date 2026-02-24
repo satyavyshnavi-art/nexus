@@ -250,6 +250,7 @@ export async function getActiveSprint(projectId: string) {
           tasks: {
             include: {
               assignee: { select: { id: true, name: true, email: true } },
+              reviewer: { select: { id: true, name: true, email: true } },
               feature: { select: { id: true, title: true } },
               childTasks: {
                 select: {
