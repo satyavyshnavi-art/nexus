@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -20,7 +20,18 @@ import {
 } from "@/server/actions/ai-sprint";
 import { SprintPlanReview } from "./sprint-plan-review";
 import { toast } from "@/lib/hooks/use-toast";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, ImagePlus, X } from "lucide-react";
+
+const MAX_IMAGES = 3;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+type ImageState = {
+  file: File;
+  mimeType: string;
+  data: string; // base64 without prefix
+  preview: string; // object URL
+};
 
 interface AiPlanSprintModalProps {
   projectId: string;
@@ -49,6 +60,63 @@ export function AiPlanSprintModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [inputText, setInputText] = useState("");
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedSprintPlan | null>(null);
+  const [images, setImages] = useState<ImageState[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const clearImages = () => {
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages([]);
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      toast({ title: "Limit reached", description: `Maximum ${MAX_IMAGES} images allowed`, variant: "destructive" });
+      return;
+    }
+
+    const toProcess = files.slice(0, remaining);
+    if (files.length > remaining) {
+      toast({ title: "Some images skipped", description: `Only ${remaining} more image(s) allowed`, variant: "destructive" });
+    }
+
+    const newImages: ImageState[] = [];
+    for (const file of toProcess) {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        toast({ title: "Invalid file type", description: `${file.name} is not a supported image format`, variant: "destructive" });
+        continue;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast({ title: "File too large", description: `${file.name} exceeds 5MB limit`, variant: "destructive" });
+        continue;
+      }
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.readAsDataURL(file);
+      });
+      newImages.push({
+        file,
+        mimeType: file.type,
+        data: base64,
+        preview: URL.createObjectURL(file),
+      });
+    }
+    setImages((prev) => [...prev, ...newImages]);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const handleGenerate = async () => {
     if (!inputText.trim()) {
@@ -62,7 +130,10 @@ export function AiPlanSprintModal({
 
     setIsGenerating(true);
     try {
-      const result = await aiGenerateSprintPlan(projectId, inputText);
+      const imagePayload = images.length > 0
+        ? images.map((i) => ({ mimeType: i.mimeType, data: i.data }))
+        : undefined;
+      const result = await aiGenerateSprintPlan(projectId, inputText, imagePayload);
 
       if (!result.success) {
         toast({
@@ -113,6 +184,7 @@ export function AiPlanSprintModal({
       setInputText("");
       setStep("input");
       setGeneratedPlan(null);
+      clearImages();
       onOpenChange(false);
       router.refresh();
     } catch (error) {
@@ -138,6 +210,7 @@ export function AiPlanSprintModal({
       // Reset state on close
       setStep("input");
       setGeneratedPlan(null);
+      clearImages();
     }
     onOpenChange(nextOpen);
   };
@@ -199,6 +272,53 @@ export function AiPlanSprintModal({
               <p className="text-xs text-muted-foreground">
                 Be specific about features, requirements, and technical details
                 for best results.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Reference Images (optional)</Label>
+                <span className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES}</span>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_TYPES.join(",")}
+                multiple
+                className="hidden"
+                onChange={handleImageSelect}
+                disabled={isGenerating}
+              />
+              {images.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {images.map((img, i) => (
+                    <div key={i} className="relative group w-20 h-20 rounded-md overflow-hidden border">
+                      <img src={img.preview} alt={img.file.name} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {images.length < MAX_IMAGES && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                >
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  Add Images
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Attach wireframes, screenshots, or diagrams for AI to analyze. Max 3 images, 5MB each.
               </p>
             </div>
 

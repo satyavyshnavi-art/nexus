@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { generateSprintTasks } from "@/lib/ai/sprint-generator";
 import { generateSprintPlan, SprintPlanOutput } from "@/lib/ai/sprint-planner";
+import type { ImageInput } from "@/lib/ai/gemini";
 import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
 
 // --- Role Matching Helper ---
@@ -98,7 +99,8 @@ export type GeneratedSprintPlan = {
 
 export async function aiGenerateSprintPlan(
   projectId: string,
-  inputText: string
+  inputText: string,
+  images?: ImageInput[]
 ): Promise<{ success: true; plan: GeneratedSprintPlan } | { success: false; error: string }> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -127,7 +129,7 @@ export async function aiGenerateSprintPlan(
 
   let aiPlan: SprintPlanOutput;
   try {
-    aiPlan = await generateSprintPlan(inputText, members);
+    aiPlan = await generateSprintPlan(inputText, members, images);
   } catch (error) {
     console.error("[AI Generate Plan] error:", error);
     const message = error instanceof Error ? error.message : "AI generation failed";
@@ -278,7 +280,8 @@ export type GeneratedTicketsPlan = {
 // Step 1: Generate tickets (read-only, no DB writes)
 export async function aiGenerateTickets(
   sprintId: string,
-  inputText: string
+  inputText: string,
+  images?: ImageInput[]
 ): Promise<{ success: true; plan: GeneratedTicketsPlan } | { success: false; error: string }> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -317,7 +320,7 @@ export async function aiGenerateTickets(
 
   let result;
   try {
-    result = await generateSprintTasks(inputText);
+    result = await generateSprintTasks(inputText, images);
   } catch (error) {
     console.error("[AI Generate Tickets] Gemini error:", error);
     const message = error instanceof Error ? error.message : "AI generation failed";

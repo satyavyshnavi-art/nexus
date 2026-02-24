@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateStructuredOutput } from "./gemini";
+import { generateStructuredOutput, type ImageInput } from "./gemini";
 
 const VALID_ROLES = ["UI", "Backend", "QA", "DevOps", "Full-Stack", "Design", "Data", "Mobile"] as const;
 
@@ -36,7 +36,8 @@ export type SprintPlanOutput = z.infer<typeof SprintPlanSchema>;
 
 export async function generateSprintPlan(
   inputText: string,
-  teamMembers?: { id: string; name: string | null; designation: string | null }[]
+  teamMembers?: { id: string; name: string | null; designation: string | null }[],
+  images?: ImageInput[]
 ): Promise<SprintPlanOutput> {
   if (!process.env.GOOGLE_AI_API_KEY) {
     throw new Error(
@@ -105,11 +106,14 @@ Role Classification:
 
 Labels & Priority:
 - labels: Short keyword tags based on the task domain (e.g. "authentication", "api", "database", "ui", "testing")
-- priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies${teamContext}`;
+- priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies
+
+If reference images are provided, analyze them for UI layout, features, and requirements to inform your task breakdown.${teamContext}`;
 
   return generateStructuredOutput(
     systemPrompt,
     `Create a complete sprint plan for the following feature:\n\n${inputText}`,
-    SprintPlanSchema
+    SprintPlanSchema,
+    images
   );
 }

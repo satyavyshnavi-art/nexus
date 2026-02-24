@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateStructuredOutput } from "./gemini";
+import { generateStructuredOutput, type ImageInput } from "./gemini";
 
 const VALID_ROLES = ["UI", "Backend", "QA", "DevOps", "Full-Stack", "Design", "Data", "Mobile"] as const;
 
@@ -26,7 +26,8 @@ const SprintTaskSchema = z.object({
 export type SprintTasksOutput = z.infer<typeof SprintTaskSchema>;
 
 export async function generateSprintTasks(
-  inputText: string
+  inputText: string,
+  images?: ImageInput[]
 ): Promise<SprintTasksOutput> {
   if (!process.env.GOOGLE_AI_API_KEY) {
     throw new Error(
@@ -80,11 +81,14 @@ Role Classification:
 
 Labels & Priority:
 - labels: Short keyword tags based on the task domain (e.g. "authentication", "api", "database", "ui", "testing")
-- priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies`;
+- priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies
+
+If reference images are provided, analyze them for UI layout, features, and requirements to inform your task breakdown.`;
 
   return generateStructuredOutput(
     systemPrompt,
     `Create a sprint backlog for the following feature:\n\n${inputText}`,
-    SprintTaskSchema
+    SprintTaskSchema,
+    images
   );
 }
