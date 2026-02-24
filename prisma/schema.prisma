@@ -18,11 +18,6 @@ model User {
   avatar               String?
   bio                  String?
   designation          String?
-  commentNotifications Boolean          @default(true)
-  dailyDigest          Boolean          @default(false)
-  emailNotifications   Boolean          @default(true)
-  sprintNotifications  Boolean          @default(true)
-  taskNotifications    Boolean          @default(true)
   theme                String           @default("system")
   viewDensity          String           @default("comfortable")
   githubAccessToken    String?          @map("github_access_token")
@@ -39,7 +34,6 @@ model User {
   assignedTasks        Task[]           @relation("TaskAssignee")
   createdTasks         Task[]           @relation("TaskCreator")
   verticals            VerticalUser[]
-  notifications        Notification[]
 
   @@index([role])
   @@map("users")
@@ -255,27 +249,3 @@ enum TaskType {
   bug
 }
 
-enum NotificationType {
-  task_assigned
-  task_updated
-  comment_added
-  project_added
-  sprint_started
-  sprint_completed
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String           @map("user_id")
-  type      NotificationType
-  title     String
-  message   String
-  link      String?
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now()) @map("created_at")
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, read])
-  @@index([userId, createdAt(sort: Desc)])
-  @@map("notifications")
-}

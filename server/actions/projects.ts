@@ -3,7 +3,6 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { unstable_cache, revalidatePath } from "next/cache";
-import { createNotification } from "@/server/actions/notifications";
 
 export async function createProject(data: {
   name: string;
@@ -142,11 +141,6 @@ export async function addMemberToProject(projectId: string, userId: string) {
   //   throw new Error("User not in project vertical");
   // }
 
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: { name: true },
-  });
-
   const result = await db.projectMember.upsert({
     where: {
       projectId_userId: { projectId, userId },
@@ -154,17 +148,6 @@ export async function addMemberToProject(projectId: string, userId: string) {
     create: { projectId, userId },
     update: {},
   });
-
-  // Notify the added user (non-blocking)
-  if (userId !== session.user.id) {
-    createNotification({
-      userId,
-      type: "project_added",
-      title: "Added to project",
-      message: `You were added to "${project?.name || "a project"}" by ${session.user.name || "an admin"}`,
-      link: `/projects/${projectId}`,
-    });
-  }
 
   // Revalidate caches
   const { revalidatePath, revalidateTag } = await import("next/cache");

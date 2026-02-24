@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import { CommandMenu } from "@/components/command-menu";
-import { NotificationBell } from "@/components/layout/notification-bell";
 import {
   Sheet,
   SheetContent,
@@ -356,7 +355,6 @@ function MobileSidebar({
         </div>
         <div className="flex items-center gap-2">
           <CommandMenu isAdmin={isAdmin} />
-          <NotificationBell />
           <ThemeToggle />
         </div>
       </header>

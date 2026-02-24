@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
-import { NotificationBell } from "@/components/layout/notification-bell";
 
 export default async function DashboardLayout({
   children,
@@ -27,10 +26,6 @@ export default async function DashboardLayout({
         userDesignation={session.user.designation}
       />
       <main className="flex-1 overflow-y-auto">
-        {/* Desktop top-right notification bar */}
-        <div className="hidden md:flex items-center justify-end sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-2">
-          <NotificationBell />
-        </div>
         <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
           {children}
         </div>

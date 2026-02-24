@@ -27,13 +27,6 @@ export async function getUserSettings(userId: string) {
           id: true,
           name: true,
           email: true,
-          emailNotifications: true,
-          taskNotifications: true,
-          commentNotifications: true,
-          sprintNotifications: true,
-          dailyDigest: true,
-          theme: true,
-          viewDensity: true,
         },
       });
     },
@@ -54,105 +47,7 @@ export async function getUserSettings(userId: string) {
     id: settings.id,
     name: settings.name ?? "",
     email: settings.email,
-    emailNotifications: settings.emailNotifications ?? true,
-    taskNotifications: settings.taskNotifications ?? true,
-    commentNotifications: settings.commentNotifications ?? true,
-    sprintNotifications: settings.sprintNotifications ?? true,
-    dailyDigest: settings.dailyDigest ?? false,
-    theme: settings.theme ?? "system",
-    viewDensity: settings.viewDensity ?? "comfortable",
   };
-}
-
-/**
- * Update notification settings
- */
-export async function updateNotificationSettings(
-  userId: string,
-  data: {
-    emailNotifications?: boolean;
-    taskNotifications?: boolean;
-    commentNotifications?: boolean;
-    sprintNotifications?: boolean;
-    dailyDigest?: boolean;
-  }
-) {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error("Unauthorized");
-  }
-
-  if (session.user.id !== userId) {
-    throw new Error("Forbidden");
-  }
-
-  const updated = await db.user.update({
-    where: { id: userId },
-    data: {
-      ...(data.emailNotifications !== undefined && {
-        emailNotifications: data.emailNotifications,
-      }),
-      ...(data.taskNotifications !== undefined && {
-        taskNotifications: data.taskNotifications,
-      }),
-      ...(data.commentNotifications !== undefined && {
-        commentNotifications: data.commentNotifications,
-      }),
-      ...(data.sprintNotifications !== undefined && {
-        sprintNotifications: data.sprintNotifications,
-      }),
-      ...(data.dailyDigest !== undefined && {
-        dailyDigest: data.dailyDigest,
-      }),
-    },
-  });
-
-  revalidatePath("/settings");
-  return updated;
-}
-
-/**
- * Update appearance settings
- */
-export async function updateAppearanceSettings(
-  userId: string,
-  data: {
-    theme?: string;
-    viewDensity?: string;
-  }
-) {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error("Unauthorized");
-  }
-
-  if (session.user.id !== userId) {
-    throw new Error("Forbidden");
-  }
-
-  // Validate theme
-  if (data.theme && !["light", "dark", "system"].includes(data.theme)) {
-    throw new Error("Invalid theme value");
-  }
-
-  // Validate viewDensity
-  if (
-    data.viewDensity &&
-    !["compact", "comfortable"].includes(data.viewDensity)
-  ) {
-    throw new Error("Invalid view density value");
-  }
-
-  const updated = await db.user.update({
-    where: { id: userId },
-    data: {
-      ...(data.theme && { theme: data.theme }),
-      ...(data.viewDensity && { viewDensity: data.viewDensity }),
-    },
-  });
-
-  revalidatePath("/settings");
-  return updated;
 }
 
 /**
