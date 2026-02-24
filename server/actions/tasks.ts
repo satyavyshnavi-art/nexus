@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { TaskStatus, TaskPriority, TaskType } from "@prisma/client";
 import { classifyBugPriority } from "@/lib/ai/bug-classifier";
-import { unstable_cache, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
 
@@ -353,84 +353,71 @@ export async function getTaskComments(taskId: string) {
 
 /**
  * Fetches a task with all related data including progress calculation
- * Uses caching for 30-second revalidation window
  * Includes parent task info, subtasks, comments count, and attachments count
  */
 export async function getTaskWithProgress(taskId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Cached query with 30-second revalidation
-  const getCachedTask = unstable_cache(
-    async (taskId: string) => {
-      return db.task.findUnique({
-        where: { id: taskId },
-        include: {
-          creator: {
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    include: {
+      creator: {
+        select: { id: true, name: true, email: true },
+      },
+      assignee: {
+        select: { id: true, name: true, email: true },
+      },
+      sprint: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          projectId: true,
+        },
+      },
+      parentTask: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+      },
+      childTasks: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+          assigneeId: true,
+        },
+      },
+      comments: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          user: {
             select: { id: true, name: true, email: true },
-          },
-          assignee: {
-            select: { id: true, name: true, email: true },
-          },
-          sprint: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              projectId: true,
-            },
-          },
-          parentTask: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-            },
-          },
-          childTasks: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-              assigneeId: true,
-            },
-          },
-          comments: {
-            select: {
-              id: true,
-              content: true,
-              createdAt: true,
-              user: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-            orderBy: { createdAt: "desc" },
-          },
-          attachments: {
-            select: {
-              id: true,
-              fileName: true,
-              mimeType: true,
-              sizeBytes: true,
-              createdAt: true,
-              uploader: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-            orderBy: { createdAt: "desc" },
           },
         },
-      });
+        orderBy: { createdAt: "desc" },
+      },
+      attachments: {
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          sizeBytes: true,
+          createdAt: true,
+          uploader: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
-    [`task-${taskId}`],
-    {
-      revalidate: 30,
-      tags: [`task-${taskId}`, "tasks"],
-    }
-  );
-
-  const task = await getCachedTask(taskId);
+  });
 
   if (!task) throw new Error("Task not found");
 

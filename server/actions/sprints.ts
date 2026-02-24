@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { SprintStatus, TaskStatus } from "@prisma/client";
-import { unstable_cache, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 export async function createSprint(data: {
   projectId: string;
@@ -285,43 +285,34 @@ export async function getActiveSprint(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Cached query - 30 second cache for active sprint
-  const getCachedActiveSprint = unstable_cache(
-    async (projectId: string) => {
-      return db.sprint.findFirst({
+  const sprint = await db.sprint.findFirst({
+    where: {
+      projectId,
+      status: SprintStatus.active,
+    },
+    include: {
+      tasks: {
         where: {
-          projectId,
-          status: SprintStatus.active,
+          type: "story",
+          parentTaskId: null,
         },
         include: {
-          tasks: {
+          assignee: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+          childTasks: {
             where: {
-              type: "story",
-              parentTaskId: null,
+              type: { in: ["task", "bug"] },
             },
             include: {
               assignee: { select: { id: true, name: true, email: true } },
               reviewer: { select: { id: true, name: true, email: true } },
               childTasks: {
-                where: {
-                  type: { in: ["task", "bug"] },
-                },
-                include: {
-                  assignee: { select: { id: true, name: true, email: true } },
-                  reviewer: { select: { id: true, name: true, email: true } },
-                  childTasks: {
-                    select: {
-                      id: true,
-                      title: true,
-                      status: true,
-                      priority: true,
-                      type: true,
-                    },
-                    orderBy: { createdAt: "asc" },
-                  },
-                  _count: {
-                    select: { comments: true, attachments: true, childTasks: true },
-                  },
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  priority: true,
+                  type: true,
                 },
                 orderBy: { createdAt: "asc" },
               },
@@ -329,18 +320,16 @@ export async function getActiveSprint(projectId: string) {
                 select: { comments: true, attachments: true, childTasks: true },
               },
             },
-            orderBy: { createdAt: "desc" },
+            orderBy: { createdAt: "asc" },
+          },
+          _count: {
+            select: { comments: true, attachments: true, childTasks: true },
           },
         },
-      });
+        orderBy: { createdAt: "desc" },
+      },
     },
-    [`active-sprint-${projectId}`],
-    {
-      revalidate: 30,
-    }
-  );
-
-  const sprint = await getCachedActiveSprint(projectId);
+  });
 
   if (!sprint) return null;
 
@@ -362,26 +351,15 @@ export async function getProjectSprints(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Cached query - 30 second cache for project sprints
-  const getCachedProjectSprints = unstable_cache(
-    async (projectId: string) => {
-      return db.sprint.findMany({
-        where: { projectId },
-        include: {
-          _count: {
-            select: { tasks: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+  return db.sprint.findMany({
+    where: { projectId },
+    include: {
+      _count: {
+        select: { tasks: true },
+      },
     },
-    [`project-sprints-${projectId}`],
-    {
-      revalidate: 30,
-    }
-  );
-
-  return getCachedProjectSprints(projectId);
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getPlannedSprints(projectId: string) {
@@ -429,72 +407,62 @@ export async function getSprintProgress(
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const getCachedSprintProgress = unstable_cache(
-    async (sprintId: string) => {
-      const sprint = await db.sprint.findUnique({
-        where: { id: sprintId },
-        include: {
-          tasks: {
-            select: {
-              id: true,
-              status: true,
-              storyPoints: true,
-              type: true,
-            },
-          },
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    include: {
+      tasks: {
+        select: {
+          id: true,
+          status: true,
+          storyPoints: true,
+          type: true,
         },
-      });
-
-      if (!sprint) return null;
-
-      // Only count tickets (type = "task" or "bug") for progress, not stories or subtasks
-      const tickets = sprint.tasks.filter(
-        (t) => t.type !== "story" && t.type !== "subtask"
-      );
-
-      const totalTasks = tickets.length;
-      const tasksByStatus = {
-        todo: tickets.filter((t) => t.status === "todo").length,
-        progress: tickets.filter((t) => t.status === "progress").length,
-        review: tickets.filter((t) => t.status === "review").length,
-        done: tickets.filter((t) => t.status === "done").length,
-      };
-
-      const completionPercentage =
-        totalTasks > 0
-          ? Math.round((tasksByStatus.done / totalTasks) * 100)
-          : 0;
-
-      const totalStoryPoints = tickets.reduce(
-        (sum, t) => sum + (t.storyPoints ?? 0),
-        0
-      );
-      const completedStoryPoints = tickets
-        .filter((t) => t.status === "done")
-        .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
-
-      return {
-        id: sprint.id,
-        name: sprint.name,
-        status: sprint.status,
-        startDate: sprint.startDate,
-        endDate: sprint.endDate,
-        totalTasks,
-        tasksByStatus,
-        completionPercentage,
-        storyPoints: {
-          completed: completedStoryPoints,
-          total: totalStoryPoints,
-        },
-      };
+      },
     },
-    [`sprint-progress-${sprintId}`],
-    {
-      revalidate: 30,
-    }
+  });
+
+  if (!sprint) return null;
+
+  // Only count tickets (type = "task" or "bug") for progress, not stories or subtasks
+  const tickets = sprint.tasks.filter(
+    (t) => t.type !== "story" && t.type !== "subtask"
   );
 
-  return getCachedSprintProgress(sprintId);
+  const totalTasks = tickets.length;
+  const tasksByStatus = {
+    todo: tickets.filter((t) => t.status === "todo").length,
+    progress: tickets.filter((t) => t.status === "progress").length,
+    review: tickets.filter((t) => t.status === "review").length,
+    done: tickets.filter((t) => t.status === "done").length,
+  };
+
+  const completionPercentage =
+    totalTasks > 0
+      ? Math.round((tasksByStatus.done / totalTasks) * 100)
+      : 0;
+
+  const totalStoryPoints = tickets.reduce(
+    (sum, t) => sum + (t.storyPoints ?? 0),
+    0
+  );
+  const completedStoryPoints = tickets
+    .filter((t) => t.status === "done")
+    .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
+
+  return {
+    id: sprint.id,
+    name: sprint.name,
+    status: sprint.status,
+    startDate: sprint.startDate,
+    endDate: sprint.endDate,
+    totalTasks,
+    tasksByStatus,
+    completionPercentage,
+    storyPoints: {
+      completed: completedStoryPoints,
+      total: totalStoryPoints,
+    },
+  };
 }
 
 export interface SprintDetailData {
