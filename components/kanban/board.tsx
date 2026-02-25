@@ -289,26 +289,61 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     parentTaskId: string,
     title: string
   ) => {
-    const created = await createSubtask(parentTaskId, { title });
-    const newSubtask = {
-      id: created.id,
-      title: created.title,
-      status: created.status,
-      priority: created.priority,
-      type: created.type,
+    // Optimistic: show subtask instantly with a temp ID
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      title,
+      status: "todo" as TaskStatus,
+      priority: "medium" as const,
+      type: "subtask" as const,
     };
 
     const addChild = (t: TaskWithRelations) =>
       t.id === parentTaskId
-        ? { ...t, childTasks: [...(t.childTasks || []), newSubtask] }
+        ? { ...t, childTasks: [...(t.childTasks || []), optimistic] }
         : t;
 
-    // Update both tasks and selectedTask
     setTasks((prev) => prev.map(addChild));
     setSelectedTask((prev) => prev ? addChild(prev) : prev);
 
-    toast.success(`Subtask "${title}" created`);
-    return newSubtask;
+    try {
+      const created = await createSubtask(parentTaskId, { title });
+      const realSubtask = {
+        id: created.id,
+        title: created.title,
+        status: created.status,
+        priority: created.priority,
+        type: created.type,
+      };
+
+      // Swap temp → real
+      const swapTemp = (t: TaskWithRelations) =>
+        t.id === parentTaskId && t.childTasks
+          ? {
+            ...t, childTasks: t.childTasks.map((st) =>
+              st.id === tempId ? realSubtask : st
+            )
+          }
+          : t;
+
+      setTasks((prev) => prev.map(swapTemp));
+      setSelectedTask((prev) => prev ? swapTemp(prev) : prev);
+
+      toast.success(`Subtask "${title}" created`);
+      return realSubtask;
+    } catch (error) {
+      // Remove optimistic subtask on failure
+      const removeTemp = (t: TaskWithRelations) =>
+        t.id === parentTaskId && t.childTasks
+          ? { ...t, childTasks: t.childTasks.filter((st) => st.id !== tempId) }
+          : t;
+
+      setTasks((prev) => prev.map(removeTemp));
+      setSelectedTask((prev) => prev ? removeTemp(prev) : prev);
+      toast.error("Failed to create subtask");
+      throw error;
+    }
   }, []);
 
   return (
