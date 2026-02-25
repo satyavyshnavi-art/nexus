@@ -2,6 +2,7 @@ import { TaskType, TaskPriority, TaskStatus } from "@prisma/client";
 import { Octokit } from "@octokit/rest";
 import { createOctokitForUser, createSystemOctokit } from "./client";
 import { db } from "@/server/db";
+import { getObject } from "@/lib/storage/s3-client";
 
 /**
  * Gets an Octokit instance with fallback: user token → system token
@@ -41,6 +42,81 @@ function generateLabels(task: {
   labels.push(`status: ${task.status}`);
 
   return labels;
+}
+
+/**
+ * Uploads an image attachment to the GitHub repo and returns the raw URL
+ */
+async function uploadImageToGitHubRepo(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  taskId: string,
+  attachment: { s3Key: string; fileName: string }
+): Promise<string | null> {
+  try {
+    const buffer = await getObject(attachment.s3Key);
+    const content = buffer.toString("base64");
+    const safeName = attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `.nexus/attachments/${taskId}/${safeName}`;
+
+    // Check if file already exists (to get its sha for update)
+    let sha: string | undefined;
+    try {
+      const { data } = await octokit.rest.repos.getContent({ owner, repo, path });
+      if (!Array.isArray(data) && "sha" in data) {
+        sha = data.sha;
+      }
+    } catch {
+      // File doesn't exist yet — that's fine
+    }
+
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message: `chore(nexus): attach screenshot for task ${taskId}`,
+      content,
+      sha,
+    });
+
+    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+  } catch (error) {
+    console.error(`[GitHub Sync] Failed to upload image ${attachment.fileName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetches image attachments for a task, uploads them to GitHub, and returns a markdown section
+ */
+async function buildScreenshotsSection(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  taskId: string
+): Promise<string> {
+  const attachments = await db.taskAttachment.findMany({
+    where: { taskId },
+  });
+
+  const imageAttachments = attachments.filter((a) =>
+    a.mimeType.startsWith("image/")
+  );
+
+  if (imageAttachments.length === 0) return "";
+
+  const imageLines: string[] = [];
+  for (const att of imageAttachments) {
+    const rawUrl = await uploadImageToGitHubRepo(octokit, owner, repo, taskId, att);
+    if (rawUrl) {
+      imageLines.push(`![${att.fileName}](${rawUrl})`);
+    }
+  }
+
+  if (imageLines.length === 0) return "";
+
+  return ["", "**Screenshots:**", ...imageLines].join("\n");
 }
 
 /**
@@ -133,7 +209,12 @@ export async function createGitHubIssue(
 
   bodyParts.push(`**Task ID:** \`${task.id}\``);
 
-  const body = bodyParts.join("\n");
+  // Upload image attachments to GitHub repo and append to body
+  const screenshotsSection = await buildScreenshotsSection(
+    octokit, repoOwner, repoName, taskId
+  );
+
+  const body = bodyParts.join("\n") + screenshotsSection;
 
   // Create the issue
   try {
@@ -214,7 +295,12 @@ export async function updateGitHubIssue(
   bodyParts.push(`**Nexus Status:** \`${task.status}\``);
   bodyParts.push(`**Last synced:** ${new Date().toISOString()}`);
 
-  const body = bodyParts.join("\n");
+  // Upload image attachments to GitHub repo and append to body
+  const screenshotsSection = await buildScreenshotsSection(
+    octokit, repoOwner, repoName, taskId
+  );
+
+  const body = bodyParts.join("\n") + screenshotsSection;
 
   // Determine if issue should be closed
   // Close if task is "done" or "review" (dev closed it, waiting for verification)

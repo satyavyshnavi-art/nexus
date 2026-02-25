@@ -51,6 +51,21 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
   return s3.send(command);
 }
 
+export async function getObject(key: string): Promise<Buffer> {
+  const command = new GetObjectCommand({
+    Bucket: process.env.STORAGE_BUCKET_NAME,
+    Key: key,
+  });
+
+  const response = await s3.send(command);
+  const stream = response.Body as NodeJS.ReadableStream;
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Uint8Array);
+  }
+  return Buffer.concat(chunks);
+}
+
 export async function deleteObject(key: string) {
   const command = new DeleteObjectCommand({
     Bucket: process.env.STORAGE_BUCKET_NAME,
