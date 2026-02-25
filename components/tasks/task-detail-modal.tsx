@@ -23,7 +23,7 @@ import { TaskHeader } from "./task-header";
 import { TaskMetadata } from "./task-metadata";
 import { AttachmentsList } from "./attachments-list";
 import { CommentSection } from "./comment-section";
-import { updateTask, updateTaskStatus, deleteTask, assignReviewer } from "@/server/actions/tasks";
+import { updateTask, updateTaskStatus, deleteTask, createSubtask, assignReviewer } from "@/server/actions/tasks";
 import { SubtaskToggleFn, SubtaskAddFn } from "@/components/kanban/task-card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -97,7 +97,9 @@ export function TaskDetailModal({
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
   // Derive subtasks from props — single source of truth is the board's tasks state
-  const subtasks = task.childTasks || [];
+  // When used standalone (no board callbacks), maintain local state for subtask mutations
+  const [localSubtasks, setLocalSubtasks] = useState(task.childTasks || []);
+  const subtasks = onSubtaskToggle ? (task.childTasks || []) : localSubtasks;
 
   // Re-sync editable fields when the task prop changes (e.g. after board state update)
   // Skip if currently saving to avoid resetting state mid-operation
@@ -110,6 +112,7 @@ export function TaskDetailModal({
     setAssigneeId(task.assigneeId || "unassigned");
     setReviewerId(task.reviewerId || "none");
     setStatus(task.status);
+    setLocalSubtasks(task.childTasks || []);
     setHasChanges(false);
   }, [task.id, task.updatedAt]);
 
@@ -171,31 +174,78 @@ export function TaskDetailModal({
   };
 
   const handleSubtaskToggle = async (subtaskId: string, currentStatus: TaskStatus) => {
-    if (!onSubtaskToggle) return;
     setTogglingSubtask(subtaskId);
-    try {
-      await onSubtaskToggle(task.id, subtaskId, currentStatus);
-    } catch {
-      // Board handles rollback
-    } finally {
-      setTogglingSubtask(null);
+
+    if (onSubtaskToggle) {
+      // Board-managed path: delegate to board's centralized handler
+      try {
+        await onSubtaskToggle(task.id, subtaskId, currentStatus);
+      } catch {
+        // Board handles rollback
+      } finally {
+        setTogglingSubtask(null);
+      }
+    } else {
+      // Standalone path: handle directly with local optimistic update
+      const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
+      setLocalSubtasks((prev) =>
+        prev.map((st) => (st.id === subtaskId ? { ...st, status: newStatus } : st))
+      );
+      try {
+        await updateTaskStatus(subtaskId, newStatus);
+        toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
+      } catch {
+        setLocalSubtasks((prev) =>
+          prev.map((st) => (st.id === subtaskId ? { ...st, status: currentStatus } : st))
+        );
+        toast.error("Failed to update subtask");
+      } finally {
+        setTogglingSubtask(null);
+      }
     }
   };
 
   const handleAddSubtask = async () => {
     const trimmed = newSubtaskTitle.trim();
-    if (!trimmed || isAddingSubtask || !onSubtaskAdd) return;
+    if (!trimmed || isAddingSubtask) return;
 
     setIsAddingSubtask(true);
-    try {
-      await onSubtaskAdd(task.id, trimmed);
-      setNewSubtaskTitle("");
-    } catch (error) {
-      toast.error("Failed to create subtask", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-      });
-    } finally {
-      setIsAddingSubtask(false);
+
+    if (onSubtaskAdd) {
+      // Board-managed path
+      try {
+        await onSubtaskAdd(task.id, trimmed);
+        setNewSubtaskTitle("");
+      } catch (error) {
+        toast.error("Failed to create subtask", {
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+        });
+      } finally {
+        setIsAddingSubtask(false);
+      }
+    } else {
+      // Standalone path: call server directly + update local state
+      try {
+        const created = await createSubtask(task.id, { title: trimmed });
+        setLocalSubtasks((prev) => [
+          ...prev,
+          {
+            id: created.id,
+            title: created.title,
+            status: created.status,
+            priority: created.priority,
+            type: created.type,
+          },
+        ]);
+        setNewSubtaskTitle("");
+        toast.success(`Subtask "${trimmed}" created`);
+      } catch (error) {
+        toast.error("Failed to create subtask", {
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+        });
+      } finally {
+        setIsAddingSubtask(false);
+      }
     }
   };
 
