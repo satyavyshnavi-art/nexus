@@ -3,7 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Task, TaskStatus, User } from "@prisma/client";
-import { TaskCard } from "./task-card";
+import { TaskCard, SubtaskToggleFn, SubtaskAddFn } from "./task-card";
 import { Badge } from "@/components/ui/badge";
 import { memo } from "react";
 import { Circle, Clock, Eye, CheckCircle2 } from "lucide-react";
@@ -25,6 +25,8 @@ interface ColumnProps {
   title: string;
   tasks: ColumnTask[];
   onTaskClick?: (task: ColumnTask) => void;
+  onSubtaskToggle?: SubtaskToggleFn;
+  onSubtaskAdd?: SubtaskAddFn;
   projectLinked?: boolean;
   userHasGitHub?: boolean;
   isDragging?: boolean;
@@ -65,7 +67,7 @@ const columnConfig = {
   },
 };
 
-export const Column = memo(function Column({ status, title, tasks, onTaskClick, projectLinked = false, userHasGitHub = false, isDragging = false }: ColumnProps) {
+export const Column = memo(function Column({ status, title, tasks, onTaskClick, onSubtaskToggle, onSubtaskAdd, projectLinked = false, userHasGitHub = false, isDragging = false }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const config = columnConfig[status];
   const StatusIcon = config.icon;
@@ -136,6 +138,8 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
                   key={task.id}
                   task={task}
                   onClick={onTaskClick ? () => onTaskClick(task) : undefined}
+                  onSubtaskToggle={onSubtaskToggle}
+                  onSubtaskAdd={onSubtaskAdd}
                   isDragging={isDragging}
                 />
               ))

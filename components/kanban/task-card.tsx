@@ -1,12 +1,12 @@
 "use client";
 
-import { Task, User, TaskPriority, TaskType } from "@prisma/client";
+import { Task, User, TaskPriority, TaskType, TaskStatus } from "@prisma/client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BookOpen,
   CheckSquare,
@@ -23,8 +23,18 @@ import {
   Eye,
 } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
-import { updateTaskStatus, createSubtask } from "@/server/actions/tasks";
-import { useRouter } from "next/navigation";
+
+// Shared callback types — exported so Column can import them
+export type SubtaskToggleFn = (
+  parentTaskId: string,
+  subtaskId: string,
+  currentStatus: TaskStatus
+) => Promise<void>;
+
+export type SubtaskAddFn = (
+  parentTaskId: string,
+  title: string
+) => Promise<{ id: string; title: string; status: TaskStatus; priority: TaskPriority; type: TaskType }>;
 
 interface TaskCardProps {
   task: Omit<Task, "githubIssueId"> & {
@@ -40,6 +50,8 @@ interface TaskCardProps {
     };
   };
   onClick?: () => void;
+  onSubtaskToggle?: SubtaskToggleFn;
+  onSubtaskAdd?: SubtaskAddFn;
   projectLinked?: boolean;
   userHasGitHub?: boolean;
   isDragging?: boolean;
@@ -60,23 +72,15 @@ const typeConfig: Record<string, { icon: typeof BookOpen; label: string; color: 
   subtask: { icon: CheckSquare, label: "Subtask", color: "text-slate-600 dark:text-slate-400" },
 };
 
-export function TaskCard({ task, onClick, isDragging = false, isOverlay = false }: TaskCardProps) {
-  const router = useRouter();
-
+export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragging = false, isOverlay = false }: TaskCardProps) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
-  const [subtasks, setSubtasks] = useState<Pick<Task, "id" | "title" | "status" | "priority" | "type">[]>(
-    task.childTasks || []
-  );
 
-  // Re-sync subtasks from props when the parent re-renders with fresh data
-  // (e.g. after router.refresh() triggered by modal or another card)
-  useEffect(() => {
-    setSubtasks(task.childTasks || []);
-  }, [task.childTasks]);
+  // Derive subtasks directly from props — no local copy
+  const subtasks = task.childTasks || [];
 
   const {
     attributes,
@@ -113,16 +117,10 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
     currentStatus: string
   ) => {
     e.stopPropagation();
+    if (!onSubtaskToggle) return;
     setTogglingSubtask(subtaskId);
     try {
-      const newStatus = currentStatus === "done" ? "todo" : "done";
-      await updateTaskStatus(subtaskId, newStatus as any);
-      setSubtasks((prev) =>
-        prev.map((st) =>
-          st.id === subtaskId ? { ...st, status: newStatus as any } : st
-        )
-      );
-      // No router.refresh() — optimistic update is instant
+      await onSubtaskToggle(task.id, subtaskId, currentStatus as TaskStatus);
     } catch (err) {
       console.error("Failed to toggle subtask status:", err);
     } finally {
@@ -137,24 +135,13 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
       setNewSubtaskTitle("");
       return;
     }
-    if (e.key === "Enter" && newSubtaskTitle.trim()) {
+    if (e.key === "Enter" && newSubtaskTitle.trim() && onSubtaskAdd) {
       e.stopPropagation();
       setIsAddingSubtask(true);
       try {
-        const created = await createSubtask(task.id, { title: newSubtaskTitle.trim() });
-        setSubtasks((prev) => [
-          ...prev,
-          {
-            id: created.id,
-            title: created.title,
-            status: created.status,
-            priority: created.priority,
-            type: created.type,
-          },
-        ]);
+        await onSubtaskAdd(task.id, newSubtaskTitle.trim());
         setNewSubtaskTitle("");
         setShowAddSubtask(false);
-        // No router.refresh() — optimistic update is instant
       } catch (err) {
         console.error("Failed to create subtask:", err);
       } finally {
@@ -304,8 +291,8 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
                       </button>
                       <span
                         className={`truncate ${st.status === "done"
-                          ? "line-through text-muted-foreground"
-                          : "text-foreground"
+                            ? "line-through text-muted-foreground"
+                            : "text-foreground"
                           }`}
                       >
                         {st.title}

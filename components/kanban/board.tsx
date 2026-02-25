@@ -17,7 +17,7 @@ import {
 import { Task, TaskStatus, User } from "@prisma/client";
 import { Column } from "./column";
 import { TaskCard } from "./task-card";
-import { updateTaskStatus } from "@/server/actions/tasks";
+import { updateTaskStatus, createSubtask } from "@/server/actions/tasks";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Badge } from "@/components/ui/badge";
@@ -252,6 +252,75 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     setIsDetailModalOpen(true);
   }, [isDragging]);
 
+  // ── Centralized subtask toggle (shared by card + modal) ──
+  const handleSubtaskToggle = useCallback(async (
+    parentTaskId: string,
+    subtaskId: string,
+    currentStatus: TaskStatus
+  ) => {
+    const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
+
+    // Optimistic update — mutate tasks state directly
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === parentTaskId && t.childTasks
+          ? {
+            ...t, childTasks: t.childTasks.map((st) =>
+              st.id === subtaskId ? { ...st, status: newStatus } : st
+            )
+          }
+          : t
+      )
+    );
+
+    try {
+      await updateTaskStatus(subtaskId, newStatus);
+      toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
+    } catch {
+      // Rollback on failure
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === parentTaskId && t.childTasks
+            ? {
+              ...t, childTasks: t.childTasks.map((st) =>
+                st.id === subtaskId ? { ...st, status: currentStatus } : st
+              )
+            }
+            : t
+        )
+      );
+      toast.error("Failed to update subtask");
+    }
+  }, []);
+
+  // ── Centralized subtask add (shared by card + modal) ──
+  const handleSubtaskAdd = useCallback(async (
+    parentTaskId: string,
+    title: string
+  ) => {
+    // Create on server first (need the generated ID)
+    const created = await createSubtask(parentTaskId, { title });
+    const newSubtask = {
+      id: created.id,
+      title: created.title,
+      status: created.status,
+      priority: created.priority,
+      type: created.type,
+    };
+
+    // Update tasks state
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === parentTaskId
+          ? { ...t, childTasks: [...(t.childTasks || []), newSubtask] }
+          : t
+      )
+    );
+
+    toast.success(`Subtask "${title}" created`);
+    return newSubtask;
+  }, []);
+
   return (
     <>
       {/* Toolbar: View Toggle + Role Filters */}
@@ -330,6 +399,8 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
                   title={column.title}
                   tasks={columnTasks}
                   onTaskClick={handleTaskClick}
+                  onSubtaskToggle={handleSubtaskToggle}
+                  onSubtaskAdd={handleSubtaskAdd}
                   projectLinked={projectLinked}
                   userHasGitHub={userHasGitHub}
                   isDragging={isDragging}
@@ -505,10 +576,11 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
           task={selectedTask}
           projectMembers={projectMembers}
           open={isDetailModalOpen}
+          onSubtaskToggle={handleSubtaskToggle}
+          onSubtaskAdd={handleSubtaskAdd}
           onOpenChange={(open) => {
             setIsDetailModalOpen(open);
             if (!open) {
-              // Clear selected task so re-opening the same task creates a fresh modal
               setSelectedTask(null);
               router.refresh();
             }

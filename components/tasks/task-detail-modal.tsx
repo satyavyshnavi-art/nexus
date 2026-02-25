@@ -23,7 +23,8 @@ import { TaskHeader } from "./task-header";
 import { TaskMetadata } from "./task-metadata";
 import { AttachmentsList } from "./attachments-list";
 import { CommentSection } from "./comment-section";
-import { updateTask, updateTaskStatus, deleteTask, createSubtask, assignReviewer } from "@/server/actions/tasks";
+import { updateTask, updateTaskStatus, deleteTask, assignReviewer } from "@/server/actions/tasks";
+import { SubtaskToggleFn, SubtaskAddFn } from "@/components/kanban/task-card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ interface TaskDetailModalProps {
   projectMembers: Pick<User, "id" | "name" | "email">[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubtaskToggle?: SubtaskToggleFn;
+  onSubtaskAdd?: SubtaskAddFn;
 }
 
 const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
@@ -73,6 +76,8 @@ export function TaskDetailModal({
   projectMembers,
   open,
   onOpenChange,
+  onSubtaskToggle,
+  onSubtaskAdd,
 }: TaskDetailModalProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -86,13 +91,15 @@ export function TaskDetailModal({
   const [reviewerId, setReviewerId] = useState(task.reviewerId || "none");
   const [status, setStatus] = useState(task.status);
   const [hasChanges, setHasChanges] = useState(false);
-  const [subtasks, setSubtasks] = useState(task.childTasks || []);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
-  // Re-sync all local state when the task prop changes (e.g. after router.refresh)
+  // Derive subtasks from props — single source of truth is the board's tasks state
+  const subtasks = task.childTasks || [];
+
+  // Re-sync editable fields when the task prop changes (e.g. after board state update)
   // Skip if currently saving to avoid resetting state mid-operation
   useEffect(() => {
     if (isSaving) return;
@@ -103,7 +110,6 @@ export function TaskDetailModal({
     setAssigneeId(task.assigneeId || "unassigned");
     setReviewerId(task.reviewerId || "none");
     setStatus(task.status);
-    setSubtasks(task.childTasks || []);
     setHasChanges(false);
   }, [task.id, task.updatedAt]);
 
@@ -165,25 +171,12 @@ export function TaskDetailModal({
   };
 
   const handleSubtaskToggle = async (subtaskId: string, currentStatus: TaskStatus) => {
-    const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
+    if (!onSubtaskToggle) return;
     setTogglingSubtask(subtaskId);
-
-    // Optimistic update — show the new status immediately
-    setSubtasks((prev) =>
-      prev.map((st) => (st.id === subtaskId ? { ...st, status: newStatus } : st))
-    );
-
     try {
-      await updateTaskStatus(subtaskId, newStatus);
-      toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
-      // No router.refresh() here — optimistic update is instant.
-      // Full sync happens when the modal closes.
-    } catch (error) {
-      // Revert on failure
-      setSubtasks((prev) =>
-        prev.map((st) => (st.id === subtaskId ? { ...st, status: currentStatus } : st))
-      );
-      toast.error("Failed to update subtask");
+      await onSubtaskToggle(task.id, subtaskId, currentStatus);
+    } catch {
+      // Board handles rollback
     } finally {
       setTogglingSubtask(null);
     }
@@ -191,25 +184,12 @@ export function TaskDetailModal({
 
   const handleAddSubtask = async () => {
     const trimmed = newSubtaskTitle.trim();
-    if (!trimmed || isAddingSubtask) return;
+    if (!trimmed || isAddingSubtask || !onSubtaskAdd) return;
 
     setIsAddingSubtask(true);
     try {
-      const created = await createSubtask(task.id, { title: trimmed });
-      setSubtasks((prev) => [
-        ...prev,
-        {
-          id: created.id,
-          title: created.title,
-          status: created.status,
-          priority: created.priority,
-          type: created.type,
-        },
-      ]);
+      await onSubtaskAdd(task.id, trimmed);
       setNewSubtaskTitle("");
-      toast.success(`Subtask "${trimmed}" created`);
-      // No router.refresh() here — optimistic update is instant.
-      // Full sync happens when the modal closes.
     } catch (error) {
       toast.error("Failed to create subtask", {
         description: error instanceof Error ? error.message : "An unexpected error occurred",
