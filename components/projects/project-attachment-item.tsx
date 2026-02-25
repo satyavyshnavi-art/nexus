@@ -47,11 +47,6 @@ export function ProjectAttachmentItem({
   const [isViewing, setIsViewing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isViewable = attachment.mimeType.startsWith("image/") ||
-    attachment.mimeType === "application/pdf" ||
-    attachment.mimeType === "text/plain" ||
-    attachment.mimeType === "text/csv";
-
   const handleView = async () => {
     setIsViewing(true);
     try {
@@ -139,17 +134,16 @@ export function ProjectAttachmentItem({
         </div>
       </div>
       <div className="flex gap-1">
-        {isViewable && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleView}
-            disabled={isViewing}
-            title="View"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleView}
+          disabled={isViewing}
+          title="View"
+        >
+          <Eye className="h-4 w-4" />
+          View
+        </Button>
         <Button
           variant="ghost"
           size="sm"

@@ -17,7 +17,6 @@ import { getLinkedRepository } from "@/server/actions/github-link";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
-import { ProjectDocsTab } from "@/components/projects/project-docs-tab";
 import { db } from "@/server/db";
 
 export default async function ProjectPage({
@@ -171,14 +170,6 @@ export default async function ProjectPage({
           </Card>
         </div>
       )}
-
-      {/* Project Reference Documents Section */}
-      <ProjectDocsTab
-        projectId={project.id}
-        documents={project.documents as any}
-        currentUserId={session.user.id}
-        isAdmin={isAdmin}
-      />
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
