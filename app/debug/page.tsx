@@ -2,13 +2,19 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { getUserProjects } from "@/server/actions/projects";
+import { notFound, redirect } from "next/navigation";
 
 export default async function DebugPage() {
     const session = await auth();
 
+    // Admin-only: non-admins and unauthenticated users cannot access this page
     if (!session?.user) {
-        return <div className="p-8">Not logged in</div>;
+        redirect("/login");
     }
+    if (session.user.role !== "admin") {
+        notFound();
+    }
+
 
     const dbUser = await db.user.findUnique({
         where: { id: session.user.id },

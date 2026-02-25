@@ -79,9 +79,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             ? encrypt(account.refresh_token)
             : null;
 
+          const githubProfile = profile as { login?: string };
           const githubData = {
             githubId: account.providerAccountId,
-            githubUsername: (profile as any)?.login as string,
+            githubUsername: githubProfile?.login,
             githubAccessToken: encryptedAccessToken,
             githubRefreshToken: encryptedRefreshToken,
             githubTokenExpiry: account.expires_at

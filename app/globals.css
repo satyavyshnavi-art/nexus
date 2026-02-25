@@ -167,6 +167,16 @@
   .text-balance-header {
     text-wrap: balance;
   }
+
+  /* Kanban drag-state: suppress task card hover effects while dragging */
+  .is-dragging .task-card {
+    pointer-events: none;
+  }
+
+  .is-dragging .task-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
 }
 
 @layer base {

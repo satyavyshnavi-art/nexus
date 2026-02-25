@@ -87,9 +87,6 @@ export function ProjectGrid({ projects, isAdmin }: ProjectGridProps) {
                                         {project.name}
                                     </CardTitle>
                                     <div className="flex gap-2 shrink-0">
-                                        <Badge variant="secondary" className="text-xs font-normal bg-primary/10 text-primary border-primary/20">
-                                            Active
-                                        </Badge>
                                     </div>
 
                                     {isAdmin && (

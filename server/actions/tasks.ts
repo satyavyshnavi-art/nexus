@@ -309,10 +309,12 @@ export async function updateTask(
     },
   });
 
-  // Trigger GitHub Sync asynchronously
-  syncTaskToGitHub(taskId).catch(err => {
-    console.error(`[Auto-Sync] Failed to sync updated task ${taskId}:`, err);
-  });
+  // Only sync to GitHub if the task is actually linked to a GitHub issue
+  if (updatedTask.githubIssueNumber) {
+    syncTaskToGitHub(taskId).catch(err => {
+      console.error(`[Auto-Sync] Failed to sync updated task ${taskId}:`, err);
+    });
+  }
 
   // Revalidate the project page to reflect the updated task
   const revalidateProjectId = updatedTask.sprint?.projectId;
@@ -591,7 +593,7 @@ export async function createSubtask(
   return subtask;
 }
 
-export async function assignReviewer(taskId: string, reviewerId: string) {
+export async function assignReviewer(taskId: string, reviewerId: string | null) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -604,7 +606,8 @@ export async function assignReviewer(taskId: string, reviewerId: string) {
 
   const updatedTask = await db.task.update({
     where: { id: taskId },
-    data: { reviewerId },
+    // reviewerId: null clears the reviewer; a valid string sets it
+    data: { reviewerId: reviewerId ?? null },
     include: {
       sprint: { select: { projectId: true } },
     },

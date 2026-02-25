@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { uploadAttachment } from "@/server/actions/attachments";
-import { toast } from "@/lib/hooks/use-toast";
+import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
 
 interface FileUploadProps {
@@ -23,32 +23,34 @@ export function FileUpload({ taskId, onSuccess }: FileUploadProps) {
 
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Maximum file size is 10MB",
-        variant: "destructive",
-      });
+      toast.error("File too large", { description: "Maximum file size is 10MB" });
       return;
     }
 
-    // Validate file type
+    // Validate file type — accept any image, plus common document types
     const allowedTypes = [
       "image/jpeg",
+      "image/jpg",
       "image/png",
       "image/gif",
       "image/webp",
+      "image/svg+xml",
+      "image/bmp",
+      "image/tiff",
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "text/plain",
+      "text/csv",
     ];
 
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type",
-        description: "Only images, PDFs, and documents are allowed",
-        variant: "destructive",
-      });
+    // Also check by extension as a fallback (some browsers don't set type correctly)
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".pdf", ".doc", ".docx", ".xlsx", ".txt", ".csv"];
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      toast.error("Invalid file type", { description: "Only images, PDFs, and documents are allowed" });
       return;
     }
 
@@ -75,10 +77,8 @@ export function FileUpload({ taskId, onSuccess }: FileUploadProps) {
 
       setUploadProgress(100);
 
-      toast({
-        title: "File uploaded",
+      toast.success("File uploaded", {
         description: `${selectedFile.name} has been uploaded successfully`,
-        variant: "success",
       });
 
       setSelectedFile(null);
@@ -87,12 +87,9 @@ export function FileUpload({ taskId, onSuccess }: FileUploadProps) {
       }
       onSuccess?.();
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to upload file",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload file",
+      );
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -111,6 +108,7 @@ export function FileUpload({ taskId, onSuccess }: FileUploadProps) {
         <input
           ref={fileInputRef}
           type="file"
+          accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
           onChange={handleFileSelect}
           className="hidden"
           id="file-upload"

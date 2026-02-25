@@ -15,6 +15,7 @@ export async function requestUploadUrl(data: {
   if (!session?.user) throw new Error("Unauthorized");
 
   // Verify user has access to task's project
+  // Subtasks don't have a sprintId — they link through parentTask
   const task = await db.task.findUnique({
     where: { id: data.taskId },
     include: {
@@ -27,12 +28,26 @@ export async function requestUploadUrl(data: {
           },
         },
       },
+      parentTask: {
+        include: {
+          sprint: {
+            include: {
+              project: {
+                include: {
+                  members: { where: { userId: session.user.id } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  const memberCount = task?.sprint?.project.members.length ?? 0;
+  // Check members from the task's sprint, or the parent task's sprint for subtasks
+  const projectMembers = task?.sprint?.project.members ?? task?.parentTask?.sprint?.project.members ?? [];
 
-  if (!task || (memberCount === 0 && session.user.role !== "admin")) {
+  if (!task || (projectMembers.length === 0 && session.user.role !== "admin")) {
     throw new Error("Unauthorized");
   }
 
@@ -115,17 +130,24 @@ export async function uploadAttachment(formData: FormData) {
 
   // Validate file type
   const allowedTypes = [
-    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+    "image/svg+xml", "image/bmp", "image/tiff",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "text/plain",
+    "text/csv",
   ];
-  if (!allowedTypes.includes(file.type)) {
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".pdf", ".doc", ".docx", ".xlsx", ".txt", ".csv"];
+  const ext = "." + file.name.split(".").pop()?.toLowerCase();
+
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
     throw new Error("Invalid file type");
   }
 
   // Verify user has access to task's project
+  // Subtasks don't have a sprintId — they link through parentTask
   const task = await db.task.findUnique({
     where: { id: taskId },
     include: {
@@ -138,20 +160,50 @@ export async function uploadAttachment(formData: FormData) {
           },
         },
       },
+      parentTask: {
+        include: {
+          sprint: {
+            include: {
+              project: {
+                include: {
+                  members: { where: { userId: session.user.id } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  const memberCount = task?.sprint?.project.members.length ?? 0;
+  // Check members from the task's sprint, or the parent task's sprint for subtasks
+  const projectMembers = task?.sprint?.project.members ?? task?.parentTask?.sprint?.project.members ?? [];
 
-  if (!task || (memberCount === 0 && session.user.role !== "admin")) {
+  if (!task || (projectMembers.length === 0 && session.user.role !== "admin")) {
     throw new Error("Unauthorized");
   }
 
   // Generate unique key and upload
-  const key = `tasks/${taskId}/${randomUUID()}-${file.name}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  // Sanitize filename: remove spaces and special chars for S3 compatibility
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `tasks/${taskId}/${randomUUID()}-${safeName}`;
 
-  await putObject(key, buffer, file.type);
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await file.arrayBuffer());
+  } catch (err) {
+    console.error("[Upload] Failed to read file buffer:", err);
+    throw new Error("Failed to read file data");
+  }
+
+  try {
+    await putObject(key, buffer, file.type || "application/octet-stream");
+  } catch (err) {
+    console.error("[Upload] S3 putObject failed:", err);
+    throw new Error(
+      `Storage upload failed: ${err instanceof Error ? err.message : "Unknown error"}`
+    );
+  }
 
   // Save metadata to DB
   const attachment = await db.taskAttachment.create({
@@ -159,7 +211,7 @@ export async function uploadAttachment(formData: FormData) {
       taskId,
       s3Key: key,
       fileName: file.name,
-      mimeType: file.type,
+      mimeType: file.type || "application/octet-stream",
       sizeBytes: file.size,
       uploadedBy: session.user.id,
     },
