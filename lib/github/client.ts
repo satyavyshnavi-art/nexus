@@ -113,6 +113,7 @@ export async function listOrgRepositories(
   const octokit = await createOctokitForUser(userId);
   const repos = await octokit.paginate(octokit.rest.repos.listForOrg, {
     org,
+    type: "all",
     sort: "updated",
     per_page: 100,
   });
