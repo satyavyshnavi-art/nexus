@@ -326,7 +326,6 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
             )
           }
           : t;
-
       setTasks((prev) => prev.map(swapTemp));
       setSelectedTask((prev) => prev ? swapTemp(prev) : prev);
 
@@ -344,6 +343,18 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
       toast.error("Failed to create subtask");
       throw error;
     }
+  }, []);
+
+  // ── Centralized task field update (optimistic from modal save) ──
+  const handleTaskUpdate = useCallback((
+    taskId: string,
+    fields: Record<string, unknown>
+  ) => {
+    const merge = (t: TaskWithRelations) =>
+      t.id === taskId ? { ...t, ...fields } : t;
+
+    setTasks((prev) => prev.map(merge));
+    setSelectedTask((prev) => prev ? merge(prev) : prev);
   }, []);
 
   return (
@@ -603,6 +614,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
           open={isDetailModalOpen}
           onSubtaskToggle={handleSubtaskToggle}
           onSubtaskAdd={handleSubtaskAdd}
+          onTaskUpdate={handleTaskUpdate}
           onOpenChange={(open) => {
             setIsDetailModalOpen(open);
             if (!open) {

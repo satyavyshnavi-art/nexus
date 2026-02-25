@@ -54,6 +54,7 @@ interface TaskDetailModalProps {
   onOpenChange: (open: boolean) => void;
   onSubtaskToggle?: SubtaskToggleFn;
   onSubtaskAdd?: SubtaskAddFn;
+  onTaskUpdate?: (taskId: string, fields: Record<string, unknown>) => void;
 }
 
 const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
@@ -78,6 +79,7 @@ export function TaskDetailModal({
   onOpenChange,
   onSubtaskToggle,
   onSubtaskAdd,
+  onTaskUpdate,
 }: TaskDetailModalProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -127,7 +129,20 @@ export function TaskDetailModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Update fields
+      // Optimistically update the board/list immediately
+      const updatedFields: Record<string, unknown> = {
+        title,
+        description: description || null,
+        priority,
+        storyPoints: storyPoints || null,
+        assigneeId: assigneeId === "unassigned" ? null : assigneeId,
+        dueAt: dueAt ? new Date(dueAt) : null,
+        estimatedDuration: estimatedDuration || null,
+        ...(status !== task.status ? { status } : {}),
+      };
+      onTaskUpdate?.(task.id, updatedFields);
+
+      // Update fields on server
       await updateTask(task.id, {
         title,
         description: description || undefined,
@@ -143,7 +158,7 @@ export function TaskDetailModal({
         await updateTaskStatus(task.id, status);
       }
 
-      // Update reviewer if changed — null clears the reviewer, string sets it
+      // Update reviewer if changed
       const newReviewerValue = reviewerId === "none" ? null : reviewerId;
       const oldReviewerValue = task.reviewerId ?? null;
       if (newReviewerValue !== oldReviewerValue) {

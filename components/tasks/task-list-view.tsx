@@ -170,6 +170,17 @@ export function TaskListView({ tasks: initialTasks, projectMembers }: TaskListVi
     }
   }, []);
 
+  // ── Task field update (optimistic from modal save) ──
+  const handleTaskUpdate = useCallback((
+    taskId: string,
+    fields: Record<string, unknown>
+  ) => {
+    const merge = (t: TaskItem) =>
+      t.id === taskId ? { ...t, ...fields } : t;
+    setTasks((prev) => prev.map(merge));
+    setSelectedTask((prev) => prev ? merge(prev) : prev);
+  }, []);
+
   // Calculate progress percentage for tasks with subtasks
   const getProgressPercentage = (task: TaskItem) => {
     if (!task.childTasks || task.childTasks.length === 0) return null;
@@ -307,6 +318,7 @@ export function TaskListView({ tasks: initialTasks, projectMembers }: TaskListVi
           onOpenChange={handleModalClose}
           onSubtaskToggle={handleSubtaskToggle}
           onSubtaskAdd={handleSubtaskAdd}
+          onTaskUpdate={handleTaskUpdate}
         />
       )}
     </>
