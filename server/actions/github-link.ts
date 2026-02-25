@@ -210,7 +210,7 @@ export async function getOrgRepos(): Promise<{ repos: OrgRepo[] } | { error: str
   }
 
   try {
-    const repos = await listOrgRepositories(session.user.id, orgName);
+    const repos = await listOrgRepositories(orgName);
     return {
       repos: repos.map((repo) => ({
         name: repo.name,
@@ -222,9 +222,6 @@ export async function getOrgRepos(): Promise<{ repos: OrgRepo[] } | { error: str
       })),
     };
   } catch (error: any) {
-    if (error.message?.includes("GitHub account not connected")) {
-      return { error: "Reconnect your GitHub account to access organization repositories" };
-    }
     if (error.status === 404) {
       return { error: "Organization not found or no access" };
     }

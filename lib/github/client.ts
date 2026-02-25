@@ -104,14 +104,14 @@ export async function getRepository(userId: string, owner: string, repo: string)
 
 /**
  * Lists repositories for a GitHub organization.
- * Uses the user's OAuth token with listForOrg (requires read:org scope
- * and the org must approve the OAuth app for private repo access).
+ * Uses the system PAT (GITHUB_ACCESS_TOKEN) so any Nexus user can browse
+ * org repos without needing their own GitHub connection.
  */
-export async function listOrgRepositories(
-  userId: string,
-  org: string
-) {
-  const octokit = await createOctokitForUser(userId);
+export async function listOrgRepositories(org: string) {
+  const octokit = createSystemOctokit();
+  if (!octokit) {
+    throw new Error("GITHUB_ACCESS_TOKEN not configured");
+  }
   const repos = await octokit.paginate(octokit.rest.repos.listForOrg, {
     org,
     type: "all",

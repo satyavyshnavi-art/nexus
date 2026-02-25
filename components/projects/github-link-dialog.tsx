@@ -21,13 +21,11 @@ import {
 } from "@/components/ui/command";
 import {
   linkGitHubRepository,
-  hasGitHubAccount,
   getOrgRepos,
   type OrgRepo,
 } from "@/server/actions/github-link";
-import { loginWithGitHubRedirect } from "@/server/actions/auth";
 import { toast } from "sonner";
-import { GitBranch, Github, Loader2, Lock, Globe, Check } from "lucide-react";
+import { GitBranch, Loader2, Lock, Globe, Check } from "lucide-react";
 
 interface GitHubLinkDialogProps {
   projectId: string;
@@ -38,7 +36,6 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [linking, setLinking] = useState(false);
-  const [githubConnected, setGithubConnected] = useState<boolean | null>(null);
   const [repos, setRepos] = useState<OrgRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<OrgRepo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,23 +46,12 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
     setError(null);
     setSelectedRepo(null);
 
-    hasGitHubAccount().then(async (result) => {
-      if (!result || !result.hasAccount) {
-        setGithubConnected(false);
-        setLoading(false);
-        return;
+    getOrgRepos().then((result) => {
+      if ("error" in result) {
+        setError(result.error);
+      } else {
+        setRepos(result.repos);
       }
-
-      setGithubConnected(true);
-
-      const orgResult = await getOrgRepos();
-      if ("error" in orgResult) {
-        setError(orgResult.error);
-        setLoading(false);
-        return;
-      }
-
-      setRepos(orgResult.repos);
       setLoading(false);
     });
   }, [open]);
@@ -108,7 +94,7 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
         <DialogHeader>
           <DialogTitle>Link GitHub Repository</DialogTitle>
           <DialogDescription>
-            Connect this project to a GitHub repository to enable task syncing as issues.
+            Select a repository from your organization to enable task syncing as issues.
           </DialogDescription>
         </DialogHeader>
 
@@ -116,35 +102,12 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
         {loading && (
           <div className="flex flex-col items-center justify-center py-8 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              {githubConnected === null ? "Checking GitHub connection..." : "Loading repositories..."}
-            </p>
-          </div>
-        )}
-
-        {/* Not connected state */}
-        {!loading && githubConnected === false && (
-          <div className="flex flex-col items-center justify-center py-8 gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <Github className="h-7 w-7 text-muted-foreground" />
-            </div>
-            <div className="text-center space-y-1">
-              <p className="font-medium">Connect your GitHub account</p>
-              <p className="text-sm text-muted-foreground">
-                Link your GitHub account to browse and select a repository from your organization.
-              </p>
-            </div>
-            <Button
-              onClick={() => loginWithGitHubRedirect(`/projects/${projectId}`)}
-            >
-              <Github className="mr-2 h-4 w-4" />
-              Connect GitHub
-            </Button>
+            <p className="text-sm text-muted-foreground">Loading repositories...</p>
           </div>
         )}
 
         {/* Error state */}
-        {!loading && error && githubConnected && (
+        {!loading && error && (
           <div className="flex flex-col items-center justify-center py-8 gap-3">
             <p className="text-sm text-destructive text-center">{error}</p>
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
@@ -153,8 +116,8 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
           </div>
         )}
 
-        {/* Connected — repo selector */}
-        {!loading && !error && githubConnected && (
+        {/* Repo selector */}
+        {!loading && !error && (
           <div className="space-y-4 py-2">
             <Command className="rounded-lg border">
               <CommandInput placeholder="Search repositories..." />
