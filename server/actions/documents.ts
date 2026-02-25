@@ -44,6 +44,9 @@ export async function createProjectDocument(data: {
     });
 
     revalidatePath(`/projects/${data.projectId}`);
+    const { revalidateTag } = await import("next/cache");
+    // @ts-expect-error - Next.js 15 type mismatch in local environment
+    revalidateTag(`project-${data.projectId}`);
     return document;
 }
 
@@ -78,6 +81,9 @@ export async function updateProjectDocument(
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
+    const { revalidateTag } = await import("next/cache");
+    // @ts-expect-error - Next.js 15 type mismatch in local environment
+    revalidateTag(`project-${existingDoc.projectId}`);
     return updatedDocument;
 }
 
@@ -104,5 +110,8 @@ export async function deleteProjectDocument(documentId: string) {
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
+    const { revalidateTag } = await import("next/cache");
+    // @ts-expect-error - Next.js 15 type mismatch in local environment
+    revalidateTag(`project-${existingDoc.projectId}`);
     return { success: true };
 }

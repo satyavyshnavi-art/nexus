@@ -166,6 +166,14 @@ export default async function ProjectPage({
         </div>
       )}
 
+      {/* Project Reference Documents Section */}
+      <ProjectDocsTab
+        projectId={project.id}
+        documents={project.documents as any}
+        currentUserId={session.user.id}
+        isAdmin={isAdmin}
+      />
+
       {/* Main Content with Tabs */}
       <Tabs defaultValue="board" className="space-y-4">
         <TabsList className="bg-muted/50 backdrop-blur-sm border">
@@ -180,10 +188,6 @@ export default async function ProjectPage({
           <TabsTrigger value="team">
             <Users className="h-4 w-4 mr-2" />
             Team
-          </TabsTrigger>
-          <TabsTrigger value="docs">
-            <FileText className="h-4 w-4 mr-2" />
-            Docs
           </TabsTrigger>
           <TabsTrigger value="overview">
             <Settings className="h-4 w-4 mr-2" />
