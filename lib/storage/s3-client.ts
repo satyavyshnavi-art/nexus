@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
@@ -36,6 +36,15 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
     Key: key,
     Body: body,
     ContentType: contentType,
+  });
+
+  return s3.send(command);
+}
+
+export async function deleteObject(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: process.env.STORAGE_BUCKET_NAME,
+    Key: key,
   });
 
   return s3.send(command);

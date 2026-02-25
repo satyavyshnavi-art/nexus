@@ -101,6 +101,12 @@ export default async function ProjectPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/projects/${projectId}/documents`}>
+            <Button variant="outline" className="glass hover:bg-muted/50">
+              <FileText className="h-4 w-4 mr-2" />
+              Documents
+            </Button>
+          </Link>
           <Link href={`/projects/${projectId}/sprints`}>
             <Button variant="outline" className="glass hover:bg-muted/50">
               <Calendar className="h-4 w-4 mr-2" />
