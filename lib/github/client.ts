@@ -103,21 +103,21 @@ export async function getRepository(userId: string, owner: string, repo: string)
 }
 
 /**
- * Lists repositories for a GitHub organization
- * Uses pagination to handle orgs with >100 repos
+ * Lists repositories for a GitHub organization.
+ * Uses the authenticated user's repo list filtered by org to ensure
+ * private repos are included (listForOrg may be blocked by org OAuth policy).
  */
 export async function listOrgRepositories(
   userId: string,
   org: string
 ) {
   const octokit = await createOctokitForUser(userId);
-  const repos = await octokit.paginate(octokit.rest.repos.listForOrg, {
-    org,
-    type: "all",
+  const repos = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
+    affiliation: "organization_member",
     sort: "updated",
     per_page: 100,
   });
-  return repos;
+  return repos.filter((repo) => repo.owner.login.toLowerCase() === org.toLowerCase());
 }
 
 /**
