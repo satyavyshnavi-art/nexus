@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,9 +9,11 @@ import { TaskTypeSelector } from "./task-type-selector";
 import { PrioritySelector } from "./priority-selector";
 import { AssigneeSelector } from "./assignee-selector";
 import { createTask } from "@/server/actions/tasks";
+import { uploadAttachment } from "@/server/actions/attachments";
+import { syncTaskToGitHub } from "@/server/actions/github-sync";
 import { toast } from "@/lib/hooks/use-toast";
 import { TaskType, TaskPriority } from "@prisma/client";
-import { GitBranch } from "lucide-react";
+import { GitBranch, ImagePlus, X } from "lucide-react";
 
 interface User {
   id: string;
@@ -36,6 +38,8 @@ export function TaskForm({
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pushToGitHub, setPushToGitHub] = useState(projectLinked);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -52,6 +56,31 @@ export function TaskForm({
     assigneeId: undefined,
   });
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Invalid file", description: `${file.name} is not an image`, variant: "destructive" });
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "File too large", description: `${file.name} exceeds 10MB limit`, variant: "destructive" });
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    setSelectedImages((prev) => [...prev, ...validFiles]);
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -66,15 +95,33 @@ export function TaskForm({
 
     setIsSubmitting(true);
     try {
-      await createTask({
+      const hasImages = selectedImages.length > 0;
+
+      // If images + pushToGitHub: suppress auto-sync so we can upload first
+      const task = await createTask({
         sprintId,
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
         storyPoints: formData.storyPoints || undefined,
         assigneeId: formData.assigneeId,
-        pushToGitHub,
+        pushToGitHub: hasImages ? false : pushToGitHub,
       });
+
+      // Upload images if any
+      if (hasImages) {
+        for (const file of selectedImages) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("taskId", task.id);
+          await uploadAttachment(fd);
+        }
+
+        // Now sync to GitHub with screenshots included
+        if (pushToGitHub) {
+          await syncTaskToGitHub(task.id);
+        }
+      }
 
       toast({
         title: "Ticket created",
@@ -90,6 +137,7 @@ export function TaskForm({
         storyPoints: 0,
         assigneeId: undefined,
       });
+      setSelectedImages([]);
 
       onSuccess?.();
     } catch (error) {
@@ -133,6 +181,54 @@ export function TaskForm({
           disabled={isSubmitting}
           rows={4}
         />
+      </div>
+
+      {/* Screenshots */}
+      <div className="space-y-2">
+        <Label>Screenshots</Label>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSubmitting}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed rounded-md text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50"
+          >
+            <ImagePlus className="h-4 w-4" />
+            Add Screenshot
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          {selectedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedImages.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted text-sm"
+                >
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="h-6 w-6 rounded object-cover"
+                  />
+                  <span className="max-w-[120px] truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -218,7 +314,11 @@ export function TaskForm({
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Ticket"}
+          {isSubmitting
+            ? selectedImages.length > 0
+              ? "Creating & Uploading..."
+              : "Creating..."
+            : "Create Ticket"}
         </Button>
       </div>
     </form>
