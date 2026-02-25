@@ -260,35 +260,26 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
   ) => {
     const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
 
-    // Optimistic update — mutate tasks state directly
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === parentTaskId && t.childTasks
-          ? {
-            ...t, childTasks: t.childTasks.map((st) =>
-              st.id === subtaskId ? { ...st, status: newStatus } : st
-            )
-          }
-          : t
-      )
-    );
+    const updateChildTasks = (t: TaskWithRelations, status: TaskStatus) =>
+      t.id === parentTaskId && t.childTasks
+        ? {
+          ...t, childTasks: t.childTasks.map((st) =>
+            st.id === subtaskId ? { ...st, status } : st
+          )
+        }
+        : t;
+
+    // Optimistic update — mutate both tasks and selectedTask
+    setTasks((prev) => prev.map((t) => updateChildTasks(t, newStatus)));
+    setSelectedTask((prev) => prev ? updateChildTasks(prev, newStatus) : prev);
 
     try {
       await updateTaskStatus(subtaskId, newStatus);
       toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
     } catch {
       // Rollback on failure
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === parentTaskId && t.childTasks
-            ? {
-              ...t, childTasks: t.childTasks.map((st) =>
-                st.id === subtaskId ? { ...st, status: currentStatus } : st
-              )
-            }
-            : t
-        )
-      );
+      setTasks((prev) => prev.map((t) => updateChildTasks(t, currentStatus)));
+      setSelectedTask((prev) => prev ? updateChildTasks(prev, currentStatus) : prev);
       toast.error("Failed to update subtask");
     }
   }, []);
@@ -298,7 +289,6 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     parentTaskId: string,
     title: string
   ) => {
-    // Create on server first (need the generated ID)
     const created = await createSubtask(parentTaskId, { title });
     const newSubtask = {
       id: created.id,
@@ -308,14 +298,14 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
       type: created.type,
     };
 
-    // Update tasks state
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === parentTaskId
-          ? { ...t, childTasks: [...(t.childTasks || []), newSubtask] }
-          : t
-      )
-    );
+    const addChild = (t: TaskWithRelations) =>
+      t.id === parentTaskId
+        ? { ...t, childTasks: [...(t.childTasks || []), newSubtask] }
+        : t;
+
+    // Update both tasks and selectedTask
+    setTasks((prev) => prev.map(addChild));
+    setSelectedTask((prev) => prev ? addChild(prev) : prev);
 
     toast.success(`Subtask "${title}" created`);
     return newSubtask;
