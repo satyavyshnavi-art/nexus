@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { SprintStatus, TaskStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 export async function createSprint(data: {
   projectId: string;
@@ -340,6 +340,31 @@ export async function getProjectSprints(projectId: string) {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * Cached variant — skips auth() when the caller already has the session.
+ */
+export async function getProjectSprintsCached(projectId: string) {
+  const getCached = unstable_cache(
+    async (projectId: string) => {
+      return db.sprint.findMany({
+        where: { projectId },
+        include: {
+          _count: {
+            select: { tasks: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+    [`project-sprints-${projectId}`],
+    {
+      revalidate: 30,
+      tags: [`project-${projectId}-sprints`],
+    }
+  );
+  return getCached(projectId);
 }
 
 export async function getPlannedSprints(projectId: string) {

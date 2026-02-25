@@ -48,8 +48,11 @@ export default async function MyTasksPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const data = await getMyTasksAndProjects();
-  const reviewTasks = await getReviewTasks(session.user.id);
+  // Parallel fetch — both were sequential before
+  const [data, reviewTasks] = await Promise.all([
+    getMyTasksAndProjects(),
+    getReviewTasks(session.user.id),
+  ]);
 
   const completionRate =
     data.stats.totalTasks > 0

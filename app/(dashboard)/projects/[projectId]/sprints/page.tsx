@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import { getProjectSprints } from "@/server/actions/sprints";
-import { getProject } from "@/server/actions/projects";
+import { getProjectSprintsCached } from "@/server/actions/sprints";
+import { getProjectCached } from "@/server/actions/projects";
 import { db } from "@/server/db";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,8 +22,8 @@ export default async function SprintsPage({
 
   const { projectId } = await params;
   const [project, sprints] = await Promise.all([
-    getProject(projectId),
-    getProjectSprints(projectId),
+    getProjectCached(projectId, session.user.id, session.user.role),
+    getProjectSprintsCached(projectId),
   ]);
 
   if (!project) {
@@ -42,10 +42,10 @@ export default async function SprintsPage({
   const taskCountsRaw =
     sprintIds.length > 0
       ? await db.task.groupBy({
-          by: ["sprintId", "status"],
-          where: { sprintId: { in: sprintIds } },
-          _count: { id: true },
-        })
+        by: ["sprintId", "status"],
+        where: { sprintId: { in: sprintIds } },
+        _count: { id: true },
+      })
       : [];
 
   const taskCounts: Record<string, { completed: number; incomplete: number }> =
@@ -67,8 +67,8 @@ export default async function SprintsPage({
   const defaultTab = activeSprints.length > 0
     ? "active"
     : plannedSprints.length > 0
-    ? "planned"
-    : "completed";
+      ? "planned"
+      : "completed";
 
   return (
     <div className="space-y-6">

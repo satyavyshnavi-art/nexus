@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { getProject } from "@/server/actions/projects";
-import { getActiveSprint, getProjectSprints, getSprintProgress } from "@/server/actions/sprints";
+import { getProjectCached } from "@/server/actions/projects";
+import { getActiveSprint, getProjectSprintsCached, getSprintProgress } from "@/server/actions/sprints";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KanbanBoard } from "@/components/kanban/board";
@@ -24,33 +25,52 @@ export default async function ProjectPage({
   params: Promise<{ projectId: string }>;
 }) {
   const session = await auth();
-  const { projectId } = await params; // FIX: Await params
+  if (!session?.user) {
+    const { redirect } = await import("next/navigation");
+    redirect("/login");
+    return; // for TypeScript narrowing
+  }
+  const { projectId } = await params;
+  const isAdmin = session.user.role === "admin";
 
-  const project = await getProject(projectId);
-  const activeSprint = await getActiveSprint(projectId);
-  const sprints = await getProjectSprints(projectId);
-  const linkedRepo = await getLinkedRepository(projectId);
-  // Fetch sprint progress for the active sprint
-  const sprintProgress = activeSprint
-    ? await getSprintProgress(activeSprint.id)
-    : null;
+  let project;
+  try {
+    project = await getProjectCached(projectId, session.user.id, session.user.role);
+  } catch (error) {
+    // Only 404 for "not found" — let authorization errors propagate
+    if (error instanceof Error && error.message === "Project not found") {
+      notFound();
+    }
+    // For "Unauthorized", redirect to dashboard
+    if (error instanceof Error && error.message === "Unauthorized") {
+      const { redirect } = await import("next/navigation");
+      redirect("/");
+    }
+    throw error; // Re-throw unexpected errors as 500
+  }
 
-  const isAdmin = session?.user.role === "admin";
-
-  // Check if current user has GitHub connected
-  const currentUser = session?.user?.id
-    ? await db.user.findUnique({
+  // Parallel fetch — these were all sequential awaits before
+  const [activeSprint, sprints, linkedRepo, currentUser] = await Promise.all([
+    getActiveSprint(projectId),
+    getProjectSprintsCached(projectId),
+    getLinkedRepository(projectId),
+    db.user.findUnique({
       where: { id: session.user.id },
       select: { githubAccessToken: true },
-    })
+    }),
+  ]);
+
+  // getSprintProgress depends on activeSprint ID
+  const sprintProgress = activeSprint
+    ? await getSprintProgress(activeSprint.id)
     : null;
   const userHasGitHub = !!currentUser?.githubAccessToken;
 
   // Filter to show tickets on the board (exclude stories and subtasks)
   const boardTickets = activeSprint
     ? activeSprint.tasks.filter(
-        (t) => t.type !== "story" && t.type !== "subtask"
-      )
+      (t) => t.type !== "story" && t.type !== "subtask"
+    )
     : [];
 
   // Calculate statistics from tickets only

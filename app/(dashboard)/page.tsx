@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config";
-import { getUserProjects } from "@/server/actions/projects";
+import { getUserProjectsCached } from "@/server/actions/projects";
 import { getVerticalsWithProjects } from "@/server/actions/verticals";
-import { getTeamStats } from "@/server/actions/team";
+import { getTeamStatsCached } from "@/server/actions/team";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,13 +20,16 @@ import { ProjectGrid } from "@/components/dashboard/project-grid";
 
 export default async function DashboardPage() {
   const session = await auth();
-  const isAdmin = session?.user.role === "admin";
+  if (!session?.user) return null;
 
-  // Fetch data based on role
-  const projects = isAdmin ? [] : await getUserProjects();
-  const verticals = isAdmin ? await getVerticalsWithProjects() : [];
+  const isAdmin = session.user.role === "admin";
 
-  const teamStats = isAdmin ? await getTeamStats() : null;
+  // Fetch data in parallel — cached variants skip redundant auth() calls
+  const [projects, verticals, teamStats] = await Promise.all([
+    isAdmin ? Promise.resolve([]) : getUserProjectsCached(session.user.id, false),
+    isAdmin ? getVerticalsWithProjects() : Promise.resolve([]),
+    isAdmin ? getTeamStatsCached() : Promise.resolve(null),
+  ]);
 
   // Flatten all projects from verticals for admin dropdown
   const allProjects = isAdmin
@@ -42,7 +45,7 @@ export default async function DashboardPage() {
     : projects.reduce((acc, p) => acc + p._count.sprints, 0);
   const totalMembers = isAdmin
     ? teamStats?.totalMembers || 0
-    : projects.reduce((acc, p) => acc + p._count.members, 0);
+    : new Set(projects.flatMap((p) => p.members.map((m) => m.userId))).size;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

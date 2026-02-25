@@ -99,6 +99,14 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
 
   useEffect(() => {
     setTasks(initialTasks);
+    // Also update the selected task if it's currently open, so the modal
+    // shows the latest data (e.g. newly added subtasks, status changes)
+    if (selectedTask) {
+      const updated = initialTasks.find((t) => t.id === selectedTask.id);
+      if (updated) {
+        setSelectedTask(updated);
+      }
+    }
   }, [initialTasks]);
 
   // Get unique roles from tasks
@@ -280,11 +288,10 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
                 <button
                   key={role}
                   onClick={() => toggleRoleFilter(role)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all ${
-                    isActive
-                      ? `${colors.bg} ${colors.text} ${colors.border} ring-1 ring-offset-1`
-                      : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
-                  }`}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all ${isActive
+                    ? `${colors.bg} ${colors.text} ${colors.border} ring-1 ring-offset-1`
+                    : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+                    }`}
                 >
                   <div className={`h-2 w-2 rounded-full ${getRoleDotColor(role)}`} />
                   {role}
@@ -346,154 +353,166 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
         </DndContext>
       ) : (
         /* --- Role View (grouped by role, no drag) --- */
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {uniqueRoles
-            .filter((role) => roleFilters.size === 0 || roleFilters.has(role))
-            .map((role) => {
-              const roleTasks = filteredTasks.filter(
-                (t) => t.requiredRole === role
-              );
-              const colors = getRoleColor(role);
+        <div className="flex flex-col gap-4 overflow-x-hidden pb-4">
+          {/* Drag hint: drag-and-drop is only available in Status view */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/60 border border-border/60 text-xs text-muted-foreground w-fit">
+            <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+            <span>Drag &amp; drop is only available in <strong>Status</strong> view. Switch views to move tickets.</span>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {uniqueRoles
+              .filter((role) => roleFilters.size === 0 || roleFilters.has(role))
+              .map((role) => {
+                const roleTasks = filteredTasks.filter(
+                  (t) => t.requiredRole === role
+                );
+                const colors = getRoleColor(role);
 
+                return (
+                  <div key={role} className="flex-1 min-w-[300px] max-w-[400px]">
+                    <div className="rounded-lg border-2 border-transparent h-full flex flex-col bg-muted/30 shadow-sm">
+                      {/* Role Column Header */}
+                      <div className="px-4 py-3 border-b rounded-t-lg bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`h-3 w-3 rounded-full ${getRoleDotColor(role)}`} />
+                            <h3 className="font-semibold text-sm">{role}</h3>
+                          </div>
+                          <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
+                            {roleTasks.length}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Tasks sorted by status */}
+                      <div className="flex-1 p-3 min-h-[300px]">
+                        {roleTasks.length === 0 ? (
+                          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                            No tasks
+                          </div>
+                        ) : (
+                          roleTasks
+                            .sort((a, b) => {
+                              const order = { todo: 0, progress: 1, review: 2, done: 3 };
+                              return order[a.status] - order[b.status];
+                            })
+                            .map((task) => (
+                              <div key={task.id} className="mb-2">
+                                <div
+                                  onClick={() => handleTaskClick(task)}
+                                  className="p-3 rounded-lg border bg-background hover:shadow-md transition-all cursor-pointer"
+                                >
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <span className="text-sm font-medium line-clamp-2">
+                                      {task.title}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className={`shrink-0 text-[10px] ${task.status === "done"
+                                        ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                                        : task.status === "progress"
+                                          ? "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                                          : task.status === "review"
+                                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                            : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                                        }`}
+                                    >
+                                      {statusLabels[task.status]}
+                                    </Badge>
+                                  </div>
+                                  {task.assignee && (
+                                    <div className="flex items-center gap-1 mt-2">
+                                      <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <span className="text-[10px] font-medium text-primary">
+                                          {(task.assignee.name?.charAt(0) || task.assignee.email.charAt(0)).toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">
+                                        {task.assignee.name || task.assignee.email}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+            {/* Unassigned role column */}
+            {(() => {
+              const unassignedTasks = filteredTasks.filter(
+                (t) => !t.requiredRole
+              );
+              if (unassignedTasks.length === 0 || roleFilters.size > 0) return null;
               return (
-                <div key={role} className="flex-1 min-w-[300px] max-w-[400px]">
+                <div className="flex-1 min-w-[300px] max-w-[400px]">
                   <div className="rounded-lg border-2 border-transparent h-full flex flex-col bg-muted/30 shadow-sm">
-                    {/* Role Column Header */}
                     <div className="px-4 py-3 border-b rounded-t-lg bg-muted/50">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`h-3 w-3 rounded-full ${getRoleDotColor(role)}`} />
-                          <h3 className="font-semibold text-sm">{role}</h3>
+                          <div className="h-3 w-3 rounded-full bg-gray-500" />
+                          <h3 className="font-semibold text-sm">Unassigned Role</h3>
                         </div>
                         <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
-                          {roleTasks.length}
+                          {unassignedTasks.length}
                         </Badge>
                       </div>
                     </div>
-
-                    {/* Tasks sorted by status */}
                     <div className="flex-1 p-3 min-h-[300px]">
-                      {roleTasks.length === 0 ? (
-                        <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                          No tasks
-                        </div>
-                      ) : (
-                        roleTasks
-                          .sort((a, b) => {
-                            const order = { todo: 0, progress: 1, review: 2, done: 3 };
-                            return order[a.status] - order[b.status];
-                          })
-                          .map((task) => (
-                            <div key={task.id} className="mb-2">
-                              <div
-                                onClick={() => handleTaskClick(task)}
-                                className="p-3 rounded-lg border bg-background hover:shadow-md transition-all cursor-pointer"
+                      {unassignedTasks.map((task) => (
+                        <div key={task.id} className="mb-2">
+                          <div
+                            onClick={() => handleTaskClick(task)}
+                            className="p-3 rounded-lg border bg-background hover:shadow-md transition-all cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="text-sm font-medium line-clamp-2">
+                                {task.title}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={`shrink-0 text-[10px] ${task.status === "done"
+                                  ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                                  : task.status === "progress"
+                                    ? "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                                    : task.status === "review"
+                                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                      : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                                  }`}
                               >
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-sm font-medium line-clamp-2">
-                                    {task.title}
-                                  </span>
-                                  <Badge
-                                    variant="outline"
-                                    className={`shrink-0 text-[10px] ${
-                                      task.status === "done"
-                                        ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                                        : task.status === "progress"
-                                        ? "bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                                        : task.status === "review"
-                                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                        : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
-                                    }`}
-                                  >
-                                    {statusLabels[task.status]}
-                                  </Badge>
-                                </div>
-                                {task.assignee && (
-                                  <div className="flex items-center gap-1 mt-2">
-                                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
-                                      <span className="text-[10px] font-medium text-primary">
-                                        {(task.assignee.name?.charAt(0) || task.assignee.email.charAt(0)).toUpperCase()}
-                                      </span>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">
-                                      {task.assignee.name || task.assignee.email}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                                {statusLabels[task.status]}
+                              </Badge>
                             </div>
-                          ))
-                      )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               );
-            })}
-
-          {/* Unassigned role column */}
-          {(() => {
-            const unassignedTasks = filteredTasks.filter(
-              (t) => !t.requiredRole
-            );
-            if (unassignedTasks.length === 0 || roleFilters.size > 0) return null;
-            return (
-              <div className="flex-1 min-w-[300px] max-w-[400px]">
-                <div className="rounded-lg border-2 border-transparent h-full flex flex-col bg-muted/30 shadow-sm">
-                  <div className="px-4 py-3 border-b rounded-t-lg bg-muted/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-gray-500" />
-                        <h3 className="font-semibold text-sm">Unassigned Role</h3>
-                      </div>
-                      <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
-                        {unassignedTasks.length}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex-1 p-3 min-h-[300px]">
-                    {unassignedTasks.map((task) => (
-                      <div key={task.id} className="mb-2">
-                        <div
-                          onClick={() => handleTaskClick(task)}
-                          className="p-3 rounded-lg border bg-background hover:shadow-md transition-all cursor-pointer"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium line-clamp-2">
-                              {task.title}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={`shrink-0 text-[10px] ${
-                                task.status === "done"
-                                  ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                                  : task.status === "progress"
-                                  ? "bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                                  : task.status === "review"
-                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                  : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
-                              }`}
-                            >
-                              {statusLabels[task.status]}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+            })()}
+          </div>
         </div>
       )}
 
       {selectedTask && (
         <TaskDetailModal
-          key={selectedTask.id}
+          key={`${selectedTask.id}-${selectedTask.updatedAt}`}
           task={selectedTask}
           projectMembers={projectMembers}
           open={isDetailModalOpen}
-          onOpenChange={setIsDetailModalOpen}
+          onOpenChange={(open) => {
+            setIsDetailModalOpen(open);
+            if (!open) {
+              // Clear selected task so re-opening the same task creates a fresh modal
+              setSelectedTask(null);
+              router.refresh();
+            }
+          }}
         />
       )}
 
@@ -539,16 +558,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
         </DialogContent>
       </Dialog>
 
-      {/* Global styles for drag state */}
-      <style jsx global>{`
-        .is-dragging .task-card {
-          pointer-events: none;
-        }
-        .is-dragging .task-card:hover {
-          transform: none !important;
-          box-shadow: none !important;
-        }
-      `}</style>
+      {/* drag-state pointer suppression via container class (no style jsx needed) */}
     </>
   );
 }

@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { UserRole, TaskStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 /**
  * Get all team members with their statistics
@@ -117,6 +117,44 @@ export async function getTeamStats() {
     memberCount,
   };
 }
+
+/**
+ * Cached team stats — skips auth() and caches results for 30s.
+ * Use this from server components that already have the session.
+ */
+export const getTeamStatsCached = unstable_cache(
+  async () => {
+    const [totalMembers, adminCount, memberCount, activeMembers] =
+      await Promise.all([
+        db.user.count(),
+        db.user.count({ where: { role: UserRole.admin } }),
+        db.user.count({ where: { role: UserRole.member } }),
+        db.user.count({
+          where: {
+            assignedTasks: {
+              some: {
+                status: {
+                  in: [TaskStatus.todo, TaskStatus.progress, TaskStatus.review],
+                },
+              },
+            },
+          },
+        }),
+      ]);
+
+    return {
+      totalMembers,
+      activeMembers,
+      adminCount,
+      memberCount,
+    };
+  },
+  ["team-stats"],
+  {
+    revalidate: 30,
+    tags: ["team-stats"],
+  }
+);
 
 /**
  * Update user role (Admin only)

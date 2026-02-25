@@ -249,6 +249,10 @@ export async function getUserProjects() {
           vertical: {
             select: { id: true, name: true },
           },
+          // Include member IDs so the dashboard can count unique members
+          members: {
+            select: { userId: true },
+          },
           _count: {
             select: { sprints: true, members: true },
           },
@@ -368,4 +372,86 @@ export async function deleteProject(projectId: string) {
     console.error("Failed to delete project:", error);
     throw new Error("Failed to delete project");
   }
+}
+
+/**
+ * Get a project by ID — skips auth() for use when the page already has the session.
+ * This avoids a redundant DB round-trip for auth.
+ */
+export async function getProjectCached(
+  projectId: string,
+  userId: string,
+  userRole: string
+) {
+  const getCached = unstable_cache(
+    async (projectId: string) => {
+      return db.project.findUnique({
+        where: { id: projectId },
+        include: {
+          vertical: true,
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, designation: true },
+              },
+            },
+          },
+          _count: {
+            select: { sprints: true },
+          },
+        },
+      });
+    },
+    [`project-${projectId}`],
+    {
+      revalidate: 30,
+      tags: [`project-${projectId}`, "projects"],
+    }
+  );
+
+  const project = await getCached(projectId);
+  if (!project) throw new Error("Project not found");
+
+  const isAdmin = userRole === "admin";
+  const isMember = project.members.some((m) => m.userId === userId);
+  if (!isAdmin && !isMember) throw new Error("Unauthorized");
+
+  return {
+    ...project,
+    githubRepoId: project.githubRepoId?.toString() || null,
+  };
+}
+
+/**
+ * Get user projects — skips auth() for use when the page already has the session.
+ */
+export async function getUserProjectsCached(userId: string, isAdmin: boolean) {
+  const getCached = unstable_cache(
+    async (userId: string, isAdmin: boolean) => {
+      const results = await db.project.findMany({
+        where: isAdmin
+          ? {}
+          : { members: { some: { userId } } },
+        include: {
+          vertical: { select: { id: true, name: true } },
+          members: { select: { userId: true } },
+          _count: { select: { sprints: true, members: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return results.map((project) => ({
+        ...project,
+        githubRepoId: project.githubRepoId
+          ? project.githubRepoId.toString()
+          : null,
+      }));
+    },
+    [`user-projects-${userId}-v3`],
+    {
+      revalidate: 30,
+      tags: [`user-${userId}-projects`, "projects"],
+    }
+  );
+
+  return getCached(userId, isAdmin);
 }
