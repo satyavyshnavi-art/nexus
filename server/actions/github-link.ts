@@ -226,7 +226,7 @@ export async function getOrgRepos(): Promise<{ repos: OrgRepo[] } | { error: str
       return { error: "Reconnect your GitHub account to access organization repositories" };
     }
     if (error.status === 404) {
-      return { error: "You don't have access to this organization" };
+      return { error: "Organization not found or no access" };
     }
     return { error: error.message || "Failed to fetch repositories" };
   }

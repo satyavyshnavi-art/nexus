@@ -104,20 +104,21 @@ export async function getRepository(userId: string, owner: string, repo: string)
 
 /**
  * Lists repositories for a GitHub organization.
- * Uses the authenticated user's repo list filtered by org to ensure
- * private repos are included (listForOrg may be blocked by org OAuth policy).
+ * Uses the user's OAuth token with listForOrg (requires read:org scope
+ * and the org must approve the OAuth app for private repo access).
  */
 export async function listOrgRepositories(
   userId: string,
   org: string
 ) {
   const octokit = await createOctokitForUser(userId);
-  const repos = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
-    affiliation: "organization_member",
+  const repos = await octokit.paginate(octokit.rest.repos.listForOrg, {
+    org,
+    type: "all",
     sort: "updated",
     per_page: 100,
   });
-  return repos.filter((repo) => repo.owner.login.toLowerCase() === org.toLowerCase());
+  return repos;
 }
 
 /**
