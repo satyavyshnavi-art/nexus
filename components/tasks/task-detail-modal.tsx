@@ -176,7 +176,8 @@ export function TaskDetailModal({
     try {
       await updateTaskStatus(subtaskId, newStatus);
       toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
-      router.refresh(); // Sync board with updated subtask state
+      // No router.refresh() here — optimistic update is instant.
+      // Full sync happens when the modal closes.
     } catch (error) {
       // Revert on failure
       setSubtasks((prev) =>
@@ -207,7 +208,8 @@ export function TaskDetailModal({
       ]);
       setNewSubtaskTitle("");
       toast.success(`Subtask "${trimmed}" created`);
-      router.refresh();
+      // No router.refresh() here — optimistic update is instant.
+      // Full sync happens when the modal closes.
     } catch (error) {
       toast.error("Failed to create subtask", {
         description: error instanceof Error ? error.message : "An unexpected error occurred",

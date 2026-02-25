@@ -122,7 +122,7 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
           st.id === subtaskId ? { ...st, status: newStatus as any } : st
         )
       );
-      router.refresh();
+      // No router.refresh() — optimistic update is instant
     } catch (err) {
       console.error("Failed to toggle subtask status:", err);
     } finally {
@@ -154,7 +154,7 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
         ]);
         setNewSubtaskTitle("");
         setShowAddSubtask(false);
-        router.refresh();
+        // No router.refresh() — optimistic update is instant
       } catch (err) {
         console.error("Failed to create subtask:", err);
       } finally {
@@ -304,8 +304,8 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
                       </button>
                       <span
                         className={`truncate ${st.status === "done"
-                            ? "line-through text-muted-foreground"
-                            : "text-foreground"
+                          ? "line-through text-muted-foreground"
+                          : "text-foreground"
                           }`}
                       >
                         {st.title}
