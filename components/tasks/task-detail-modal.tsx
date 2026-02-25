@@ -31,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus, Eye } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus, Eye, Calendar, Timer } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
 
 interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
@@ -91,6 +91,8 @@ export function TaskDetailModal({
   const [reviewerId, setReviewerId] = useState(task.reviewerId || "none");
   const [status, setStatus] = useState(task.status);
   const [hasChanges, setHasChanges] = useState(false);
+  const [dueAt, setDueAt] = useState(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : "");
+  const [estimatedDuration, setEstimatedDuration] = useState(task.estimatedDuration || 0);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
@@ -112,6 +114,8 @@ export function TaskDetailModal({
     setAssigneeId(task.assigneeId || "unassigned");
     setReviewerId(task.reviewerId || "none");
     setStatus(task.status);
+    setDueAt(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : "");
+    setEstimatedDuration(task.estimatedDuration || 0);
     setLocalSubtasks(task.childTasks || []);
     setHasChanges(false);
   }, [task.id, task.updatedAt]);
@@ -130,6 +134,8 @@ export function TaskDetailModal({
         priority,
         storyPoints: storyPoints || undefined,
         assigneeId: assigneeId === "unassigned" ? undefined : assigneeId,
+        dueAt: dueAt ? new Date(dueAt) : null,
+        estimatedDuration: estimatedDuration || null,
       });
 
       // Update status if changed
@@ -387,6 +393,69 @@ export function TaskDetailModal({
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Due Date + Estimated Duration row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-red-500" />
+                    Due Date
+                  </Label>
+                  <Input
+                    type="datetime-local"
+                    value={dueAt}
+                    onChange={(e) => { setDueAt(e.target.value); markChanged(); }}
+                    className="text-sm"
+                  />
+                  {dueAt && (
+                    <button
+                      type="button"
+                      onClick={() => { setDueAt(""); markChanged(); }}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear deadline
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Timer className="h-3 w-3 text-blue-500" />
+                    Estimated Duration
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={estimatedDuration > 0 ? Math.floor(estimatedDuration / 60) : ""}
+                      onChange={(e) => {
+                        const hours = parseInt(e.target.value) || 0;
+                        const mins = estimatedDuration % 60;
+                        setEstimatedDuration(hours * 60 + mins);
+                        markChanged();
+                      }}
+                      placeholder="0"
+                      className="text-sm w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">h</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={estimatedDuration > 0 ? estimatedDuration % 60 : ""}
+                      onChange={(e) => {
+                        const mins = parseInt(e.target.value) || 0;
+                        const hours = Math.floor(estimatedDuration / 60);
+                        setEstimatedDuration(hours * 60 + mins);
+                        markChanged();
+                      }}
+                      placeholder="0"
+                      className="text-sm w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">m</span>
+                  </div>
                 </div>
               </div>
 

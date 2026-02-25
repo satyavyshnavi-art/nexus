@@ -148,6 +148,8 @@ model Task {
   reviewerId        String?          @map("reviewer_id")
   requiredRole      String?          @map("required_role")
   labels            String[]         @default([])
+  dueAt             DateTime?        @map("due_at")
+  estimatedDuration Int?             @map("estimated_duration") // in minutes
   syncLogs          GitHubSyncLog[]
   attachments       TaskAttachment[]
   comments          TaskComment[]

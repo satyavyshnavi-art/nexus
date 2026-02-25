@@ -283,6 +283,8 @@ export async function updateTask(
     assigneeId?: string | null;
     requiredRole?: string;
     labels?: string[];
+    dueAt?: Date | null;
+    estimatedDuration?: number | null;
   }
 ) {
   const session = await auth();

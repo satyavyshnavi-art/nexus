@@ -21,6 +21,8 @@ import {
   Plus,
   Loader2,
   Eye,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
 
@@ -111,6 +113,22 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
   const doneSubtasks = subtasks.filter((st) => st.status === "done").length;
   const subtaskPct = totalSubtasks > 0 ? Math.round((doneSubtasks / totalSubtasks) * 100) : 0;
 
+  // Overdue detection
+  const isOverdue = task.dueAt && task.status !== "done" && new Date() > new Date(task.dueAt);
+  const dueDate = task.dueAt ? new Date(task.dueAt) : null;
+
+  const formatDueLabel = () => {
+    if (!dueDate) return null;
+    const now = new Date();
+    const diff = dueDate.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (task.status === "done") return `Done`;
+    if (days < 0) return `${Math.abs(days)}d overdue`;
+    if (days === 0) return "Due today";
+    if (days === 1) return "Due tomorrow";
+    return `${days}d left`;
+  };
+
   const handleToggleSubtaskStatus = async (
     e: React.MouseEvent,
     subtaskId: string,
@@ -168,6 +186,7 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
           transition-all duration-150 ease-out
           ${!isDragging ? "hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/40" : ""}
           ${isOverlay ? "shadow-2xl ring-2 ring-primary/40 border-primary/30" : "shadow-sm"}
+          ${isOverdue ? "ring-2 ring-red-400/60 border-red-300 dark:border-red-500/40" : ""}
         `}
         onClick={handleClick}
       >
@@ -291,8 +310,8 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
                       </button>
                       <span
                         className={`truncate ${st.status === "done"
-                            ? "line-through text-muted-foreground"
-                            : "text-foreground"
+                          ? "line-through text-muted-foreground"
+                          : "text-foreground"
                           }`}
                       >
                         {st.title}
@@ -349,9 +368,15 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
             </div>
           )}
 
-          {/* Footer: Metadata + Assignee */}
+          {/* Footer: Due Date + Metadata + Assignee */}
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {dueDate && (
+                <div className={`flex items-center gap-1 ${isOverdue ? "text-red-500 font-medium" : ""}`}>
+                  {isOverdue ? <AlertTriangle className="h-3.5 w-3.5" /> : <Calendar className="h-3.5 w-3.5" />}
+                  <span>{formatDueLabel()}</span>
+                </div>
+              )}
               {task._count && task._count.comments > 0 && (
                 <div className="flex items-center gap-1">
                   <MessageSquare className="h-3.5 w-3.5" />
