@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   getProjectAttachmentDownloadUrl,
+  getProjectAttachmentViewUrl,
   deleteProjectAttachment,
 } from "@/server/actions/project-attachments";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Download, Trash2, FileText, Image, FileSpreadsheet, File } from "lucide-react";
+import { Download, Trash2, FileText, Image, FileSpreadsheet, File, Eye } from "lucide-react";
 import type { User } from "@prisma/client";
 
 interface ProjectAttachment {
@@ -43,7 +44,27 @@ export function ProjectAttachmentItem({
   onDelete,
 }: ProjectAttachmentItemProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const isViewable = attachment.mimeType.startsWith("image/") ||
+    attachment.mimeType === "application/pdf" ||
+    attachment.mimeType === "text/plain" ||
+    attachment.mimeType === "text/csv";
+
+  const handleView = async () => {
+    setIsViewing(true);
+    try {
+      const viewUrl = await getProjectAttachmentViewUrl(attachment.id);
+      window.open(viewUrl, "_blank");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to open file"
+      );
+    } finally {
+      setIsViewing(false);
+    }
+  };
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -118,11 +139,23 @@ export function ProjectAttachmentItem({
         </div>
       </div>
       <div className="flex gap-1">
+        {isViewable && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleView}
+            disabled={isViewing}
+            title="View"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
           onClick={handleDownload}
           disabled={isDownloading}
+          title="Download"
         >
           <Download className="h-4 w-4" />
         </Button>

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { putObject, getDownloadUrl, deleteObject } from "@/lib/storage/s3-client";
+import { putObject, getDownloadUrl, getViewUrl, deleteObject } from "@/lib/storage/s3-client";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 
@@ -162,6 +162,26 @@ export async function getProjectAttachmentDownloadUrl(attachmentId: string) {
   if (!hasAccess) throw new Error("Unauthorized");
 
   return getDownloadUrl(attachment.s3Key);
+}
+
+export async function getProjectAttachmentViewUrl(attachmentId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const attachment = await db.projectAttachment.findUnique({
+    where: { id: attachmentId },
+  });
+
+  if (!attachment) throw new Error("Attachment not found");
+
+  const hasAccess = await canAccessProject(
+    attachment.projectId,
+    session.user.id,
+    session.user.role === "admin"
+  );
+  if (!hasAccess) throw new Error("Unauthorized");
+
+  return getViewUrl(attachment.s3Key, attachment.mimeType);
 }
 
 export async function deleteProjectAttachment(attachmentId: string) {
