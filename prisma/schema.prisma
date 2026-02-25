@@ -34,6 +34,7 @@ model User {
   assignedTasks        Task[]           @relation("TaskAssignee")
   createdTasks         Task[]           @relation("TaskCreator")
   reviewedTasks        Task[]           @relation("TaskReviewer")
+  uploadedDocuments    ProjectDocument[]
   verticals            VerticalUser[]
 
   @@index([role])
@@ -80,6 +81,7 @@ model Project {
   githubRepoOwner String?         @map("github_repo_owner")
   syncLogs        GitHubSyncLog[]
   members         ProjectMember[]
+  documents       ProjectDocument[]
   creator         User            @relation(fields: [createdBy], references: [id])
   linkedByUser    User?           @relation("GitHubLinkedBy", fields: [githubLinkedBy], references: [id])
   vertical        Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
@@ -256,3 +258,20 @@ enum TaskType {
   subtask
 }
 
+model ProjectDocument {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  title       String
+  url         String
+  description String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdBy])
+  @@map("project_documents")
+}

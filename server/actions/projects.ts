@@ -396,6 +396,14 @@ export async function getProjectCached(
               },
             },
           },
+          documents: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              creator: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
           _count: {
             select: { sprints: true },
           },

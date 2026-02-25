@@ -8,7 +8,7 @@ import { KanbanBoard } from "@/components/kanban/board";
 import { Button } from "@/components/ui/button";
 import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
-import { Calendar, Users, LayoutDashboard, ListTodo, Settings } from "lucide-react";
+import { Calendar, Users, LayoutDashboard, ListTodo, Settings, FileText } from "lucide-react";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
@@ -17,6 +17,7 @@ import { getLinkedRepository } from "@/server/actions/github-link";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
+import { ProjectDocsTab } from "@/components/projects/project-docs-tab";
 import { db } from "@/server/db";
 
 export default async function ProjectPage({
@@ -179,6 +180,10 @@ export default async function ProjectPage({
           <TabsTrigger value="team">
             <Users className="h-4 w-4 mr-2" />
             Team
+          </TabsTrigger>
+          <TabsTrigger value="docs">
+            <FileText className="h-4 w-4 mr-2" />
+            Docs
           </TabsTrigger>
           <TabsTrigger value="overview">
             <Settings className="h-4 w-4 mr-2" />
