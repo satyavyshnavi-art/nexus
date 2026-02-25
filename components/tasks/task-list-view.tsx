@@ -265,14 +265,6 @@ export function TaskListView({ tasks: initialTasks, projectMembers }: TaskListVi
                           </span>
                         </span>
                       )}
-                      {task.storyPoints && (
-                        <span className="flex items-center gap-1">
-                          <span className="font-medium">Story Points:</span>
-                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
-                            {task.storyPoints}
-                          </span>
-                        </span>
-                      )}
                     </div>
                   </div>
 

@@ -1,16 +1,17 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, Crown, User } from "lucide-react";
+import { Users, UserCheck, Crown, Code, Eye } from "lucide-react";
 
-type FilterType = "all" | "active" | "admin" | "member";
+type FilterType = "all" | "active" | "admin" | "developer" | "reviewer";
 
 interface TeamStatsProps {
   stats: {
     totalMembers: number;
     activeMembers: number;
     adminCount: number;
-    memberCount: number;
+    developerCount: number;
+    reviewerCount: number;
   };
   activeFilter?: FilterType;
   onFilterChange?: (filter: FilterType) => void;
@@ -49,19 +50,29 @@ export function TeamStats({ stats, activeFilter = "all", onFilterChange }: TeamS
       filter: "admin",
     },
     {
-      title: "Members",
-      value: stats.memberCount,
-      icon: User,
-      description: "Regular members",
+      title: "Developers",
+      value: stats.developerCount,
+      icon: Code,
+      description: "Development team",
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-500/10",
       borderColor: "border-l-blue-500 dark:border-l-blue-400",
-      filter: "member",
+      filter: "developer",
+    },
+    {
+      title: "Reviewers",
+      value: stats.reviewerCount,
+      icon: Eye,
+      description: "Review & QA team",
+      color: "text-indigo-600 dark:text-indigo-400",
+      bgColor: "bg-indigo-500/10",
+      borderColor: "border-l-indigo-500 dark:border-l-indigo-400",
+      filter: "reviewer",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {statCards.map((stat) => {
         const Icon = stat.icon;
         const isActive = activeFilter === stat.filter;

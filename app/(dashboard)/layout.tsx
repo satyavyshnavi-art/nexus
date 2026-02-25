@@ -21,7 +21,7 @@ export default async function DashboardLayout({
         isAdmin={isAdmin}
         userName={session.user.name || session.user.email || "User"}
         userEmail={session.user.email || ""}
-        userRole={session.user.role as "admin" | "member"}
+        userRole={session.user.role as "admin" | "developer" | "reviewer"}
         userId={session.user.id}
         userDesignation={session.user.designation}
       />

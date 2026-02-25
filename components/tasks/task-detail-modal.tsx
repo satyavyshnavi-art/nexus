@@ -88,7 +88,6 @@ export function TaskDetailModal({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [priority, setPriority] = useState(task.priority);
-  const [storyPoints, setStoryPoints] = useState(task.storyPoints || 0);
   const [assigneeId, setAssigneeId] = useState(task.assigneeId || "unassigned");
   const [reviewerId, setReviewerId] = useState(task.reviewerId || "none");
   const [status, setStatus] = useState(task.status);
@@ -112,7 +111,6 @@ export function TaskDetailModal({
     setTitle(task.title);
     setDescription(task.description || "");
     setPriority(task.priority);
-    setStoryPoints(task.storyPoints || 0);
     setAssigneeId(task.assigneeId || "unassigned");
     setReviewerId(task.reviewerId || "none");
     setStatus(task.status);
@@ -134,7 +132,6 @@ export function TaskDetailModal({
         title,
         description: description || null,
         priority,
-        storyPoints: storyPoints || null,
         assigneeId: assigneeId === "unassigned" ? null : assigneeId,
         dueAt: dueAt ? new Date(dueAt) : null,
         estimatedDuration: estimatedDuration || null,
@@ -147,7 +144,6 @@ export function TaskDetailModal({
         title,
         description: description || undefined,
         priority,
-        storyPoints: storyPoints || undefined,
         assigneeId: assigneeId === "unassigned" ? undefined : assigneeId,
         dueAt: dueAt ? new Date(dueAt) : null,
         estimatedDuration: estimatedDuration || null,
@@ -362,19 +358,8 @@ export function TaskDetailModal({
                 </div>
               </div>
 
-              {/* Story Points + Assignee row */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Story Points</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="20"
-                    value={storyPoints}
-                    onChange={(e) => { setStoryPoints(parseInt(e.target.value) || 0); markChanged(); }}
-                  />
-                </div>
-
+              {/* Assignee + Reviewer row */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Assignee</Label>
                   <select

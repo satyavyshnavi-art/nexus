@@ -15,7 +15,7 @@ async function main() {
     });
 
     const user = await db.user.create({
-        data: { email: userEmail, name: "User", role: "member" }
+        data: { email: userEmail, name: "User", role: "developer" }
     });
 
     // Create a vertical

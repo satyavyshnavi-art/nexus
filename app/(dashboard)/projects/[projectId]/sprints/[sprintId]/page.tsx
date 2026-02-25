@@ -43,8 +43,6 @@ export default async function SprintDetailPage({
       <SprintMetricsCards
         completionPercentage={sprint.completionPercentage}
         totalTasks={sprint.totalTasks}
-        storyPoints={sprint.storyPoints}
-        velocity={sprint.velocity}
         durationDays={sprint.durationDays}
       />
 

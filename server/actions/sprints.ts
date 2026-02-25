@@ -400,10 +400,6 @@ export interface SprintProgressData {
     done: number;
   };
   completionPercentage: number;
-  storyPoints: {
-    completed: number;
-    total: number;
-  };
 }
 
 export async function getSprintProgress(
@@ -419,7 +415,6 @@ export async function getSprintProgress(
         select: {
           id: true,
           status: true,
-          storyPoints: true,
           type: true,
         },
       },
@@ -446,14 +441,6 @@ export async function getSprintProgress(
       ? Math.round((tasksByStatus.done / totalTasks) * 100)
       : 0;
 
-  const totalStoryPoints = tickets.reduce(
-    (sum, t) => sum + (t.storyPoints ?? 0),
-    0
-  );
-  const completedStoryPoints = tickets
-    .filter((t) => t.status === "done")
-    .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
-
   return {
     id: sprint.id,
     name: sprint.name,
@@ -463,10 +450,6 @@ export async function getSprintProgress(
     totalTasks,
     tasksByStatus,
     completionPercentage,
-    storyPoints: {
-      completed: completedStoryPoints,
-      total: totalStoryPoints,
-    },
   };
 }
 
@@ -487,8 +470,6 @@ export interface SprintDetailData {
     review: number;
     done: number;
   };
-  storyPoints: { completed: number; total: number };
-  velocity: number;
   durationDays: number;
   completedTasks: SprintDetailTask[];
   incompleteTasks: SprintDetailTask[];
@@ -501,7 +482,6 @@ export interface SprintDetailTask {
   type: string;
   status: string;
   priority: string;
-  storyPoints: number | null;
   assignee: { id: string; name: string | null; email: string; avatar: string | null } | null;
 }
 
@@ -512,7 +492,6 @@ export interface SprintTeamMember {
   avatar: string | null;
   taskCount: number;
   completedTaskCount: number;
-  storyPointsDelivered: number;
 }
 
 export async function getSprintDetail(
@@ -558,14 +537,6 @@ export async function getSprintDetail(
       ? Math.round((tasksByStatus.done / totalTasks) * 100)
       : 0;
 
-  const totalStoryPoints = tickets.reduce(
-    (sum, t) => sum + (t.storyPoints ?? 0),
-    0
-  );
-  const completedStoryPoints = tickets
-    .filter((t) => t.status === "done")
-    .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0);
-
   // Calculate duration in days
   const startMs = new Date(sprint.startDate).getTime();
   const endMs = sprint.completedAt
@@ -585,7 +556,6 @@ export async function getSprintDetail(
       type: t.type,
       status: t.status,
       priority: t.priority,
-      storyPoints: t.storyPoints,
       assignee: t.assignee,
     }));
 
@@ -597,7 +567,6 @@ export async function getSprintDetail(
       type: t.type,
       status: t.status,
       priority: t.priority,
-      storyPoints: t.storyPoints,
       assignee: t.assignee,
     }));
 
@@ -610,7 +579,6 @@ export async function getSprintDetail(
       existing.taskCount++;
       if (task.status === "done") {
         existing.completedTaskCount++;
-        existing.storyPointsDelivered += task.storyPoints ?? 0;
       }
     } else {
       memberMap.set(task.assignee.id, {
@@ -620,8 +588,6 @@ export async function getSprintDetail(
         avatar: task.assignee.avatar,
         taskCount: 1,
         completedTaskCount: task.status === "done" ? 1 : 0,
-        storyPointsDelivered:
-          task.status === "done" ? (task.storyPoints ?? 0) : 0,
       });
     }
   }
@@ -638,13 +604,11 @@ export async function getSprintDetail(
     completionPercentage,
     totalTasks,
     tasksByStatus,
-    storyPoints: { completed: completedStoryPoints, total: totalStoryPoints },
-    velocity: completedStoryPoints,
     durationDays,
     completedTasks,
     incompleteTasks,
     teamMembers: Array.from(memberMap.values()).sort(
-      (a, b) => b.storyPointsDelivered - a.storyPointsDelivered
+      (a, b) => b.completedTaskCount - a.completedTaskCount
     ),
   };
 }

@@ -23,7 +23,7 @@ export function UserRoleToggle({
   const router = useRouter();
 
   const handleToggle = async () => {
-    const newRole = currentRole === "admin" ? UserRole.member : UserRole.admin;
+    const newRole = currentRole === "admin" ? UserRole.developer : UserRole.admin;
 
     if (
       !confirm(

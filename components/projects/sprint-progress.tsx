@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Calendar, Target, CheckCircle2, Circle, Clock, Eye } from "lucide-react";
+import { Calendar, CheckCircle2, Circle, Clock, Eye } from "lucide-react";
 import type { SprintProgressData } from "@/server/actions/sprints";
 
 interface SprintProgressProps {
@@ -37,14 +37,7 @@ export function SprintProgress({ progress }: SprintProgressProps) {
     totalTasks,
     tasksByStatus,
     completionPercentage,
-    storyPoints,
   } = progress;
-
-  const hasStoryPoints = storyPoints.total > 0;
-  const storyPointPercentage =
-    storyPoints.total > 0
-      ? Math.round((storyPoints.completed / storyPoints.total) * 100)
-      : 0;
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm border shadow-sm">
@@ -79,11 +72,6 @@ export function SprintProgress({ progress }: SprintProgressProps) {
             <span className="text-muted-foreground">
               {tasksByStatus.done} of {totalTasks} tasks done
             </span>
-            {hasStoryPoints && (
-              <span className="text-muted-foreground">
-                {storyPoints.completed} / {storyPoints.total} pts
-              </span>
-            )}
           </div>
           <div className="h-2.5 w-full rounded-full bg-secondary overflow-hidden">
             <div
@@ -91,14 +79,6 @@ export function SprintProgress({ progress }: SprintProgressProps) {
               style={{ width: `${completionPercentage}%` }}
             />
           </div>
-          {hasStoryPoints && (
-            <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full bg-purple-400 dark:bg-purple-500 transition-all duration-500 ease-out"
-                style={{ width: `${storyPointPercentage}%` }}
-              />
-            </div>
-          )}
         </div>
 
         {/* Task Breakdown */}
@@ -153,17 +133,6 @@ export function SprintProgress({ progress }: SprintProgressProps) {
             </div>
           </div>
         </div>
-
-        {/* Story Points Summary */}
-        {hasStoryPoints && (
-          <div className="flex items-center gap-2 pt-1 text-sm text-muted-foreground border-t">
-            <Target className="h-3.5 w-3.5" />
-            <span>
-              Story Points: {storyPoints.completed} completed of{" "}
-              {storyPoints.total} total ({storyPointPercentage}%)
-            </span>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

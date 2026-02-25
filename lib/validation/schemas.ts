@@ -26,12 +26,6 @@ export const taskSchema = z.object({
     .optional(),
   type: z.nativeEnum(TaskType),
   priority: z.nativeEnum(TaskPriority).optional(),
-  storyPoints: z
-    .number()
-    .int("Story points must be a whole number")
-    .min(0, "Story points cannot be negative")
-    .max(20, "Story points cannot exceed 20")
-    .optional(),
   assigneeId: z.string().optional(),
 });
 

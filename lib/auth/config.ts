@@ -129,7 +129,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   email: user.email!,
                   name: user.name || (profile as any)?.login || "GitHub User",
                   ...githubData,
-                  role: "member",
+                  role: "reviewer",
                 },
               });
 
@@ -171,7 +171,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   email: user.email!,
                   name: user.name || "Google User",
                   avatar: user.image || null,
-                  role: "member",
+                  role: "reviewer",
                 },
               });
 

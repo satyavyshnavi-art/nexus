@@ -40,7 +40,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Sarah Johnson",
         designation: "Senior Frontend Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     prisma.user.create({
@@ -49,7 +49,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Tom Rivera",
         designation: "UI/UX Designer",
-        role: "member",
+        role: "developer",
       },
     }),
     // Backend Team
@@ -59,7 +59,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Mike Chen",
         designation: "Senior Backend Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     prisma.user.create({
@@ -68,7 +68,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Priya Sharma",
         designation: "API Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     // Design Team
@@ -78,7 +78,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Emily Davis",
         designation: "Design Lead",
-        role: "member",
+        role: "developer",
       },
     }),
     prisma.user.create({
@@ -87,7 +87,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Carlos Martinez",
         designation: "UX Researcher",
-        role: "member",
+        role: "developer",
       },
     }),
     // DevOps Team
@@ -97,7 +97,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Alex Kumar",
         designation: "DevOps Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     // QA Team
@@ -107,7 +107,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Jessica White",
         designation: "QA Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     // Full Stack
@@ -117,7 +117,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "David Brown",
         designation: "Full Stack Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
     // Database
@@ -127,7 +127,7 @@ async function main() {
         passwordHash: await hash("password123", 10),
         name: "Lisa Wong",
         designation: "Database Engineer",
-        role: "member",
+        role: "developer",
       },
     }),
   ]);
@@ -194,24 +194,24 @@ async function main() {
   // Create tasks for Portal Sprint 1
   const portalTasks = [
     // Todo
-    { title: "Design customer dashboard wireframes", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[4].id, storyPoints: 5 },
-    { title: "Implement user authentication flow", status: TaskStatus.todo, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, storyPoints: 8 },
-    { title: "Create profile management API", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[2].id, storyPoints: 5 },
+    { title: "Design customer dashboard wireframes", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[4].id },
+    { title: "Implement user authentication flow", status: TaskStatus.todo, priority: TaskPriority.critical, assigneeId: teamMembers[2].id },
+    { title: "Create profile management API", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[2].id },
 
     // In Progress
-    { title: "Build customer dashboard UI", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[0].id, storyPoints: 8 },
-    { title: "Implement order history view", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, storyPoints: 5 },
-    { title: "Setup database schema for customers", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, storyPoints: 8 },
+    { title: "Build customer dashboard UI", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[0].id },
+    { title: "Implement order history view", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[0].id },
+    { title: "Setup database schema for customers", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[2].id },
 
     // Review
-    { title: "Create login/signup pages", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[0].id, storyPoints: 5 },
-    { title: "Implement password reset functionality", status: TaskStatus.review, priority: TaskPriority.medium, assigneeId: teamMembers[2].id, storyPoints: 3 },
+    { title: "Create login/signup pages", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[0].id },
+    { title: "Implement password reset functionality", status: TaskStatus.review, priority: TaskPriority.medium, assigneeId: teamMembers[2].id },
 
     // Done
-    { title: "Setup project structure", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[0].id, storyPoints: 3 },
-    { title: "Configure authentication middleware", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[2].id, storyPoints: 5 },
-    { title: "Design system setup", status: TaskStatus.done, priority: TaskPriority.medium, assigneeId: teamMembers[4].id, storyPoints: 5 },
-    { title: "Test plan creation", status: TaskStatus.done, priority: TaskPriority.medium, assigneeId: teamMembers[7].id, storyPoints: 3 },
+    { title: "Setup project structure", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[0].id },
+    { title: "Configure authentication middleware", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[2].id },
+    { title: "Design system setup", status: TaskStatus.done, priority: TaskPriority.medium, assigneeId: teamMembers[4].id },
+    { title: "Test plan creation", status: TaskStatus.done, priority: TaskPriority.medium, assigneeId: teamMembers[7].id },
   ];
 
   await prisma.task.createMany({
@@ -259,23 +259,23 @@ async function main() {
 
   const paymentTasks = [
     // Todo
-    { title: "Integrate Stripe payment API", status: TaskStatus.todo, priority: TaskPriority.critical, assigneeId: teamMembers[3].id, storyPoints: 13, type: TaskType.task },
-    { title: "Implement payment webhooks handler", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[2].id, storyPoints: 8, type: TaskType.task },
-    { title: "Setup fraud detection rules", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[3].id, storyPoints: 8, type: TaskType.task },
+    { title: "Integrate Stripe payment API", status: TaskStatus.todo, priority: TaskPriority.critical, assigneeId: teamMembers[3].id, type: TaskType.task },
+    { title: "Implement payment webhooks handler", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[2].id, type: TaskType.task },
+    { title: "Setup fraud detection rules", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: teamMembers[3].id, type: TaskType.task },
 
     // In Progress
-    { title: "Create payment transaction database", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[9].id, storyPoints: 8, type: TaskType.task },
-    { title: "Build payment processing service", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, storyPoints: 13, type: TaskType.task },
-    { title: "Implement payment retry logic", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[3].id, storyPoints: 5, type: TaskType.task },
+    { title: "Create payment transaction database", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[9].id, type: TaskType.task },
+    { title: "Build payment processing service", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, type: TaskType.task },
+    { title: "Implement payment retry logic", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[3].id, type: TaskType.task },
 
     // Review
-    { title: "Setup secure payment endpoints", status: TaskStatus.review, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, storyPoints: 5, type: TaskType.task },
-    { title: "Configure payment encryption", status: TaskStatus.review, priority: TaskPriority.critical, assigneeId: teamMembers[6].id, storyPoints: 8, type: TaskType.task },
+    { title: "Setup secure payment endpoints", status: TaskStatus.review, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, type: TaskType.task },
+    { title: "Configure payment encryption", status: TaskStatus.review, priority: TaskPriority.critical, assigneeId: teamMembers[6].id, type: TaskType.task },
 
     // Done
-    { title: "Setup payment gateway infrastructure", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[6].id, storyPoints: 8, type: TaskType.task },
-    { title: "Create payment service architecture", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[2].id, storyPoints: 5, type: TaskType.task },
-    { title: "Security audit preparation", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[7].id, storyPoints: 3, type: TaskType.task },
+    { title: "Setup payment gateway infrastructure", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[6].id, type: TaskType.task },
+    { title: "Create payment service architecture", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[2].id, type: TaskType.task },
+    { title: "Security audit preparation", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[7].id, type: TaskType.task },
   ];
 
   await prisma.task.createMany({
@@ -322,20 +322,20 @@ async function main() {
 
   const adminTasks = [
     // User Stories with subtasks
-    { title: "User Management System", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: null, storyPoints: 21, type: TaskType.story },
-    { title: "Analytics Dashboard", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: null, storyPoints: 13, type: TaskType.story },
+    { title: "User Management System", status: TaskStatus.progress, priority: TaskPriority.critical, assigneeId: null, type: TaskType.story },
+    { title: "Analytics Dashboard", status: TaskStatus.todo, priority: TaskPriority.high, assigneeId: null, type: TaskType.story },
 
     // Regular tasks
-    { title: "Build sidebar navigation", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[1].id, storyPoints: 5, type: TaskType.task },
-    { title: "Create data visualization components", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, storyPoints: 8, type: TaskType.task },
-    { title: "Implement real-time notifications", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[8].id, storyPoints: 8, type: TaskType.task },
-    { title: "Setup admin authentication", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, storyPoints: 5, type: TaskType.task },
-    { title: "Design admin UI mockups", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[4].id, storyPoints: 8, type: TaskType.task },
-    { title: "Build settings management panel", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, storyPoints: 5, type: TaskType.task },
+    { title: "Build sidebar navigation", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[1].id, type: TaskType.task },
+    { title: "Create data visualization components", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, type: TaskType.task },
+    { title: "Implement real-time notifications", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[8].id, type: TaskType.task },
+    { title: "Setup admin authentication", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[2].id, type: TaskType.task },
+    { title: "Design admin UI mockups", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[4].id, type: TaskType.task },
+    { title: "Build settings management panel", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, type: TaskType.task },
 
     // Bugs
-    { title: "Fix dashboard loading performance", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[8].id, storyPoints: 3, type: TaskType.bug },
-    { title: "Resolve navigation menu mobile bug", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[1].id, storyPoints: 2, type: TaskType.bug },
+    { title: "Fix dashboard loading performance", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[8].id, type: TaskType.bug },
+    { title: "Resolve navigation menu mobile bug", status: TaskStatus.progress, priority: TaskPriority.medium, assigneeId: teamMembers[1].id, type: TaskType.bug },
   ];
 
   const createdAdminTasks = await prisma.task.createManyAndReturn({
@@ -356,7 +356,6 @@ async function main() {
           status: TaskStatus.done,
           priority: TaskPriority.high,
           assigneeId: teamMembers[0].id,
-          storyPoints: 5,
           type: TaskType.task,
           sprintId: adminSprint1.id,
           parentTaskId: userStory.id,
@@ -367,7 +366,6 @@ async function main() {
           status: TaskStatus.progress,
           priority: TaskPriority.high,
           assigneeId: teamMembers[0].id,
-          storyPoints: 3,
           type: TaskType.task,
           sprintId: adminSprint1.id,
           parentTaskId: userStory.id,
@@ -378,7 +376,6 @@ async function main() {
           status: TaskStatus.progress,
           priority: TaskPriority.critical,
           assigneeId: teamMembers[2].id,
-          storyPoints: 8,
           type: TaskType.task,
           sprintId: adminSprint1.id,
           parentTaskId: userStory.id,
@@ -389,7 +386,6 @@ async function main() {
           status: TaskStatus.todo,
           priority: TaskPriority.medium,
           assigneeId: teamMembers[0].id,
-          storyPoints: 5,
           type: TaskType.task,
           sprintId: adminSprint1.id,
           parentTaskId: userStory.id,
@@ -415,10 +411,10 @@ async function main() {
 
   await prisma.task.createMany({
     data: [
-      { title: "Implement advanced analytics", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[8].id, storyPoints: 13, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
-      { title: "Build export functionality", status: TaskStatus.todo, priority: TaskPriority.low, assigneeId: teamMembers[0].id, storyPoints: 5, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
-      { title: "Add email notification system", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[2].id, storyPoints: 8, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
-      { title: "Create activity log viewer", status: TaskStatus.todo, priority: TaskPriority.low, assigneeId: teamMembers[1].id, storyPoints: 5, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
+      { title: "Implement advanced analytics", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[8].id, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
+      { title: "Build export functionality", status: TaskStatus.todo, priority: TaskPriority.low, assigneeId: teamMembers[0].id, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
+      { title: "Add email notification system", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[2].id, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
+      { title: "Create activity log viewer", status: TaskStatus.todo, priority: TaskPriority.low, assigneeId: teamMembers[1].id, type: TaskType.task, sprintId: adminSprint2.id, createdBy: admin.id },
     ],
   });
   console.log(`    ✅ Sprint: ${adminSprint2.name} (4 tasks - planned)`);
@@ -472,13 +468,13 @@ async function main() {
 
   await prisma.task.createMany({
     data: [
-      { title: "Setup React Native project", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[0].id, storyPoints: 5, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Design mobile app screens", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[4].id, storyPoints: 8, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Implement navigation", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[0].id, storyPoints: 5, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Build home screen", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[1].id, storyPoints: 8, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Implement offline mode", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, storyPoints: 13, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Setup push notifications", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[1].id, storyPoints: 5, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
-      { title: "Mobile testing framework", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[7].id, storyPoints: 5, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Setup React Native project", status: TaskStatus.done, priority: TaskPriority.critical, assigneeId: teamMembers[0].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Design mobile app screens", status: TaskStatus.done, priority: TaskPriority.high, assigneeId: teamMembers[4].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Implement navigation", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[0].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Build home screen", status: TaskStatus.progress, priority: TaskPriority.high, assigneeId: teamMembers[1].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Implement offline mode", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[0].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Setup push notifications", status: TaskStatus.todo, priority: TaskPriority.medium, assigneeId: teamMembers[1].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
+      { title: "Mobile testing framework", status: TaskStatus.review, priority: TaskPriority.high, assigneeId: teamMembers[7].id, type: TaskType.task, sprintId: mobileSprint.id, createdBy: admin.id },
     ],
   });
   console.log(`    ✅ Sprint: ${mobileSprint.name} (7 tasks)`);

@@ -1,6 +1,6 @@
 import { Task, User } from "@prisma/client";
 import { format } from "date-fns";
-import { Calendar, User as UserIcon, Hash } from "lucide-react";
+import { Calendar, User as UserIcon } from "lucide-react";
 
 interface TaskMetadataProps {
   task: Omit<Task, "githubIssueId"> & {
@@ -20,16 +20,6 @@ export function TaskMetadata({ task, createdBy }: TaskMetadataProps) {
         </div>
         <div className="text-sm font-medium">
           {task.assignee ? task.assignee.name || task.assignee.email : "Unassigned"}
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Hash className="h-4 w-4" />
-          <span>Story Points</span>
-        </div>
-        <div className="text-sm font-medium">
-          {task.storyPoints || "Not set"}
         </div>
       </div>
 

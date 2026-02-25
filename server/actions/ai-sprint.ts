@@ -84,7 +84,6 @@ export type SuggestedTask = {
   required_role: string;
   labels: string[];
   priority: "low" | "medium" | "high" | "critical";
-  story_points: number;
   subtasks: SuggestedSubtask[];
   suggested_assignees: RoleMatchResult[];
   selected_assignee_id?: string;
@@ -93,7 +92,7 @@ export type SuggestedTask = {
 export type GeneratedSprintPlan = {
   sprint_name: string;
   duration_days: number;
-  role_distribution: { role: string; story_points: number; task_count: number }[];
+  role_distribution: { role: string; task_count: number }[];
   tasks: SuggestedTask[];
   members: { id: string; name: string | null; designation: string | null }[];
 };
@@ -146,7 +145,6 @@ export async function aiGenerateSprintPlan(
     required_role: task.required_role,
     labels: task.labels,
     priority: task.priority,
-    story_points: task.story_points,
     subtasks: task.subtasks.map((subtask) => ({
       title: subtask.title,
       required_role: subtask.required_role,
@@ -185,7 +183,6 @@ export type ConfirmedTask = {
   required_role: string;
   labels: string[];
   priority: "low" | "medium" | "high" | "critical";
-  story_points: number;
   assignee_id?: string;
   subtasks: ConfirmedSubtask[];
 };
@@ -238,7 +235,6 @@ export async function aiConfirmSprintPlan(
             sprintId: sprint.id,
             title: task.title,
             type: TaskType.story,
-            storyPoints: task.story_points,
             priority: task.priority as TaskPriority,
             requiredRole: task.required_role,
             labels: storyLabels,
@@ -288,7 +284,7 @@ export async function aiConfirmSprintPlan(
 export type GeneratedTicketsPlan = {
   tasks: SuggestedTask[];
   members: { id: string; name: string | null; designation: string | null }[];
-  role_distribution: { role: string; story_points: number; task_count: number }[];
+  role_distribution: { role: string; task_count: number }[];
 };
 
 // Step 1: Generate tickets (read-only, no DB writes)
@@ -348,7 +344,6 @@ export async function aiGenerateTickets(
     required_role: task.required_role,
     labels: task.labels,
     priority: task.priority,
-    story_points: task.story_points,
     subtasks: task.subtasks.map((subtask) => ({
       title: subtask.title,
       required_role: subtask.required_role,
@@ -359,18 +354,14 @@ export async function aiGenerateTickets(
   }));
 
   // Compute role distribution
-  const roleMap = new Map<string, { story_points: number; task_count: number }>();
+  const roleMap = new Map<string, number>();
   tasks.forEach((task) => {
-    const existing = roleMap.get(task.required_role) || { story_points: 0, task_count: 0 };
-    existing.story_points += task.story_points;
-    existing.task_count += 1;
-    roleMap.set(task.required_role, existing);
+    roleMap.set(task.required_role, (roleMap.get(task.required_role) || 0) + 1);
   });
 
-  const role_distribution = Array.from(roleMap.entries()).map(([role, data]) => ({
+  const role_distribution = Array.from(roleMap.entries()).map(([role, task_count]) => ({
     role,
-    story_points: data.story_points,
-    task_count: data.task_count,
+    task_count,
   }));
 
   return {
@@ -417,7 +408,6 @@ export async function aiConfirmTickets(
             sprintId,
             title: task.title,
             type: TaskType.story,
-            storyPoints: task.story_points,
             priority: task.priority as TaskPriority,
             requiredRole: task.required_role,
             labels: storyLabels,

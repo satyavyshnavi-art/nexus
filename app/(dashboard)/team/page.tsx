@@ -16,7 +16,8 @@ export default async function TeamPage() {
     totalMembers: 0,
     activeMembers: 0,
     adminCount: 0,
-    memberCount: 0,
+    developerCount: 0,
+    reviewerCount: 0,
   };
 
   try {

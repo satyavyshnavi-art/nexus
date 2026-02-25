@@ -37,7 +37,7 @@ async function testNewUserFlow() {
         name: "Test User",
         designation: "Test Engineer",
         passwordHash,
-        role: "member",
+        role: "developer",
       },
     });
 

@@ -271,7 +271,6 @@ export async function getMyTasksAndProjects() {
           type: true,
           requiredRole: true,
           labels: true,
-          storyPoints: true,
           createdAt: true,
           sprint: {
             select: {

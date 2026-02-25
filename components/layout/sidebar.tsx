@@ -36,7 +36,7 @@ interface SidebarProps {
   isAdmin: boolean;
   userName: string;
   userEmail: string;
-  userRole: "admin" | "member";
+  userRole: "admin" | "developer" | "reviewer";
   userId: string;
   userDesignation?: string | null;
 }

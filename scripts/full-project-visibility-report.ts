@@ -36,7 +36,7 @@ async function generateReport(targetEmail?: string) {
           orderBy: { name: "asc" },
         })
       : await db.user.findMany({
-          where: { role: "member" }, // Skip admin for clarity
+          where: { role: { not: "admin" } }, // Skip admin for clarity
           select: {
             id: true,
             name: true,

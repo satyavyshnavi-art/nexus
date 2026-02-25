@@ -128,7 +128,6 @@ export async function createTask(data: {
   title: string;
   description?: string;
   type: TaskType;
-  storyPoints?: number;
   assigneeId?: string;
   parentTaskId?: string;
   pushToGitHub?: boolean;
@@ -279,7 +278,6 @@ export async function updateTask(
     title?: string;
     description?: string;
     priority?: TaskPriority;
-    storyPoints?: number;
     assigneeId?: string | null;
     requiredRole?: string;
     labels?: string[];
@@ -639,7 +637,6 @@ export async function getReviewTasks(userId: string) {
       priority: true,
       type: true,
       requiredRole: true,
-      storyPoints: true,
       sprint: {
         select: {
           id: true,
@@ -669,7 +666,6 @@ export async function createStory(data: {
   sprintId: string;
   title: string;
   description?: string;
-  storyPoints?: number;
   assigneeId?: string;
   requiredRole?: string;
   labels?: string[];
@@ -718,7 +714,6 @@ export async function createStory(data: {
       description: data.description,
       type: "story",
       sprintId: data.sprintId,
-      storyPoints: data.storyPoints,
       assigneeId: data.assigneeId,
       requiredRole: data.requiredRole,
       labels: data.labels ?? [],
@@ -742,7 +737,6 @@ export async function createTicket(data: {
   description?: string;
   type: "task" | "bug";
   priority?: TaskPriority;
-  storyPoints?: number;
   assigneeId?: string;
   requiredRole?: string;
   labels?: string[];
@@ -801,7 +795,6 @@ export async function createTicket(data: {
       description: data.description,
       type: data.type,
       priority: data.priority ?? "medium",
-      storyPoints: data.storyPoints,
       assigneeId: data.assigneeId,
       requiredRole: data.requiredRole,
       labels: data.labels ?? [],

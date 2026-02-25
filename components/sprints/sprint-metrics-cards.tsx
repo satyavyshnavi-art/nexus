@@ -2,24 +2,18 @@ import { Card } from "@/components/ui/card";
 import {
   CheckCircle2,
   ListTodo,
-  Star,
-  TrendingUp,
   Clock,
 } from "lucide-react";
 
 interface SprintMetricsCardsProps {
   completionPercentage: number;
   totalTasks: number;
-  storyPoints: { completed: number; total: number };
-  velocity: number;
   durationDays: number;
 }
 
 export function SprintMetricsCards({
   completionPercentage,
   totalTasks,
-  storyPoints,
-  velocity,
   durationDays,
 }: SprintMetricsCardsProps) {
   const metrics = [
@@ -38,20 +32,6 @@ export function SprintMetricsCards({
       iconColor: "text-slate-500",
     },
     {
-      label: "Story Points",
-      value: `${storyPoints.completed}/${storyPoints.total}`,
-      icon: Star,
-      color: "border-l-purple-500",
-      iconColor: "text-purple-500",
-    },
-    {
-      label: "Velocity",
-      value: `${velocity} SP`,
-      icon: TrendingUp,
-      color: "border-l-blue-500",
-      iconColor: "text-blue-500",
-    },
-    {
       label: "Duration",
       value: `${durationDays}d`,
       icon: Clock,
@@ -61,7 +41,7 @@ export function SprintMetricsCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {metrics.map((m) => {
         const Icon = m.icon;
         return (

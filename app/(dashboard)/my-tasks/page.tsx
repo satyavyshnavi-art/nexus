@@ -303,7 +303,6 @@ function TaskRow({
     priority: string;
     type: string;
     requiredRole: string | null;
-    storyPoints: number | null;
     sprint: { id: string; name: string; project: { id: string; name: string } } | null;
   };
 }) {
@@ -323,12 +322,6 @@ function TaskRow({
       <span className="text-sm font-medium flex-1 line-clamp-1 group-hover:text-primary transition-colors">
         {task.title}
       </span>
-
-      {task.storyPoints && (
-        <span className="text-xs text-muted-foreground shrink-0">
-          {task.storyPoints}pt
-        </span>
-      )}
 
       {roleStyle && (
         <Badge

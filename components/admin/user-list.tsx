@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import type { UserRole } from "@prisma/client";
-import { Shield, User, Trash2, Loader2, Search, Users } from "lucide-react";
+import { Shield, Code, Eye, Trash2, Loader2, Search, Users } from "lucide-react";
 import { updateUserRole } from "@/server/actions/users";
 import { deleteUser } from "@/server/actions/team";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -23,6 +23,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface UserData {
   id: string;
@@ -105,8 +112,8 @@ function UserRow({ user }: { user: UserData }) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleRoleToggle = async () => {
-    const newRole = user.role === "admin" ? "member" : "admin";
+  const handleRoleChange = async (newRole: string) => {
+    if (newRole === user.role) return;
     setIsUpdating(true);
     try {
       await updateUserRole(user.id, newRole as UserRole);
@@ -162,13 +169,15 @@ function UserRow({ user }: { user: UserData }) {
         </div>
         <div className="col-span-2">
           <Badge
-            variant={user.role === "admin" ? "default" : "secondary"}
+            variant={user.role === "admin" ? "default" : user.role === "developer" ? "secondary" : "outline"}
             className="text-xs"
           >
             {user.role === "admin" ? (
               <Shield className="h-3 w-3 mr-1" />
+            ) : user.role === "developer" ? (
+              <Code className="h-3 w-3 mr-1" />
             ) : (
-              <User className="h-3 w-3 mr-1" />
+              <Eye className="h-3 w-3 mr-1" />
             )}
             {user.role}
           </Badge>
@@ -179,21 +188,36 @@ function UserRow({ user }: { user: UserData }) {
           </p>
         </div>
         <div className="col-span-2 flex items-center gap-2">
-          <Button
-            variant={user.role === "admin" ? "outline" : "default"}
-            size="sm"
-            onClick={handleRoleToggle}
+          <Select
+            value={user.role}
+            onValueChange={handleRoleChange}
             disabled={isUpdating || isDeleting}
-            className="h-8 text-xs"
           >
-            {isUpdating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : user.role === "admin" ? (
-              "Remove as Admin"
-            ) : (
-              "Make Admin"
-            )}
-          </Button>
+            <SelectTrigger className="h-8 w-[120px] text-xs">
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <SelectValue />
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3 w-3" /> Admin
+                </span>
+              </SelectItem>
+              <SelectItem value="developer">
+                <span className="flex items-center gap-1.5">
+                  <Code className="h-3 w-3" /> Developer
+                </span>
+              </SelectItem>
+              <SelectItem value="reviewer">
+                <span className="flex items-center gap-1.5">
+                  <Eye className="h-3 w-3" /> Reviewer
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>

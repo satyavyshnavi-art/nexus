@@ -203,10 +203,6 @@ export async function createGitHubIssue(
     `**Created in Nexus by:** ${task.creator.name}`,
   ];
 
-  if (task.storyPoints) {
-    bodyParts.push(`**Story Points:** ${task.storyPoints}`);
-  }
-
   bodyParts.push(`**Task ID:** \`${task.id}\``);
 
   // Upload image attachments to GitHub repo and append to body
@@ -286,10 +282,6 @@ export async function updateGitHubIssue(
     "",
     "---",
   ];
-
-  if (task.storyPoints) {
-    bodyParts.push(`**Story Points:** ${task.storyPoints}`);
-  }
 
   bodyParts.push(`**Task ID:** \`${task.id}\``);
   bodyParts.push(`**Nexus Status:** \`${task.status}\``);

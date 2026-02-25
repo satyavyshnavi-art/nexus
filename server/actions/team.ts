@@ -92,11 +92,12 @@ export async function getTeamStats() {
     throw new Error("Unauthorized");
   }
 
-  const [totalMembers, adminCount, memberCount, activeMembers] =
+  const [totalMembers, adminCount, developerCount, reviewerCount, activeMembers] =
     await Promise.all([
       db.user.count(),
       db.user.count({ where: { role: UserRole.admin } }),
-      db.user.count({ where: { role: UserRole.member } }),
+      db.user.count({ where: { role: UserRole.developer } }),
+      db.user.count({ where: { role: UserRole.reviewer } }),
       db.user.count({
         where: {
           assignedTasks: {
@@ -114,7 +115,8 @@ export async function getTeamStats() {
     totalMembers,
     activeMembers,
     adminCount,
-    memberCount,
+    developerCount,
+    reviewerCount,
   };
 }
 
@@ -124,11 +126,12 @@ export async function getTeamStats() {
  */
 export const getTeamStatsCached = unstable_cache(
   async () => {
-    const [totalMembers, adminCount, memberCount, activeMembers] =
+    const [totalMembers, adminCount, developerCount, reviewerCount, activeMembers] =
       await Promise.all([
         db.user.count(),
         db.user.count({ where: { role: UserRole.admin } }),
-        db.user.count({ where: { role: UserRole.member } }),
+        db.user.count({ where: { role: UserRole.developer } }),
+        db.user.count({ where: { role: UserRole.reviewer } }),
         db.user.count({
           where: {
             assignedTasks: {
@@ -146,7 +149,8 @@ export const getTeamStatsCached = unstable_cache(
       totalMembers,
       activeMembers,
       adminCount,
-      memberCount,
+      developerCount,
+      reviewerCount,
     };
   },
   ["team-stats"],

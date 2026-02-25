@@ -13,7 +13,7 @@ interface TeamPageClientProps {
     email: string;
     designation: string | null;
     avatar: string | null;
-    role: "admin" | "member";
+    role: "admin" | "developer" | "reviewer";
     createdAt: Date;
     stats: {
       projects: number;
@@ -45,13 +45,14 @@ interface TeamPageClientProps {
     totalMembers: number;
     activeMembers: number;
     adminCount: number;
-    memberCount: number;
+    developerCount: number;
+    reviewerCount: number;
   };
   currentUserId: string;
   isAdmin: boolean;
 }
 
-type FilterType = "all" | "active" | "admin" | "member";
+type FilterType = "all" | "active" | "admin" | "developer" | "reviewer";
 
 export function TeamPageClient({
   members,
@@ -67,7 +68,8 @@ export function TeamPageClient({
     return members.filter((member) => {
       // Stat card filter
       if (activeFilter === "admin" && member.role !== "admin") return false;
-      if (activeFilter === "member" && member.role !== "member") return false;
+      if (activeFilter === "developer" && member.role !== "developer") return false;
+      if (activeFilter === "reviewer" && member.role !== "reviewer") return false;
       if (activeFilter === "active" && member.stats.activeTasks === 0) return false;
 
       // Search filter
@@ -88,9 +90,7 @@ export function TeamPageClient({
     });
   }, [members, searchQuery, activeFilter]);
 
-  const filterLabel = activeFilter === "all" ? "all" :
-    activeFilter === "active" ? "active" :
-      activeFilter === "admin" ? "admin" : "member";
+  const filterLabel = activeFilter;
 
   return (
     <div className="space-y-6 pb-8">

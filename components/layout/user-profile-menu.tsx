@@ -21,8 +21,8 @@ interface UserProfileMenuProps {
   name?: string | null;
   /** User email */
   email?: string | null;
-  /** User role: admin | member */
-  role?: 'admin' | 'member';
+  /** User role */
+  role?: 'admin' | 'developer' | 'reviewer';
   /** User avatar image URL */
   avatarSrc?: string | null;
   /** Custom className for the trigger button */
@@ -38,7 +38,7 @@ interface UserProfileMenuProps {
 export function UserProfileMenu({
   name = 'User',
   email = 'user@example.com',
-  role = 'member',
+  role = 'reviewer',
   avatarSrc,
   className,
   compact = false,

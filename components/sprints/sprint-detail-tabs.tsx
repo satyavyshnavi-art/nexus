@@ -49,11 +49,6 @@ function TaskRow({ task }: { task: SprintDetailTask }) {
         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityColors[task.priority] || ""}`}>
           {task.priority}
         </span>
-        {task.storyPoints != null && (
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            {task.storyPoints} SP
-          </span>
-        )}
         {task.assignee && (
           <Avatar
             name={task.assignee.name || task.assignee.email}
@@ -135,11 +130,6 @@ export function SprintDetailTabs({
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${priorityColors[task.priority] || ""}`}>
                     {task.priority}
                   </span>
-                  {task.storyPoints != null && (
-                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                      {task.storyPoints} SP
-                    </span>
-                  )}
                   {task.assignee && (
                     <Avatar
                       name={task.assignee.name || task.assignee.email}
@@ -180,7 +170,7 @@ export function SprintDetailTabs({
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-2 gap-2 text-center">
                   <div>
                     <p className="text-lg font-bold">{member.taskCount}</p>
                     <p className="text-xs text-muted-foreground">Tasks</p>
@@ -188,10 +178,6 @@ export function SprintDetailTabs({
                   <div>
                     <p className="text-lg font-bold text-green-600">{member.completedTaskCount}</p>
                     <p className="text-xs text-muted-foreground">Done</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-purple-600">{member.storyPointsDelivered}</p>
-                    <p className="text-xs text-muted-foreground">SP</p>
                   </div>
                 </div>
               </Card>

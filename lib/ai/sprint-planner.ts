@@ -15,13 +15,11 @@ const TaskItemSchema = z.object({
   required_role: z.string().default("Full-Stack"),
   labels: z.array(z.string()).default([]),
   priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-  story_points: z.number().min(0).max(20).default(3),
   subtasks: z.array(SubtaskItemSchema).default([]),
 });
 
 const RoleDistributionSchema = z.object({
   role: z.string(),
-  story_points: z.number(),
   task_count: z.number(),
 });
 
@@ -54,7 +52,7 @@ export async function generateSprintPlan(
   const systemPrompt = `You are a sprint planning assistant. Given a description, generate a complete sprint plan with user stories and their tickets.
 
 **Structure explained:**
-- **Stories** (the "tasks" array) are high-level user stories or epics that describe a feature or capability from the user's perspective (e.g., "User Authentication Flow", "Dashboard Analytics View", "Payment Integration"). Each story has story points and a category for grouping.
+- **Stories** (the "tasks" array) are high-level user stories or epics that describe a feature or capability from the user's perspective (e.g., "User Authentication Flow", "Dashboard Analytics View", "Payment Integration"). Each story has a category for grouping.
 - **Tickets** (the "subtasks" array under each story) are concrete, actionable work items that implement parts of the story (e.g., "Create login API endpoint", "Build chart component", "Write unit tests for auth service"). Each ticket has an assigned role and priority. Tickets are what developers actually work on day-to-day.
 - Group related stories using the \`category\` field (e.g., "Authentication", "Dashboard UI", "API Development"). Categories are just labels for organizing stories visually.
 
@@ -63,8 +61,8 @@ You MUST respond with valid JSON matching this exact schema:
   "sprint_name": "Descriptive Sprint Name (max 80 chars)",
   "duration_days": 14,
   "role_distribution": [
-    { "role": "Backend", "story_points": 13, "task_count": 5 },
-    { "role": "UI", "story_points": 8, "task_count": 4 }
+    { "role": "Backend", "task_count": 5 },
+    { "role": "UI", "task_count": 4 }
   ],
   "tasks": [
     {
@@ -73,7 +71,6 @@ You MUST respond with valid JSON matching this exact schema:
       "required_role": "Backend",
       "labels": ["api", "authentication"],
       "priority": "high",
-      "story_points": 5,
       "subtasks": [
         {
           "title": "Ticket title — an actionable work item (max 120 chars)",
@@ -88,7 +85,6 @@ You MUST respond with valid JSON matching this exact schema:
 Rules:
 - sprint_name: A meaningful, concise name for the sprint. Max 80 characters.
 - duration_days: Suggested sprint duration between 7 and 30 days. Use 14 for medium features, 7 for small, 21-30 for large.
-- story_points: Number between 0 and 20 per story (reflects overall complexity of the story)
 - Maximum 50 stories total
 - Maximum 10 tickets per story
 - All titles must be under 120 characters
@@ -109,7 +105,7 @@ Role Classification:
   - Design: UI/UX design, wireframes, prototypes
   - Data: Data modeling, analytics, reporting
   - Mobile: Mobile-specific development
-- role_distribution: Summary of total story points and task count per role across all stories
+- role_distribution: Summary of task count per role across all stories
 
 Labels & Priority:
 - labels: Short keyword tags based on the story domain (e.g. "authentication", "api", "database", "ui", "testing")

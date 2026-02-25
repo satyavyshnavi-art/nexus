@@ -8,7 +8,7 @@ import { KanbanBoard } from "@/components/kanban/board";
 import { Button } from "@/components/ui/button";
 import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
-import { Calendar, Users, LayoutDashboard, ListTodo, Settings, FileText } from "lucide-react";
+import { Calendar, Users, LayoutDashboard, ListTodo, Settings, FileText, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
@@ -17,7 +17,14 @@ import { getLinkedRepository } from "@/server/actions/github-link";
 import { TeamTabContent } from "@/components/projects/team-tab-content";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
+import { WeeklySummarySection } from "@/components/projects/weekly-summary-section";
+import { ProjectReportSection } from "@/components/projects/project-report-section";
+import { AutoSprintToggle } from "@/components/projects/auto-sprint-toggle";
+import { canCreateTasks, canLinkGitHub, canViewReports } from "@/lib/auth/permissions";
+import { ensureWeeklySprint } from "@/server/actions/auto-sprint";
+import { getWeeklySummaries } from "@/server/actions/weekly-summary";
 import { db } from "@/server/db";
+import type { UserRole } from "@prisma/client";
 
 export default async function ProjectPage({
   params,
@@ -49,14 +56,27 @@ export default async function ProjectPage({
     throw error; // Re-throw unexpected errors as 500
   }
 
-  // Parallel fetch — these were all sequential awaits before
-  const [activeSprint, sprints, linkedRepo, currentUser] = await Promise.all([
+  const userRole = session.user.role as UserRole;
+  const showCreateTask = canCreateTasks(userRole);
+  const showLinkGitHub = canLinkGitHub(userRole);
+  const showReports = canViewReports(userRole);
+
+  // Ensure weekly sprint if auto-sprint is enabled
+  await ensureWeeklySprint(projectId);
+
+  // Parallel fetch
+  const [activeSprint, sprints, linkedRepo, currentUser, weeklySummaries, projectData] = await Promise.all([
     getActiveSprint(projectId),
     getProjectSprintsCached(projectId),
     getLinkedRepository(projectId),
     db.user.findUnique({
       where: { id: session.user.id },
       select: { githubAccessToken: true },
+    }),
+    getWeeklySummaries(projectId),
+    db.project.findUnique({
+      where: { id: projectId },
+      select: { autoSprintEnabled: true },
     }),
   ]);
 
@@ -186,6 +206,10 @@ export default async function ProjectPage({
             <Users className="h-4 w-4 mr-2" />
             Team
           </TabsTrigger>
+          <TabsTrigger value="reports">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Reports
+          </TabsTrigger>
           <TabsTrigger value="overview">
             <Settings className="h-4 w-4 mr-2" />
             Overview
@@ -209,11 +233,13 @@ export default async function ProjectPage({
                 </div>
                 <div className="flex items-center gap-2">
                   {isAdmin && <AiSprintButton sprintId={activeSprint.id} />}
-                  <CreateTaskButton
-                    sprintId={activeSprint.id}
-                    projectMembers={project.members.map((m) => m.user)}
-                    projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
-                  />
+                  {showCreateTask && (
+                    <CreateTaskButton
+                      sprintId={activeSprint.id}
+                      projectMembers={project.members.map((m) => m.user)}
+                      projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -251,7 +277,7 @@ export default async function ProjectPage({
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">All Tasks</h2>
-            {activeSprint && (
+            {activeSprint && showCreateTask && (
               <CreateTaskButton
                 sprintId={activeSprint.id}
                 projectMembers={project.members.map((m) => m.user)}
@@ -284,9 +310,30 @@ export default async function ProjectPage({
           />
         </TabsContent>
 
+        {/* Tab: Reports */}
+        <TabsContent value="reports" className="space-y-4">
+          <WeeklySummarySection
+            projectId={projectId}
+            summaries={weeklySummaries}
+            isAdmin={isAdmin}
+          />
+          <ProjectReportSection
+            projectId={projectId}
+            canGenerate={showReports}
+          />
+        </TabsContent>
+
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-4">
-          {/* GitHub Integration Section - visible to all members */}
+          {/* Auto Sprint Toggle - admin only */}
+          {isAdmin && (
+            <AutoSprintToggle
+              projectId={projectId}
+              enabled={projectData?.autoSprintEnabled ?? false}
+            />
+          )}
+
+          {/* GitHub Integration Section */}
           <Card>
             <CardHeader>
               <CardTitle>GitHub Integration</CardTitle>
@@ -304,7 +351,7 @@ export default async function ProjectPage({
                   linkedBy={linkedRepo.linkedBy!}
                   isAdmin={isAdmin}
                 />
-              ) : (
+              ) : showLinkGitHub ? (
                 <div className="flex items-center justify-between p-4 border rounded-lg border-dashed">
                   <div>
                     <p className="font-medium">No repository linked</p>
@@ -314,6 +361,10 @@ export default async function ProjectPage({
                   </div>
                   <GitHubLinkDialog projectId={projectId} />
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No repository linked. Only admins and developers can link repositories.
+                </p>
               )}
             </CardContent>
           </Card>

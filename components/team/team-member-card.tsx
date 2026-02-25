@@ -95,7 +95,7 @@ export function TeamMemberCard({
     setIsUpdating(true);
     try {
       const newRole =
-        member.role === UserRole.admin ? UserRole.member : UserRole.admin;
+        member.role === UserRole.admin ? UserRole.developer : UserRole.admin;
       await updateUserRole(member.id, newRole);
       toast({
         title: "Success",
@@ -271,7 +271,7 @@ export function TeamMemberCard({
                   {isUpdating
                     ? "Updating..."
                     : member.role === UserRole.admin
-                      ? "Change to Member"
+                      ? "Change to Developer"
                       : "Make Admin"}
                 </Button>
 

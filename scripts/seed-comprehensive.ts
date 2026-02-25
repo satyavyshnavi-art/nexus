@@ -42,7 +42,7 @@ async function main() {
         email: member.email,
         passwordHash: password,
         name: member.name,
-        role: "member",
+        role: "developer",
       },
     });
     team.push(user);
@@ -125,7 +125,7 @@ async function main() {
         type: ticket.type,
         status: ticket.status,
         priority: ticket.priority,
-        storyPoints: ticket.points,
+
         assigneeId: ticket.assignee.id,
         createdBy: admin.id,
       },
@@ -164,7 +164,6 @@ async function main() {
       type: TaskType.story,
       status: TaskStatus.progress,
       priority: TaskPriority.critical,
-      storyPoints: 21,
       assigneeId: team[0].id,
       createdBy: admin.id,
     },
@@ -187,7 +186,7 @@ async function main() {
         type: TaskType.task,
         status: task.status,
         priority: task.priority,
-        storyPoints: task.points,
+
         assigneeId: task.assignee.id,
         createdBy: admin.id,
       },
@@ -203,7 +202,6 @@ async function main() {
       type: TaskType.story,
       status: TaskStatus.progress,
       priority: TaskPriority.critical,
-      storyPoints: 18,
       assigneeId: team[5].id,
       createdBy: admin.id,
     },
@@ -226,7 +224,7 @@ async function main() {
         type: TaskType.task,
         status: task.status,
         priority: task.priority,
-        storyPoints: task.points,
+
         assigneeId: task.assignee.id,
         createdBy: admin.id,
       },
@@ -242,7 +240,6 @@ async function main() {
       type: TaskType.story,
       status: TaskStatus.todo,
       priority: TaskPriority.critical,
-      storyPoints: 24,
       assigneeId: team[1].id,
       createdBy: admin.id,
     },
@@ -265,7 +262,7 @@ async function main() {
         type: TaskType.task,
         status: task.status,
         priority: task.priority,
-        storyPoints: task.points,
+
         assigneeId: task.assignee.id,
         createdBy: admin.id,
       },
@@ -288,7 +285,7 @@ async function main() {
         type: TaskType.bug,
         status: bug.status,
         priority: bug.priority,
-        storyPoints: 3,
+
         assigneeId: bug.assignee.id,
         createdBy: admin.id,
       },
@@ -312,7 +309,7 @@ async function main() {
         type: TaskType.task,
         status: task.status,
         priority: task.priority,
-        storyPoints: task.points,
+
         assigneeId: task.assignee.id,
         createdBy: admin.id,
       },
@@ -357,7 +354,7 @@ async function main() {
         type: story.type,
         status: TaskStatus.todo,
         priority: story.priority,
-        storyPoints: story.points,
+
         assigneeId: story.assignee.id,
         createdBy: admin.id,
       },
@@ -379,7 +376,7 @@ async function main() {
         type: TaskType.task,
         status: TaskStatus.todo,
         priority: task.priority,
-        storyPoints: task.points,
+
         assigneeId: task.assignee.id,
         createdBy: admin.id,
       },
@@ -405,7 +402,7 @@ async function main() {
         type: item.type,
         status: TaskStatus.todo,
         priority: item.priority,
-        storyPoints: item.points,
+
         createdBy: admin.id,
       },
     });

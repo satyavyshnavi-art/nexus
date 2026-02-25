@@ -16,7 +16,7 @@ async function main() {
 
     const updatedUser = await db.user.update({
         where: { id: user.id },
-        data: { role: "member" },
+        data: { role: "developer" },
     });
 
     console.log(`✅ User demoted to: ${updatedUser.role}`);

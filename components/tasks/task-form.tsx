@@ -45,14 +45,12 @@ export function TaskForm({
     description: string;
     type: TaskType;
     priority: TaskPriority;
-    storyPoints: number;
     assigneeId: string | undefined;
   }>({
     title: "",
     description: "",
     type: TaskType.task,
     priority: TaskPriority.medium,
-    storyPoints: 0,
     assigneeId: undefined,
   });
 
@@ -103,7 +101,6 @@ export function TaskForm({
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
-        storyPoints: formData.storyPoints || undefined,
         assigneeId: formData.assigneeId,
         pushToGitHub: hasImages ? false : pushToGitHub,
       });
@@ -134,7 +131,6 @@ export function TaskForm({
         description: "",
         type: TaskType.task,
         priority: TaskPriority.medium,
-        storyPoints: 0,
         assigneeId: undefined,
       });
       setSelectedImages([]);
@@ -249,36 +245,16 @@ export function TaskForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="storyPoints">Story Points</Label>
-          <Input
-            id="storyPoints"
-            type="number"
-            min="0"
-            max="20"
-            value={formData.storyPoints}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                storyPoints: parseInt(e.target.value) || 0,
-              })
-            }
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="assignee">Assignee</Label>
-          <AssigneeSelector
-            members={projectMembers}
-            value={formData.assigneeId}
-            onChange={(assigneeId) =>
-              setFormData({ ...formData, assigneeId })
-            }
-            disabled={isSubmitting}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="assignee">Assignee</Label>
+        <AssigneeSelector
+          members={projectMembers}
+          value={formData.assigneeId}
+          onChange={(assigneeId) =>
+            setFormData({ ...formData, assigneeId })
+          }
+          disabled={isSubmitting}
+        />
       </div>
 
       {/* Push to GitHub checkbox */}

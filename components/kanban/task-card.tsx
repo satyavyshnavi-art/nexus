@@ -13,7 +13,6 @@ import {
   Bug,
   MessageSquare,
   Paperclip,
-  TrendingUp,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -387,12 +386,6 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
                 <div className="flex items-center gap-1">
                   <Paperclip className="h-3.5 w-3.5" />
                   <span>{task._count.attachments}</span>
-                </div>
-              )}
-              {task.storyPoints && (
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span>{task.storyPoints}pt</span>
                 </div>
               )}
             </div>

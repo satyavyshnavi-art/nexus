@@ -55,6 +55,11 @@ export function SprintList({
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-semibold">{sprint.name}</h3>
                   <StatusBadge status={sprint.status} />
+                  {sprint.autoCreated && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                      Auto
+                    </span>
+                  )}
                 </div>
                 <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1">
                   <span>

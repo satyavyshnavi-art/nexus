@@ -37,7 +37,6 @@ interface SprintPlanReviewProps {
       required_role: string;
       labels: string[];
       priority: "low" | "medium" | "high" | "critical";
-      story_points: number;
       assignee_id?: string;
       subtasks: {
         title: string;
@@ -121,7 +120,7 @@ export function SprintPlanReview({
       const updated = [...prev];
       updated[taskIndex] = {
         ...updated[taskIndex],
-        [field]: field === "story_points" ? Number(value) : value,
+        [field]: value,
       };
       return updated;
     });
@@ -148,7 +147,7 @@ export function SprintPlanReview({
         required_role: "Full-Stack",
         labels: [],
         priority: "medium",
-        story_points: 3,
+        story_points: 0,
         subtasks: [],
         suggested_assignees: plan.members.map((m) => ({
           userId: m.id,
@@ -209,17 +208,15 @@ export function SprintPlanReview({
 
   // Recompute role distribution from current state
   const roleDistribution = useMemo(() => {
-    const map = new Map<string, { story_points: number; task_count: number }>();
+    const map = new Map<string, { task_count: number }>();
     tasks.forEach((task) => {
       const role = task.required_role;
-      const existing = map.get(role) || { story_points: 0, task_count: 0 };
-      existing.story_points += task.story_points;
+      const existing = map.get(role) || { task_count: 0 };
       existing.task_count += 1;
       map.set(role, existing);
     });
     return Array.from(map.entries()).map(([role, data]) => ({
       role,
-      story_points: data.story_points,
       task_count: data.task_count,
     }));
   }, [tasks]);
@@ -234,7 +231,6 @@ export function SprintPlanReview({
         required_role: task.required_role,
         labels: task.labels,
         priority: task.priority,
-        story_points: task.story_points,
         assignee_id: task.selected_assignee_id,
         subtasks: task.subtasks.map((subtask) => ({
           title: subtask.title,
@@ -248,7 +244,6 @@ export function SprintPlanReview({
 
   const totalTasks = tasks.length;
   const totalSubtasks = tasks.reduce((sum, t) => sum + t.subtasks.length, 0);
-  const totalPoints = tasks.reduce((sum, t) => sum + t.story_points, 0);
 
   return (
     <div className="space-y-5">
@@ -282,7 +277,6 @@ export function SprintPlanReview({
           <span className="text-sm text-muted-foreground">{categories.length} categories</span>
           <span className="text-sm text-muted-foreground">{totalTasks} tasks</span>
           <span className="text-sm text-muted-foreground">{totalSubtasks} subtasks</span>
-          <span className="text-sm text-muted-foreground">{totalPoints} points</span>
         </div>
       </div>
 
@@ -473,17 +467,6 @@ function TaskRow({
         value={task.title}
         onChange={(e) => onUpdate("title", e.target.value)}
         className="h-7 text-sm flex-1 bg-transparent border-transparent hover:border-input focus:border-input"
-      />
-
-      {/* Story points */}
-      <Input
-        type="number"
-        min={0}
-        max={20}
-        value={task.story_points}
-        onChange={(e) => onUpdate("story_points", parseInt(e.target.value) || 0)}
-        className="h-7 w-14 text-xs text-center bg-background"
-        title="Story points"
       />
 
       {/* Role select */}

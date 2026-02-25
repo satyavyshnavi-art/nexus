@@ -160,7 +160,6 @@ export function AiSprintForm({
       required_role: string;
       labels: string[];
       priority: "low" | "medium" | "high" | "critical";
-      story_points: number;
       assignee_id?: string;
       subtasks: {
         title: string;
@@ -178,7 +177,6 @@ export function AiSprintForm({
         required_role: t.required_role,
         labels: t.labels,
         priority: t.priority,
-        story_points: t.story_points,
         assignee_id: t.assignee_id,
         subtasks: t.subtasks.map((s) => ({
           title: s.title,

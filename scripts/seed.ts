@@ -41,7 +41,7 @@ async function main() {
         email: memberInfo.email,
         passwordHash: memberPassword,
         name: memberInfo.name,
-        role: "member",
+        role: "developer",
       },
     });
     teamMembers.push(member);
@@ -134,7 +134,7 @@ async function main() {
       description: "Initialize Next.js 14 with App Router, TypeScript, Tailwind CSS, and shadcn/ui components",
       status: TaskStatus.done,
       priority: TaskPriority.critical,
-      storyPoints: 5,
+
       assigneeId: teamMembers[0].id, // Sarah
     },
     {
@@ -142,7 +142,7 @@ async function main() {
       description: "Create responsive product listing with filters, sorting, and pagination",
       status: TaskStatus.done,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[0].id, // Sarah
     },
     {
@@ -150,7 +150,7 @@ async function main() {
       description: "Build cart sidebar with add/remove items, quantity controls, and price calculation",
       status: TaskStatus.review,
       priority: TaskPriority.high,
-      storyPoints: 5,
+
       assigneeId: teamMembers[5].id, // David
     },
     {
@@ -158,7 +158,7 @@ async function main() {
       description: "Multi-step checkout with shipping, payment, and order confirmation",
       status: TaskStatus.progress,
       priority: TaskPriority.critical,
-      storyPoints: 13,
+
       assigneeId: teamMembers[0].id, // Sarah
     },
   ];
@@ -170,7 +170,7 @@ async function main() {
       description: "Configure Prisma ORM, design database schema for products, orders, users",
       status: TaskStatus.done,
       priority: TaskPriority.critical,
-      storyPoints: 5,
+
       assigneeId: teamMembers[6].id, // Lisa
     },
     {
@@ -178,7 +178,7 @@ async function main() {
       description: "Create REST API for product CRUD operations with filtering and search",
       status: TaskStatus.done,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[1].id, // Mike
     },
     {
@@ -186,7 +186,7 @@ async function main() {
       description: "Order creation, status updates, and order history endpoints",
       status: TaskStatus.progress,
       priority: TaskPriority.critical,
-      storyPoints: 13,
+
       assigneeId: teamMembers[1].id, // Mike
     },
     {
@@ -194,7 +194,7 @@ async function main() {
       description: "Real-time stock tracking, low stock alerts, and automatic reordering",
       status: TaskStatus.todo,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[1].id, // Mike
     },
   ];
@@ -206,7 +206,7 @@ async function main() {
       description: "Configure NextAuth with credentials provider, JWT sessions, and password hashing",
       status: TaskStatus.done,
       priority: TaskPriority.critical,
-      storyPoints: 8,
+
       assigneeId: teamMembers[5].id, // David
     },
     {
@@ -214,7 +214,7 @@ async function main() {
       description: "Email validation, password requirements, welcome email",
       status: TaskStatus.review,
       priority: TaskPriority.high,
-      storyPoints: 5,
+
       assigneeId: teamMembers[5].id, // David
     },
     {
@@ -222,7 +222,7 @@ async function main() {
       description: "Google and GitHub OAuth integration for social login",
       status: TaskStatus.todo,
       priority: TaskPriority.medium,
-      storyPoints: 5,
+
       assigneeId: teamMembers[5].id, // David
     },
   ];
@@ -234,7 +234,7 @@ async function main() {
       description: "Define color palette, typography, spacing, and component styles",
       status: TaskStatus.done,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[2].id, // Emily
     },
     {
@@ -242,7 +242,7 @@ async function main() {
       description: "Mobile-first responsive design for all pages",
       status: TaskStatus.review,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[2].id, // Emily
     },
     {
@@ -250,7 +250,7 @@ async function main() {
       description: "Enhanced product images, zoom, reviews section, related products",
       status: TaskStatus.progress,
       priority: TaskPriority.medium,
-      storyPoints: 5,
+
       assigneeId: teamMembers[2].id, // Emily
     },
   ];
@@ -262,7 +262,7 @@ async function main() {
       description: "GitHub Actions for automated testing, building, and deployment",
       status: TaskStatus.done,
       priority: TaskPriority.high,
-      storyPoints: 5,
+
       assigneeId: teamMembers[3].id, // Alex
     },
     {
@@ -270,7 +270,7 @@ async function main() {
       description: "Production and preview deployments, environment variables, domain setup",
       status: TaskStatus.done,
       priority: TaskPriority.critical,
-      storyPoints: 3,
+
       assigneeId: teamMembers[3].id, // Alex
     },
     {
@@ -278,7 +278,7 @@ async function main() {
       description: "Error tracking with Sentry, performance monitoring, log aggregation",
       status: TaskStatus.todo,
       priority: TaskPriority.medium,
-      storyPoints: 5,
+
       assigneeId: teamMembers[3].id, // Alex
     },
   ];
@@ -290,7 +290,7 @@ async function main() {
       description: "Test coverage for all backend endpoints using Jest",
       status: TaskStatus.progress,
       priority: TaskPriority.high,
-      storyPoints: 8,
+
       assigneeId: teamMembers[4].id, // Jessica
     },
     {
@@ -298,7 +298,7 @@ async function main() {
       description: "Playwright tests for critical user flows: login, browse, checkout",
       status: TaskStatus.todo,
       priority: TaskPriority.high,
-      storyPoints: 13,
+
       assigneeId: teamMembers[4].id, // Jessica
     },
     {
@@ -306,7 +306,7 @@ async function main() {
       description: "XSS, CSRF, SQL injection testing, dependency vulnerability scan",
       status: TaskStatus.todo,
       priority: TaskPriority.critical,
-      storyPoints: 8,
+
       assigneeId: teamMembers[4].id, // Jessica
     },
   ];
@@ -318,7 +318,7 @@ async function main() {
       description: "AI-powered recommendations based on user behavior and purchase history",
       status: TaskStatus.todo,
       priority: TaskPriority.medium,
-      storyPoints: 13,
+
       assigneeId: teamMembers[1].id, // Mike
     },
     {
@@ -326,7 +326,7 @@ async function main() {
       description: "Natural language search with typo tolerance and synonyms",
       status: TaskStatus.todo,
       priority: TaskPriority.medium,
-      storyPoints: 8,
+
       assigneeId: teamMembers[6].id, // Lisa
     },
   ];
@@ -351,7 +351,7 @@ async function main() {
         type: "task",
         status: ticketData.status,
         priority: ticketData.priority,
-        storyPoints: ticketData.storyPoints,
+  
         assigneeId: ticketData.assigneeId,
         createdBy: admin.id,
       },

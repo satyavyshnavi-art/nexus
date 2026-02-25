@@ -12,7 +12,7 @@ model User {
   email                String           @unique
   passwordHash         String?          @map("password_hash")
   name                 String?
-  role                 UserRole         @default(member)
+  role                 UserRole         @default(reviewer)
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
   avatar               String?
@@ -87,7 +87,9 @@ model Project {
   creator         User            @relation(fields: [createdBy], references: [id])
   linkedByUser    User?           @relation("GitHubLinkedBy", fields: [githubLinkedBy], references: [id])
   vertical        Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  autoSprintEnabled Boolean         @default(false) @map("auto_sprint_enabled")
   sprints         Sprint[]
+  summaries       WeeklySummary[]
 
   @@index([verticalId])
   @@index([createdBy])
@@ -122,6 +124,7 @@ model Sprint {
   createdBy   String       @map("created_by")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
+  autoCreated Boolean      @default(false) @map("auto_created")
   creator   User         @relation(fields: [createdBy], references: [id])
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     Task[]
@@ -138,7 +141,6 @@ model Task {
   type              TaskType         @default(task)
   status            TaskStatus       @default(todo)
   priority          TaskPriority     @default(medium)
-  storyPoints       Int?             @map("story_points")
   assigneeId        String?          @map("assignee_id")
   createdBy         String           @map("created_by")
   parentTaskId      String?          @map("parent_task_id")
@@ -230,7 +232,8 @@ model GitHubSyncLog {
 
 enum UserRole {
   admin
-  member
+  developer
+  reviewer
 }
 
 enum SprintStatus {
@@ -292,4 +295,19 @@ model ProjectDocument {
   @@index([projectId])
   @@index([createdBy])
   @@map("project_documents")
+}
+
+model WeeklySummary {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  weekStart DateTime @map("week_start")
+  weekEnd   DateTime @map("week_end")
+  summary   String   @db.Text
+  highlights String[] @default([])
+  blockers   String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekStart])
+  @@map("weekly_summaries")
 }
