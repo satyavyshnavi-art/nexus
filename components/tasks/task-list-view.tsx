@@ -1,24 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { Task, User } from "@prisma/client";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Task, User, TaskStatus, TaskPriority, TaskType } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TaskDetailModal } from "./task-detail-modal";
 import { CheckSquare, Bug, BookOpen, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { updateTaskStatus, createSubtask } from "@/server/actions/tasks";
+import { toast } from "sonner";
+import type { SubtaskToggleFn, SubtaskAddFn } from "@/components/kanban/task-card";
+
+type TaskItem = Omit<Task, "githubIssueId"> & {
+  githubIssueId: string | null;
+  assignee: Pick<User, "id" | "name" | "email"> | null;
+  _count?: {
+    comments: number;
+    attachments: number;
+    childTasks?: number;
+  };
+  childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
+};
 
 interface TaskListViewProps {
-  tasks: (Omit<Task, "githubIssueId"> & {
-    githubIssueId: string | null;
-    assignee: Pick<User, "id" | "name" | "email"> | null;
-    _count?: {
-      comments: number;
-      attachments: number;
-      childTasks?: number;
-    };
-    childTasks?: Pick<Task, "id" | "title" | "status" | "priority" | "type">[];
-  })[];
+  tasks: TaskItem[];
   projectMembers: Pick<User, "id" | "name" | "email">[];
 }
 
@@ -43,29 +49,133 @@ const typeIcons: Record<string, typeof CheckSquare> = {
   subtask: CheckSquare,
 };
 
-export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
-  const [selectedTask, setSelectedTask] = useState<typeof tasks[0] | null>(null);
+export function TaskListView({ tasks: initialTasks, projectMembers }: TaskListViewProps) {
+  const router = useRouter();
+  const [tasks, setTasks] = useState(initialTasks);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleTaskClick = (task: typeof tasks[0]) => {
+  // Sync from server when initialTasks changes (e.g. after revalidation)
+  // We compare by reference — Next.js provides a new array after revalidation
+  const [prevInitial, setPrevInitial] = useState(initialTasks);
+  if (initialTasks !== prevInitial) {
+    setPrevInitial(initialTasks);
+    setTasks(initialTasks);
+    // Also update selectedTask if open
+    if (selectedTask) {
+      const updated = initialTasks.find((t) => t.id === selectedTask.id);
+      if (updated) setSelectedTask(updated);
+    }
+  }
+
+  const handleTaskClick = (task: TaskItem) => {
     setSelectedTask(task);
     setModalOpen(true);
   };
 
   const handleModalClose = () => {
     setModalOpen(false);
-    // Small delay before clearing to allow modal close animation
     setTimeout(() => setSelectedTask(null), 200);
+    router.refresh();
   };
 
+  // ── Subtask toggle (optimistic) ──
+  const handleSubtaskToggle: SubtaskToggleFn = useCallback(async (
+    parentTaskId: string,
+    subtaskId: string,
+    currentStatus: TaskStatus
+  ) => {
+    const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
+
+    const updateChild = (t: TaskItem) =>
+      t.id === parentTaskId && t.childTasks
+        ? {
+          ...t, childTasks: t.childTasks.map((st) =>
+            st.id === subtaskId ? { ...st, status: newStatus } : st
+          )
+        }
+        : t;
+
+    setTasks((prev) => prev.map(updateChild));
+    setSelectedTask((prev) => prev ? updateChild(prev) : prev);
+
+    try {
+      await updateTaskStatus(subtaskId, newStatus);
+      toast.success(newStatus === "done" ? "Subtask completed" : "Subtask reopened");
+    } catch {
+      const rollback = (t: TaskItem) =>
+        t.id === parentTaskId && t.childTasks
+          ? {
+            ...t, childTasks: t.childTasks.map((st) =>
+              st.id === subtaskId ? { ...st, status: currentStatus } : st
+            )
+          }
+          : t;
+      setTasks((prev) => prev.map(rollback));
+      setSelectedTask((prev) => prev ? rollback(prev) : prev);
+      toast.error("Failed to update subtask");
+    }
+  }, []);
+
+  // ── Subtask add (optimistic with temp ID) ──
+  const handleSubtaskAdd: SubtaskAddFn = useCallback(async (
+    parentTaskId: string,
+    title: string
+  ) => {
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      title,
+      status: "todo" as TaskStatus,
+      priority: "medium" as TaskPriority,
+      type: "subtask" as TaskType,
+    };
+
+    const addChild = (t: TaskItem) =>
+      t.id === parentTaskId
+        ? { ...t, childTasks: [...(t.childTasks || []), optimistic] }
+        : t;
+
+    setTasks((prev) => prev.map(addChild));
+    setSelectedTask((prev) => prev ? addChild(prev) : prev);
+
+    try {
+      const created = await createSubtask(parentTaskId, { title });
+      const real = {
+        id: created.id,
+        title: created.title,
+        status: created.status,
+        priority: created.priority,
+        type: created.type,
+      };
+
+      const swap = (t: TaskItem) =>
+        t.id === parentTaskId && t.childTasks
+          ? { ...t, childTasks: t.childTasks.map((st) => st.id === tempId ? real : st) }
+          : t;
+
+      setTasks((prev) => prev.map(swap));
+      setSelectedTask((prev) => prev ? swap(prev) : prev);
+      toast.success(`Subtask "${title}" created`);
+      return real;
+    } catch (error) {
+      const remove = (t: TaskItem) =>
+        t.id === parentTaskId && t.childTasks
+          ? { ...t, childTasks: t.childTasks.filter((st) => st.id !== tempId) }
+          : t;
+      setTasks((prev) => prev.map(remove));
+      setSelectedTask((prev) => prev ? remove(prev) : prev);
+      toast.error("Failed to create subtask");
+      throw error;
+    }
+  }, []);
+
   // Calculate progress percentage for tasks with subtasks
-  const getProgressPercentage = (task: typeof tasks[0]) => {
+  const getProgressPercentage = (task: TaskItem) => {
     if (!task.childTasks || task.childTasks.length === 0) return null;
     const completed = task.childTasks.filter((t) => t.status === "done").length;
     return Math.round((completed / task.childTasks.length) * 100);
   };
-
-  // ... inside component ...
 
   if (tasks.length === 0) {
     return (
@@ -195,6 +305,8 @@ export function TaskListView({ tasks, projectMembers }: TaskListViewProps) {
           projectMembers={projectMembers}
           open={modalOpen}
           onOpenChange={handleModalClose}
+          onSubtaskToggle={handleSubtaskToggle}
+          onSubtaskAdd={handleSubtaskAdd}
         />
       )}
     </>
