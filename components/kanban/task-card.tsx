@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BookOpen,
   CheckSquare,
@@ -71,6 +71,12 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
   const [subtasks, setSubtasks] = useState<Pick<Task, "id" | "title" | "status" | "priority" | "type">[]>(
     task.childTasks || []
   );
+
+  // Re-sync subtasks from props when the parent re-renders with fresh data
+  // (e.g. after router.refresh() triggered by modal or another card)
+  useEffect(() => {
+    setSubtasks(task.childTasks || []);
+  }, [task.childTasks]);
 
   const {
     attributes,
@@ -297,11 +303,10 @@ export function TaskCard({ task, onClick, isDragging = false, isOverlay = false 
                         )}
                       </button>
                       <span
-                        className={`truncate ${
-                          st.status === "done"
+                        className={`truncate ${st.status === "done"
                             ? "line-through text-muted-foreground"
                             : "text-foreground"
-                        }`}
+                          }`}
                       >
                         {st.title}
                       </span>
