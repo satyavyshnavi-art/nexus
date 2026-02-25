@@ -181,7 +181,7 @@ export async function getProjectAttachmentViewUrl(attachmentId: string) {
   );
   if (!hasAccess) throw new Error("Unauthorized");
 
-  return getViewUrl(attachment.s3Key, attachment.mimeType);
+  return getViewUrl(attachment.s3Key);
 }
 
 export async function deleteProjectAttachment(attachmentId: string) {

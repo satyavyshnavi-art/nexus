@@ -25,18 +25,15 @@ export async function getDownloadUrl(key: string) {
   const command = new GetObjectCommand({
     Bucket: process.env.STORAGE_BUCKET_NAME,
     Key: key,
-    ResponseContentDisposition: "attachment",
   });
 
   return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
 }
 
-export async function getViewUrl(key: string, contentType: string) {
+export async function getViewUrl(key: string) {
   const command = new GetObjectCommand({
     Bucket: process.env.STORAGE_BUCKET_NAME,
     Key: key,
-    ResponseContentDisposition: "inline",
-    ResponseContentType: contentType,
   });
 
   return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
@@ -48,6 +45,7 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
     Key: key,
     Body: body,
     ContentType: contentType,
+    ContentDisposition: "inline",
   });
 
   return s3.send(command);

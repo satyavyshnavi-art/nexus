@@ -65,7 +65,17 @@ export function ProjectAttachmentItem({
     setIsDownloading(true);
     try {
       const downloadUrl = await getProjectAttachmentDownloadUrl(attachment.id);
-      window.open(downloadUrl, "_blank");
+      // Fetch as blob and trigger save-as to force download
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = attachment.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to download file"
