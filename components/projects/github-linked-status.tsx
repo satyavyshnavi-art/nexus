@@ -79,21 +79,19 @@ export function GitHubLinkedStatus({
         </div>
       </div>
 
-      {isAdmin && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleUnlink}
-          disabled={unlinking}
-        >
-          {unlinking ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Unlink className="mr-2 h-4 w-4" />
-          )}
-          {unlinking ? "Unlinking..." : "Unlink"}
-        </Button>
-      )}
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={handleUnlink}
+        disabled={unlinking}
+      >
+        {unlinking ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Unlink className="mr-2 h-4 w-4" />
+        )}
+        {unlinking ? "Unlinking..." : "Unlink"}
+      </Button>
     </div>
   );
 }
