@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
-import { verifyRepositoryAccess, createOctokitForUser, getRepository } from "@/lib/github/client";
+import { verifyRepositoryAccess, createOctokitForUser, getRepository, listOrgRepositories } from "@/lib/github/client";
 import { z } from "zod";
 
 const linkRepoSchema = z.object({
@@ -184,4 +184,50 @@ export async function hasGitHubAccount() {
     hasAccount: !!user?.githubAccessToken,
     username: user?.githubUsername || null,
   };
+}
+
+export interface OrgRepo {
+  name: string;
+  fullName: string;
+  owner: string;
+  isPrivate: boolean;
+  description: string | null;
+  updatedAt: string;
+}
+
+/**
+ * Fetches repositories from the configured GitHub org
+ */
+export async function getOrgRepos(): Promise<{ repos: OrgRepo[] } | { error: string }> {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: "Unauthorized" };
+  }
+
+  const orgName = process.env.GITHUB_ORG_NAME;
+  if (!orgName) {
+    return { error: "GitHub organization not configured" };
+  }
+
+  try {
+    const repos = await listOrgRepositories(session.user.id, orgName);
+    return {
+      repos: repos.map((repo) => ({
+        name: repo.name,
+        fullName: repo.full_name,
+        owner: repo.owner.login,
+        isPrivate: repo.private,
+        description: repo.description ?? null,
+        updatedAt: repo.updated_at ?? "",
+      })),
+    };
+  } catch (error: any) {
+    if (error.message?.includes("GitHub account not connected")) {
+      return { error: "Reconnect your GitHub account to access organization repositories" };
+    }
+    if (error.status === 404) {
+      return { error: "You don't have access to this organization" };
+    }
+    return { error: error.message || "Failed to fetch repositories" };
+  }
 }

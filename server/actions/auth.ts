@@ -60,3 +60,7 @@ export async function loginWithGitHub() {
 export async function loginWithGoogle() {
   await signIn("google", { redirectTo: "/" });
 }
+
+export async function loginWithGitHubRedirect(redirectTo: string) {
+  await signIn("github", { redirectTo });
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { unlinkGitHubRepository } from "@/server/actions/github-link";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export function GitHubLinkedStatus({
   linkedBy,
   isAdmin,
 }: GitHubLinkedStatusProps) {
+  const router = useRouter();
   const [unlinking, setUnlinking] = useState(false);
 
   async function handleUnlink() {
@@ -43,8 +45,7 @@ export function GitHubLinkedStatus({
         description: "GitHub repository has been unlinked from this project",
       });
 
-      // Refresh the page
-      window.location.reload();
+      router.refresh();
     } catch (error: any) {
       toast.error("Failed to unlink repository", {
         description: error.message,
