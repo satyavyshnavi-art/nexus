@@ -17,6 +17,10 @@ import { toast } from "@/lib/hooks/use-toast";
 import { sprintSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EditSprintModalProps {
   sprint: {
@@ -112,13 +116,32 @@ export function EditSprintModal({ sprint, open, onOpenChange }: EditSprintModalP
 
           <div className="space-y-2">
             <Label htmlFor="edit-startDate">Start Date</Label>
-            <Input
-              id="edit-startDate"
-              type="date"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              disabled={isSubmitting}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={isSubmitting}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.startDate
+                    ? format(new Date(formData.startDate + "T00:00:00"), "MMM d, yyyy")
+                    : "Pick a start date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.startDate ? new Date(formData.startDate + "T00:00:00") : undefined}
+                  onSelect={(date) =>
+                    setFormData({ ...formData, startDate: date ? format(date, "yyyy-MM-dd") : "" })
+                  }
+                />
+              </PopoverContent>
+            </Popover>
             {errors.startDate && (
               <p className="text-sm text-destructive">{errors.startDate}</p>
             )}
@@ -126,13 +149,32 @@ export function EditSprintModal({ sprint, open, onOpenChange }: EditSprintModalP
 
           <div className="space-y-2">
             <Label htmlFor="edit-endDate">End Date</Label>
-            <Input
-              id="edit-endDate"
-              type="date"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              disabled={isSubmitting}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={isSubmitting}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.endDate
+                    ? format(new Date(formData.endDate + "T00:00:00"), "MMM d, yyyy")
+                    : "Pick an end date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.endDate ? new Date(formData.endDate + "T00:00:00") : undefined}
+                  onSelect={(date) =>
+                    setFormData({ ...formData, endDate: date ? format(date, "yyyy-MM-dd") : "" })
+                  }
+                />
+              </PopoverContent>
+            </Popover>
             {errors.endDate && (
               <p className="text-sm text-destructive">{errors.endDate}</p>
             )}

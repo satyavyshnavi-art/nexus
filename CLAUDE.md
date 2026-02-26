@@ -7,7 +7,7 @@ Nexus is an AI-first project management portal built with Next.js 14, Prisma, an
 - **Framework**: Next.js 14 (App Router), TypeScript
 - **Database**: Neon Serverless Postgres via Prisma ORM
 - **Auth**: NextAuth.js v5
-- **AI**: Anthropic Claude Sonnet 4.5
+- **AI**: Anthropic Claude Sonnet 4.5 & Google Gemini 2.5 Flash
 - **Storage**: Cloudflare R2 (S3-compatible)
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **State**: Zustand (minimal, Kanban only)
@@ -50,23 +50,25 @@ prisma/
 
 ### Core Entities
 - **Users** → **Verticals** → **Projects** → **Sprints** → **Tasks**
-- Tasks have: Comments, Attachments
+- Projects have: Documents, Attachments, Weekly Summaries, GitHub Sync Logs
+- Tasks have: Comments, Attachments, Subtasks
 - Tasks support hierarchy: Stories contain child tasks via `parent_task_id`
 
 ### Key Enums (ALWAYS USE THESE)
-- `user.role`: admin | member
+- `user.role`: admin | developer | reviewer
 - `sprint.status`: planned | active | completed
 - `task.status`: todo | progress | review | done
 - `task.priority`: low | medium | high | critical
-- `task.type`: story | task | bug
+- `task.type`: story | task | bug | subtask
 
 ### Business Rules
 1. **One active sprint per project** (enforced at DB transaction level)
 2. **Admin-only operations**: Create projects, sprints; activate sprints; AI generation
-3. **Member operations**: View assigned projects, create/update tasks, move tasks, comment
-4. **AI features**:
+3. **Developer/Reviewer operations**: View assigned projects, create/update tasks, move tasks, comment, review
+4. **AI features** (using Claude Sonnet and Gemini):
    - Sprint planning: Generates structured backlog from natural language
    - Bug classification: Auto-assigns priority when task.type=bug
+   - Project Reports & Weekly Summaries: Generates reports via Gemini using context
 
 ## Development Conventions
 
@@ -156,7 +158,16 @@ export function Component({ prop }: Props) {
 - `DATABASE_URL` - Neon Postgres connection string
 - `NEXTAUTH_SECRET` - Generated via `openssl rand -base64 32`
 - `NEXTAUTH_URL` - Application URL (http://localhost:3000 for dev)
+
+### AI Keys (at least one usually required)
 - `ANTHROPIC_API_KEY` - Claude API key
+- `GOOGLE_AI_API_KEY` - Gemini API key
+
+### GitHub OAuth (for GitHub integration)
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `GITHUB_TOKEN_ENCRYPTION_KEY`
+- `GITHUB_ORG_NAME`
 
 ### Optional (for file uploads)
 - `R2_ACCOUNT_ID`
@@ -193,7 +204,7 @@ npx prisma generate
 
 ### Security Checklist
 - [ ] Auth check (authenticated user)
-- [ ] Role check (admin/member)
+- [ ] Role check (admin/developer/reviewer)
 - [ ] Membership check (vertical/project)
 - [ ] Input validation (Zod schema)
 - [ ] SQL injection prevention (use Prisma)
@@ -239,7 +250,7 @@ Production migrations run automatically via `postinstall` script in package.json
 5. Create sprint (admin)
 6. Activate sprint (admin)
 7. Create tasks or use AI generation
-8. Move tasks on Kanban (member)
+8. Move tasks on Kanban (developer/reviewer)
 9. Add comments/attachments
 
 ### Key Edge Cases to Test
@@ -248,6 +259,7 @@ Production migrations run automatically via `postinstall` script in package.json
 - AI JSON validation failures
 - Unauthorized access attempts
 - File upload failures
+- GitHub Issue sync (open/close sync, creation)
 
 ## Performance Targets
 - **Kanban latency**: < 300ms (optimistic UI required)
@@ -257,8 +269,8 @@ Production migrations run automatically via `postinstall` script in package.json
 
 ## Non-Goals (DO NOT ADD)
 - Analytics dashboards (not in MVP)
-- External integrations (Slack/Jira/GitHub)
-- Complex role hierarchies beyond admin/member
+- External integrations beyond what we have now (we have GitHub, no Jira/Slack)
+- Complex role hierarchies beyond admin/developer/reviewer
 - Multi-workspace tenancy beyond verticals
 - Advanced workflow automation
 

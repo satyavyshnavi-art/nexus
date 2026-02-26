@@ -8,6 +8,11 @@ import { createSprint } from "@/server/actions/sprints";
 import { toast } from "sonner";
 import { sprintSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface SprintFormProps {
   projectId: string;
@@ -96,13 +101,32 @@ export function SprintForm({ projectId, onSuccess, onCancel }: SprintFormProps) 
         <Label htmlFor="startDate" required>
           Start Date
         </Label>
-        <Input
-          id="startDate"
-          type="date"
-          value={formData.startDate}
-          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-          disabled={isSubmitting}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !formData.startDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {formData.startDate
+                ? format(parse(formData.startDate, "yyyy-MM-dd", new Date()), "MMM d, yyyy")
+                : "Pick a start date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={formData.startDate ? parse(formData.startDate, "yyyy-MM-dd", new Date()) : undefined}
+              onSelect={(date) =>
+                setFormData({ ...formData, startDate: date ? format(date, "yyyy-MM-dd") : "" })
+              }
+            />
+          </PopoverContent>
+        </Popover>
         {errors.startDate && (
           <p className="text-sm text-destructive">{errors.startDate}</p>
         )}
@@ -112,13 +136,32 @@ export function SprintForm({ projectId, onSuccess, onCancel }: SprintFormProps) 
         <Label htmlFor="endDate" required>
           End Date
         </Label>
-        <Input
-          id="endDate"
-          type="date"
-          value={formData.endDate}
-          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-          disabled={isSubmitting}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !formData.endDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {formData.endDate
+                ? format(parse(formData.endDate, "yyyy-MM-dd", new Date()), "MMM d, yyyy")
+                : "Pick an end date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={formData.endDate ? parse(formData.endDate, "yyyy-MM-dd", new Date()) : undefined}
+              onSelect={(date) =>
+                setFormData({ ...formData, endDate: date ? format(date, "yyyy-MM-dd") : "" })
+              }
+            />
+          </PopoverContent>
+        </Popover>
         {errors.endDate && (
           <p className="text-sm text-destructive">{errors.endDate}</p>
         )}

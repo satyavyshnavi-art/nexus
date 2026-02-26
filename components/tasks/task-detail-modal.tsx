@@ -31,8 +31,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus, Eye, Calendar, Timer } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Save, Trash2, Tag, Plus, Eye, CalendarIcon, Timer, X } from "lucide-react";
 import { getRoleColor } from "@/lib/utils/role-colors";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, parseISO } from "date-fns";
 
 interface TaskWithDetails extends Omit<Task, "githubIssueId"> {
   githubIssueId: string | null;
@@ -400,15 +404,33 @@ export function TaskDetailModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-red-500" />
+                    <CalendarIcon className="h-3 w-3 text-red-500" />
                     Due Date
                   </Label>
-                  <Input
-                    type="datetime-local"
-                    value={dueAt}
-                    onChange={(e) => { setDueAt(e.target.value); markChanged(); }}
-                    className="text-sm"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left text-sm font-normal h-9",
+                          !dueAt && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                        {dueAt ? format(new Date(dueAt), "MMM d, yyyy") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dueAt ? new Date(dueAt) : undefined}
+                        onSelect={(date) => {
+                          setDueAt(date ? date.toISOString() : "");
+                          markChanged();
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {dueAt && (
                     <button
                       type="button"

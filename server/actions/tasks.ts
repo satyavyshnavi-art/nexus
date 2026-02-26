@@ -79,39 +79,33 @@ async function recalculateTicketStatus(ticketId: string) {
 async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
-  // Single query: check if this task (or any ancestor up to 3 levels deep)
-  // belongs to a sprint in a project where the user is a member.
-  // Hierarchy is max 3 levels: Story → Ticket → Subtask.
-  const task = await db.task.findFirst({
-    where: {
-      OR: [
-        // Direct: task itself is in an accessible sprint
-        {
-          id: taskId,
-          sprint: { project: { members: { some: { userId } } } },
-        },
-        // Parent: task's parent is in an accessible sprint
-        {
-          id: taskId,
+  // Single query: fetch task with all ancestral sprints up to 3 levels deep
+  // This avoids N+1 loops and deep `OR` traversals
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    select: {
+      sprint: { select: { project: { select: { members: { where: { userId }, select: { userId: true } } } } } },
+      parentTask: {
+        select: {
+          sprint: { select: { project: { select: { members: { where: { userId }, select: { userId: true } } } } } },
           parentTask: {
-            sprint: { project: { members: { some: { userId } } } },
-          },
-        },
-        // Grandparent: task's grandparent is in an accessible sprint
-        {
-          id: taskId,
-          parentTask: {
-            parentTask: {
-              sprint: { project: { members: { some: { userId } } } },
+            select: {
+              sprint: { select: { project: { select: { members: { where: { userId }, select: { userId: true } } } } } },
             },
           },
         },
-      ],
+      },
     },
-    select: { id: true },
   });
 
-  return !!task;
+  if (!task) return false;
+
+  // Check if any of the levels have a sprint belonging to a project where the user is a member
+  const isDirectMember = (task.sprint?.project?.members?.length ?? 0) > 0;
+  const isParentMember = (task.parentTask?.sprint?.project?.members?.length ?? 0) > 0;
+  const isGrandparentMember = (task.parentTask?.parentTask?.sprint?.project?.members?.length ?? 0) > 0;
+
+  return isDirectMember || isParentMember || isGrandparentMember;
 }
 
 export async function createTask(data: {
