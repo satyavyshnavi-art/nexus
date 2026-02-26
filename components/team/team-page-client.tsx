@@ -62,6 +62,7 @@ export function TeamPageClient({
 }: TeamPageClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
 
   // Filter and search members
   const filteredMembers = useMemo(() => {
@@ -147,6 +148,10 @@ export function TeamPageClient({
               member={member}
               isAdmin={isAdmin}
               currentUserId={currentUserId}
+              isExpanded={expandedMemberId === member.id}
+              onToggleExpand={() =>
+                setExpandedMemberId(expandedMemberId === member.id ? null : member.id)
+              }
             />
           ))}
         </div>

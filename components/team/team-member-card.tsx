@@ -69,14 +69,17 @@ interface TeamMemberCardProps {
   };
   isAdmin: boolean;
   currentUserId: string;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }
 
 export function TeamMemberCard({
   member,
   isAdmin,
   currentUserId,
+  isExpanded,
+  onToggleExpand,
 }: TeamMemberCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
@@ -191,7 +194,7 @@ export function TeamMemberCard({
         {/* Expand toggle */}
         <button
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={onToggleExpand}
           className="flex items-center justify-center gap-1 w-full mt-3 pt-2 border-t text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {isExpanded ? (
