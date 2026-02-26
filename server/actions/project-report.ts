@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { generateProjectReportAI, type ProjectReportOutput } from "@/lib/ai/project-report";
 import { canViewReports } from "@/lib/auth/permissions";
 import type { UserRole } from "@prisma/client";
+import { z } from "zod";
 
 /**
  * Generate a comprehensive project progress report using AI
@@ -13,6 +14,9 @@ import type { UserRole } from "@prisma/client";
 export async function generateProjectReport(
   projectId: string
 ): Promise<ProjectReportOutput> {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

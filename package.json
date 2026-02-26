@@ -20,7 +20,9 @@
     "test:new-user": "tsx scripts/test-new-user-flow.ts",
     "simulate:add-member": "tsx scripts/simulate-add-member.ts",
     "check:github": "tsx scripts/check-github-auth.ts",
-    "fix:github-users": "tsx scripts/fix-github-users-vertical.ts"
+    "fix:github-users": "tsx scripts/fix-github-users-vertical.ts",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -45,6 +47,7 @@
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vercel/functions": "^3.4.3",
     "autoprefixer": "^10.4.20",
     "bcrypt": "^6.0.0",
     "canvas-confetti": "^1.9.4",
@@ -70,11 +73,16 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/bcrypt": "^6.0.0",
     "@types/canvas-confetti": "^1.9.0",
+    "@vitejs/plugin-react": "^5.1.4",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
+    "jsdom": "^28.1.0",
     "prisma": "^5.22.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
   }
 }

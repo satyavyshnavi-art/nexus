@@ -2,15 +2,19 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { unstable_cache } from "next/cache";
+import { z } from "zod";
+import { verticalNameSchema } from "@/lib/validation/schemas";
 
 export async function createVertical(name: string) {
+  // Runtime validation
+  const validatedName = verticalNameSchema.parse(name);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
-  const vertical = await db.vertical.create({ data: { name } });
+  const vertical = await db.vertical.create({ data: { name: validatedName } });
 
   const { revalidatePath } = await import("next/cache");
   revalidatePath("/admin/verticals");
@@ -19,6 +23,10 @@ export async function createVertical(name: string) {
 }
 
 export async function assignUserToVertical(userId: string, verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -33,14 +41,10 @@ export async function assignUserToVertical(userId: string, verticalId: string) {
     update: {},
   });
 
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/admin/verticals");
   revalidatePath(`/admin/verticals/${verticalId}`);
   revalidatePath("/team");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-members");
 
   return result;
 }
@@ -74,6 +78,9 @@ export async function getAllVerticals() {
 }
 
 export async function getVerticalWithUsers(verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -94,6 +101,10 @@ export async function getVerticalWithUsers(verticalId: string) {
 }
 
 export async function removeUserFromVertical(userId: string, verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -105,19 +116,18 @@ export async function removeUserFromVertical(userId: string, verticalId: string)
     },
   });
 
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/admin/verticals");
   revalidatePath(`/admin/verticals/${verticalId}`);
   revalidatePath("/team");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-members");
 
   return result;
 }
 
 export async function getVerticalDetails(verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -180,18 +190,18 @@ export async function getVerticalDetails(verticalId: string) {
 }
 
 export async function updateVertical(verticalId: string, name: string) {
+  // Runtime validation
+  z.string().min(1).parse(verticalId);
+  const validatedName = verticalNameSchema.parse(name);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
-  if (!name || name.trim().length === 0) {
-    throw new Error("Vertical name cannot be empty");
-  }
-
   const updated = await db.vertical.update({
     where: { id: verticalId },
-    data: { name: name.trim() },
+    data: { name: validatedName.trim() },
   });
 
   const { revalidatePath } = await import("next/cache");
@@ -202,6 +212,9 @@ export async function updateVertical(verticalId: string, name: string) {
 }
 
 export async function deleteVertical(verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -243,16 +256,10 @@ export async function deleteVertical(verticalId: string) {
     });
   });
 
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/admin/verticals");
   revalidatePath("/admin");
   revalidatePath("/team");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("verticals-with-projects");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-members");
 }
 
 export async function getVerticalsWithProjects() {
@@ -261,45 +268,34 @@ export async function getVerticalsWithProjects() {
     throw new Error("Unauthorized");
   }
 
-  const getCachedVerticalsWithProjects = unstable_cache(
-    async () => {
-      return db.vertical.findMany({
-        include: {
-          projects: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              createdAt: true,
-              _count: {
-                select: {
-                  members: true,
-                  sprints: true,
-                },
-              },
-            },
-            orderBy: {
-              createdAt: "desc",
-            },
-          },
+  return db.vertical.findMany({
+    include: {
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
           _count: {
             select: {
-              users: true,
-              projects: true,
+              members: true,
+              sprints: true,
             },
           },
         },
         orderBy: {
-          name: "asc",
+          createdAt: "desc",
         },
-      });
+      },
+      _count: {
+        select: {
+          users: true,
+          projects: true,
+        },
+      },
     },
-    ["verticals-with-projects"],
-    {
-      revalidate: 30,
-      tags: ["verticals-with-projects"],
-    }
-  );
-
-  return getCachedVerticalsWithProjects();
+    orderBy: {
+      name: "asc",
+    },
+  });
 }

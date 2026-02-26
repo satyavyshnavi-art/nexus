@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { generateWeeklySummaryAI } from "@/lib/ai/weekly-summary";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 function getCurrentWeekBounds(): { monday: Date; friday: Date } {
   const now = new Date();
@@ -26,6 +27,9 @@ function getCurrentWeekBounds(): { monday: Date; friday: Date } {
  * Admin only
  */
 export async function generateWeeklySummary(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -102,6 +106,10 @@ export async function generateWeeklySummary(projectId: string) {
  * Get recent weekly summaries for a project
  */
 export async function getWeeklySummaries(projectId: string, limit: number = 5) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  z.number().min(1).max(50).parse(limit);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

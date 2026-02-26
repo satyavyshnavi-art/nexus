@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { getUploadUrl, getDownloadUrl, putObject } from "@/lib/storage/s3-client";
 import { randomUUID } from "crypto";
+import { z } from "zod";
+import { requestUploadUrlSchema, saveAttachmentMetadataSchema } from "@/lib/validation/schemas";
 
 export async function requestUploadUrl(data: {
   taskId: string;
@@ -11,13 +13,16 @@ export async function requestUploadUrl(data: {
   mimeType: string;
   fileSize: number;
 }) {
+  // Runtime validation
+  const validated = requestUploadUrlSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
   // Verify user has access to task's project
   // Subtasks don't have a sprintId — they link through parentTask
   const task = await db.task.findUnique({
-    where: { id: data.taskId },
+    where: { id: validated.taskId },
     include: {
       sprint: {
         include: {
@@ -51,15 +56,10 @@ export async function requestUploadUrl(data: {
     throw new Error("Unauthorized");
   }
 
-  // Validate file size (e.g., max 10MB)
-  if (data.fileSize > 10 * 1024 * 1024) {
-    throw new Error("File too large");
-  }
-
   // Generate unique key
-  const key = `tasks/${data.taskId}/${randomUUID()}-${data.fileName}`;
+  const key = `tasks/${validated.taskId}/${randomUUID()}-${validated.fileName}`;
 
-  const uploadUrl = await getUploadUrl(key, data.mimeType);
+  const uploadUrl = await getUploadUrl(key, validated.mimeType);
 
   return { uploadUrl, key };
 }
@@ -71,22 +71,28 @@ export async function saveAttachmentMetadata(data: {
   mimeType: string;
   sizeBytes: number;
 }) {
+  // Runtime validation
+  const validated = saveAttachmentMetadataSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
   return db.taskAttachment.create({
     data: {
-      taskId: data.taskId,
-      s3Key: data.key,
-      fileName: data.fileName,
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
+      taskId: validated.taskId,
+      s3Key: validated.key,
+      fileName: validated.fileName,
+      mimeType: validated.mimeType,
+      sizeBytes: validated.sizeBytes,
       uploadedBy: session.user.id,
     },
   });
 }
 
 export async function getTaskAttachments(taskId: string) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -102,6 +108,9 @@ export async function getTaskAttachments(taskId: string) {
 }
 
 export async function getAttachmentDownloadUrl(attachmentId: string) {
+  // Runtime validation
+  z.string().min(1).parse(attachmentId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -122,6 +131,9 @@ export async function uploadAttachment(formData: FormData) {
   const taskId = formData.get("taskId") as string;
 
   if (!file || !taskId) throw new Error("Missing file or taskId");
+
+  // Runtime validation
+  z.string().min(1).parse(taskId);
 
   // Validate file size (10MB)
   if (file.size > 10 * 1024 * 1024) {
@@ -221,6 +233,9 @@ export async function uploadAttachment(formData: FormData) {
 }
 
 export async function deleteAttachment(attachmentId: string) {
+  // Runtime validation
+  z.string().min(1).parse(attachmentId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

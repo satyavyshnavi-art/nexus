@@ -3,7 +3,9 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { UserRole } from "@prisma/client";
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { updateUserRoleSchema, updateUserProfileSchema } from "@/lib/validation/schemas";
 
 export async function getAllUsers() {
   const session = await auth();
@@ -25,28 +27,24 @@ export async function getAllUsers() {
 }
 
 export async function updateUserRole(userId: string, role: UserRole) {
+  // Runtime validation
+  const validated = updateUserRoleSchema.parse({ userId, role });
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
   const updated = await db.user.update({
-    where: { id: userId },
-    data: { role },
+    where: { id: validated.userId },
+    data: { role: validated.role },
   });
 
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/");
   revalidatePath("/admin/verticals");
   revalidatePath("/team");
   revalidatePath("/admin/users");
-
-  // @ts-expect-error - Next.js 15
-  revalidateTag("all-users");
-  // @ts-expect-error - Next.js 15
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15
-  revalidateTag("team-members");
 
   return updated;
 }
@@ -56,6 +54,9 @@ export async function updateUserRole(userId: string, role: UserRole) {
  * Includes user info, task counts, and project memberships
  */
 export async function getUserProfile(userId: string) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
@@ -66,39 +67,28 @@ export async function getUserProfile(userId: string) {
     throw new Error("Forbidden");
   }
 
-  const getCachedProfile = unstable_cache(
-    async (id: string) => {
-      return db.user.findUnique({
-        where: { id },
+  const profile = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      designation: true,
+      bio: true,
+      avatar: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: {
         select: {
-          id: true,
-          name: true,
-          email: true,
-          designation: true,
-          bio: true,
-          avatar: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              createdTasks: true,
-              assignedTasks: true,
-              comments: true,
-              projectMemberships: true,
-            },
-          },
+          createdTasks: true,
+          assignedTasks: true,
+          comments: true,
+          projectMemberships: true,
         },
-      });
+      },
     },
-    ["user-profile"],
-    {
-      revalidate: 30, // Cache for 30 seconds
-      tags: [`user-profile-${userId}`],
-    }
-  );
-
-  const profile = await getCachedProfile(userId);
+  });
   if (!profile) {
     throw new Error("User not found");
   }
@@ -118,6 +108,10 @@ export async function updateUserProfile(
     avatar?: string;
   }
 ) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+  const validatedData = updateUserProfileSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
@@ -128,20 +122,7 @@ export async function updateUserProfile(
     throw new Error("Forbidden");
   }
 
-  // Validate input
-  if (data.designation !== undefined && data.designation !== null && data.designation.length > 255) {
-    throw new Error("Designation must be 255 characters or less");
-  }
-
-  if (data.bio !== undefined && data.bio !== null && data.bio.length > 1000) {
-    throw new Error("Bio must be 1000 characters or less");
-  }
-
-  if (data.avatar !== undefined && data.avatar !== null && data.avatar.length > 2048) {
-    throw new Error("Avatar URL must be 2048 characters or less");
-  }
-
-  const { designation, bio, avatar } = data;
+  const { designation, bio, avatar } = validatedData;
 
   const updated = await db.user.update({
     where: { id: userId },

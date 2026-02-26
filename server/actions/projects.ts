@@ -2,7 +2,9 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { unstable_cache, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createProjectSchema } from "@/lib/validation/schemas";
 
 export async function createProject(data: {
   name: string;
@@ -10,12 +12,15 @@ export async function createProject(data: {
   verticalId: string;
   initialMemberIds?: string[];
 }) {
+  // Runtime validation
+  const validated = createProjectSchema.parse(data);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
-  const { initialMemberIds = [], ...projectData } = data;
+  const { initialMemberIds = [], ...projectData } = validated;
 
   // Always include the creator as a member
   const memberIds = new Set([session.user.id, ...initialMemberIds]);
@@ -36,12 +41,15 @@ export async function createProject(data: {
   // Revalidate caches
   revalidatePath("/admin/projects");
   revalidatePath("/admin/verticals");
-  revalidatePath(`/admin/verticals/${data.verticalId}`);
+  revalidatePath(`/admin/verticals/${validated.verticalId}`);
 
   return { id: project.id, name: project.name };
 }
 
 export async function getProjectsByVertical(verticalId: string) {
+  // Runtime validation
+  z.string().min(1).parse(verticalId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -72,38 +80,28 @@ export async function getProjectsByVertical(verticalId: string) {
 }
 
 export async function getProject(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  // Cached query - 30 second cache per project
-  const getCachedProject = unstable_cache(
-    async (projectId: string) => {
-      return db.project.findUnique({
-        where: { id: projectId },
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: {
+      vertical: true,
+      members: {
         include: {
-          vertical: true,
-          members: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, designation: true },
-              },
-            },
-          },
-          _count: {
-            select: { sprints: true },
+          user: {
+            select: { id: true, name: true, email: true, designation: true },
           },
         },
-        // Note: GitHub fields (githubRepoOwner, githubRepoName, etc.) are included by default
-      });
+      },
+      _count: {
+        select: { sprints: true },
+      },
     },
-    [`project-${projectId}`],
-    {
-      revalidate: 30,
-      tags: [`project-${projectId}`, "projects"],
-    }
-  );
-
-  const project = await getCachedProject(projectId);
+  });
 
   if (!project) throw new Error("Project not found");
 
@@ -123,6 +121,10 @@ export async function getProject(projectId: string) {
 }
 
 export async function addMemberToProject(projectId: string, userId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  z.string().min(1).parse(userId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -150,20 +152,20 @@ export async function addMemberToProject(projectId: string, userId: string) {
   });
 
   // Revalidate caches
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
   revalidatePath("/team");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-members");
 
   return result;
 }
 
 export async function removeMemberFromProject(projectId: string, userId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  z.string().min(1).parse(userId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -176,15 +178,11 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   });
 
   // Revalidate caches
-  const { revalidatePath, revalidateTag } = await import("next/cache");
+  const { revalidatePath } = await import("next/cache");
   revalidatePath("/");
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
   revalidatePath("/team");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-stats");
-  // @ts-expect-error - Next.js 15 type mismatch in local environment
-  revalidateTag("team-members");
 
   return result;
 }
@@ -195,34 +193,22 @@ export async function getAllProjects() {
     throw new Error("Unauthorized");
   }
 
-  // Cached query - 30 second cache for admin projects list
-  const getCachedAllProjects = unstable_cache(
-    async () => {
-      const projects = await db.project.findMany({
-        include: {
-          vertical: {
-            select: { id: true, name: true },
-          },
-          _count: {
-            select: { sprints: true, members: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-
-      return projects.map(project => ({
-        ...project,
-        githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
-      }));
+  const projects = await db.project.findMany({
+    include: {
+      vertical: {
+        select: { id: true, name: true },
+      },
+      _count: {
+        select: { sprints: true, members: true },
+      },
     },
-    ["all-projects"],
-    {
-      revalidate: 30, // Cache for 30 seconds
-      tags: ["projects"],
-    }
-  );
+    orderBy: { createdAt: "desc" },
+  });
 
-  return getCachedAllProjects();
+  return projects.map(project => ({
+    ...project,
+    githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
+  }));
 }
 
 // Optimized: Get all user projects in ONE query (fixes N+1)
@@ -231,50 +217,40 @@ export async function getUserProjects() {
   if (!session?.user) throw new Error("Unauthorized");
 
   const isAdmin = session.user.role === "admin";
+  const userId = session.user.id;
 
-
-  // Cached query - 30 second cache per user
-  const getCachedProjects = unstable_cache(
-    async (userId: string, isAdmin: boolean) => {
-      const results = await db.project.findMany({
-        where: isAdmin
-          ? {}
-          : {
-            // Get projects where user is explicitly a member
-            members: {
-              some: { userId },
-            },
-          },
-        include: {
-          vertical: {
-            select: { id: true, name: true },
-          },
-          // Include member IDs so the dashboard can count unique members
-          members: {
-            select: { userId: true },
-          },
-          _count: {
-            select: { sprints: true, members: true },
-          },
+  const results = await db.project.findMany({
+    where: isAdmin
+      ? {}
+      : {
+        members: {
+          some: { userId },
         },
-        orderBy: { createdAt: "desc" },
-      });
-      return results.map(project => ({
-        ...project,
-        githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
-      }));
+      },
+    include: {
+      vertical: {
+        select: { id: true, name: true },
+      },
+      members: {
+        select: { userId: true },
+      },
+      _count: {
+        select: { sprints: true, members: true },
+      },
     },
-    [`user-projects-${session.user.id}-v2`], // Force cache bust with v2
-    {
-      revalidate: 10, // Lower cache time to 10s for debugging
-      tags: [`user-${session.user.id}-projects`, "projects"],
-    }
-  );
+    orderBy: { createdAt: "desc" },
+  });
 
-  return getCachedProjects(session.user.id, isAdmin);
+  return results.map(project => ({
+    ...project,
+    githubRepoId: project.githubRepoId ? project.githubRepoId.toString() : null,
+  }));
 }
 
 export async function getProjectMemberData(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -354,6 +330,9 @@ export async function getProjectMemberData(projectId: string) {
 }
 
 export async function deleteProject(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -383,41 +362,35 @@ export async function getProjectCached(
   userId: string,
   userRole: string
 ) {
-  const getCached = unstable_cache(
-    async (projectId: string) => {
-      return db.project.findUnique({
-        where: { id: projectId },
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  z.string().min(1).parse(userId);
+  z.string().min(1).parse(userRole);
+
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: {
+      vertical: true,
+      members: {
         include: {
-          vertical: true,
-          members: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, designation: true },
-              },
-            },
-          },
-          documents: {
-            orderBy: { createdAt: "desc" },
-            include: {
-              creator: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-          },
-          _count: {
-            select: { sprints: true },
+          user: {
+            select: { id: true, name: true, email: true, designation: true },
           },
         },
-      });
+      },
+      documents: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          creator: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      },
+      _count: {
+        select: { sprints: true },
+      },
     },
-    [`project-${projectId}`],
-    {
-      revalidate: 30,
-      tags: [`project-${projectId}`, "projects"],
-    }
-  );
-
-  const project = await getCached(projectId);
+  });
   if (!project) throw new Error("Project not found");
 
   const isAdmin = userRole === "admin";
@@ -434,32 +407,26 @@ export async function getProjectCached(
  * Get user projects — skips auth() for use when the page already has the session.
  */
 export async function getUserProjectsCached(userId: string, isAdmin: boolean) {
-  const getCached = unstable_cache(
-    async (userId: string, isAdmin: boolean) => {
-      const results = await db.project.findMany({
-        where: isAdmin
-          ? {}
-          : { members: { some: { userId } } },
-        include: {
-          vertical: { select: { id: true, name: true } },
-          members: { select: { userId: true } },
-          _count: { select: { sprints: true, members: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      return results.map((project) => ({
-        ...project,
-        githubRepoId: project.githubRepoId
-          ? project.githubRepoId.toString()
-          : null,
-      }));
-    },
-    [`user-projects-${userId}-v3`],
-    {
-      revalidate: 30,
-      tags: [`user-${userId}-projects`, "projects"],
-    }
-  );
+  // Runtime validation
+  z.string().min(1).parse(userId);
+  z.boolean().parse(isAdmin);
 
-  return getCached(userId, isAdmin);
+  const results = await db.project.findMany({
+    where: isAdmin
+      ? {}
+      : { members: { some: { userId } } },
+    include: {
+      vertical: { select: { id: true, name: true } },
+      members: { select: { userId: true } },
+      _count: { select: { sprints: true, members: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return results.map((project) => ({
+    ...project,
+    githubRepoId: project.githubRepoId
+      ? project.githubRepoId.toString()
+      : null,
+  }));
 }

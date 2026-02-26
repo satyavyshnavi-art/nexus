@@ -3,7 +3,9 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { SprintStatus, TaskStatus } from "@prisma/client";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createSprintSchema, updateSprintSchema, completeSprintOptionsSchema } from "@/lib/validation/schemas";
 
 export async function createSprint(data: {
   projectId: string;
@@ -11,26 +13,29 @@ export async function createSprint(data: {
   startDate: Date;
   endDate: Date;
 }) {
+  // Runtime validation
+  const validated = createSprintSchema.parse(data);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
-  if (data.endDate < data.startDate) {
+  if (validated.endDate < validated.startDate) {
     throw new Error("End date must be after start date");
   }
 
   try {
     const sprint = await db.sprint.create({
       data: {
-        ...data,
+        ...validated,
         createdBy: session.user.id,
       },
     });
 
     // Revalidate caches
-    revalidatePath(`/projects/${data.projectId}`);
-    revalidatePath(`/projects/${data.projectId}/sprints`);
+    revalidatePath(`/projects/${validated.projectId}`);
+    revalidatePath(`/projects/${validated.projectId}/sprints`);
 
     return sprint;
   } catch (error) {
@@ -42,12 +47,16 @@ export async function updateSprint(
   sprintId: string,
   data: { name?: string; startDate?: Date; endDate?: Date }
 ) {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+  const validated = updateSprintSchema.parse(data);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
   }
 
-  if (data.startDate && data.endDate && data.endDate < data.startDate) {
+  if (validated.startDate && validated.endDate && validated.endDate < validated.startDate) {
     throw new Error("End date must be after start date");
   }
 
@@ -63,7 +72,7 @@ export async function updateSprint(
 
   const updated = await db.sprint.update({
     where: { id: sprintId },
-    data,
+    data: validated,
   });
 
   revalidatePath(`/projects/${sprint.projectId}`);
@@ -73,6 +82,9 @@ export async function updateSprint(
 }
 
 export async function deleteSprint(sprintId: string) {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -97,6 +109,9 @@ export async function deleteSprint(sprintId: string) {
 }
 
 export async function activateSprint(sprintId: string) {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -151,6 +166,10 @@ export async function completeSprint(
   sprintId: string,
   options?: CompleteSprintOptions
 ): Promise<CompleteSprintResult> {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+  completeSprintOptionsSchema.parse(options);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Unauthorized");
@@ -282,6 +301,9 @@ export async function completeSprint(
 }
 
 export async function getActiveSprint(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -328,6 +350,9 @@ export async function getActiveSprint(projectId: string) {
 }
 
 export async function getProjectSprints(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -343,31 +368,28 @@ export async function getProjectSprints(projectId: string) {
 }
 
 /**
- * Cached variant — skips auth() when the caller already has the session.
+ * Get project sprints — direct DB query, no caching layer.
+ * Skips auth() when the caller already has the session.
  */
 export async function getProjectSprintsCached(projectId: string) {
-  const getCached = unstable_cache(
-    async (projectId: string) => {
-      return db.sprint.findMany({
-        where: { projectId },
-        include: {
-          _count: {
-            select: { tasks: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
+  return db.sprint.findMany({
+    where: { projectId },
+    include: {
+      _count: {
+        select: { tasks: true },
+      },
     },
-    [`project-sprints-${projectId}`],
-    {
-      revalidate: 30,
-      tags: [`project-${projectId}-sprints`],
-    }
-  );
-  return getCached(projectId);
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getPlannedSprints(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -405,6 +427,9 @@ export interface SprintProgressData {
 export async function getSprintProgress(
   sprintId: string
 ): Promise<SprintProgressData | null> {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -497,6 +522,9 @@ export interface SprintTeamMember {
 export async function getSprintDetail(
   sprintId: string
 ): Promise<SprintDetailData | null> {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

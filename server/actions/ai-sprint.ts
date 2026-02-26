@@ -6,6 +6,8 @@ import { db } from "@/server/db";
 import { generateSprintPlan, SprintPlanOutput } from "@/lib/ai/sprint-planner";
 import type { ImageInput } from "@/lib/ai/gemini";
 import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
+import { z } from "zod";
+import { confirmedPlanSchema, confirmedTasksArraySchema } from "@/lib/validation/schemas";
 
 // --- Role Matching Helper ---
 
@@ -104,6 +106,10 @@ export async function aiGenerateSprintPlan(
   inputText: string,
   images?: ImageInput[]
 ): Promise<{ success: true; plan: GeneratedSprintPlan } | { success: false; error: string }> {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  z.string().min(1).max(10000).parse(inputText);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Unauthorized" };
@@ -197,6 +203,10 @@ export async function aiConfirmSprintPlan(
   projectId: string,
   confirmedPlan: ConfirmedPlan
 ): Promise<{ success: true; sprintName: string; taskCount: number } | { success: false; error: string }> {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+  const validatedPlan = confirmedPlanSchema.parse(confirmedPlan);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Unauthorized" };
@@ -204,7 +214,7 @@ export async function aiConfirmSprintPlan(
 
   const startDate = new Date();
   const endDate = new Date();
-  endDate.setDate(endDate.getDate() + confirmedPlan.duration_days);
+  endDate.setDate(endDate.getDate() + validatedPlan.duration_days);
 
   try {
     const data = await db.$transaction(async (tx) => {
@@ -212,7 +222,7 @@ export async function aiConfirmSprintPlan(
       const sprint = await tx.sprint.create({
         data: {
           projectId,
-          name: confirmedPlan.sprint_name,
+          name: validatedPlan.sprint_name,
           startDate,
           endDate,
           status: SprintStatus.planned,
@@ -223,7 +233,7 @@ export async function aiConfirmSprintPlan(
       let totalTaskCount = 0;
 
       // Each confirmed "task" becomes a Story in the DB
-      for (const task of confirmedPlan.tasks) {
+      for (const task of validatedPlan.tasks) {
         const storyLabels = [...task.labels];
         if (task.category && !storyLabels.includes(task.category)) {
           storyLabels.push(task.category);
@@ -293,6 +303,10 @@ export async function aiGenerateTickets(
   inputText: string,
   images?: ImageInput[]
 ): Promise<{ success: true; plan: GeneratedTicketsPlan } | { success: false; error: string }> {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+  z.string().min(1).max(10000).parse(inputText);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Unauthorized" };
@@ -377,6 +391,10 @@ export async function aiConfirmTickets(
   sprintId: string,
   confirmedTasks: ConfirmedTask[]
 ): Promise<{ success: true; taskCount: number } | { success: false; error: string }> {
+  // Runtime validation
+  z.string().min(1).parse(sprintId);
+  const validatedTasks = confirmedTasksArraySchema.parse(confirmedTasks);
+
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Unauthorized" };
@@ -396,7 +414,7 @@ export async function aiConfirmTickets(
       let totalTaskCount = 0;
 
       // Each confirmed "task" becomes a Story in the DB
-      for (const task of confirmedTasks) {
+      for (const task of validatedTasks) {
         const storyLabels = [...task.labels];
         if (task.category && !storyLabels.includes(task.category)) {
           storyLabels.push(task.category);

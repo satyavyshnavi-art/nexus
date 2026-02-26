@@ -2,13 +2,18 @@
 
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { hash, compare } from "bcrypt";
+import { z } from "zod";
+import { updateAccountSettingsSchema, updatePasswordSchema } from "@/lib/validation/schemas";
 
 /**
  * Get user settings (cached 30s)
  */
 export async function getUserSettings(userId: string) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
@@ -19,25 +24,14 @@ export async function getUserSettings(userId: string) {
     throw new Error("Forbidden");
   }
 
-  const getCachedSettings = unstable_cache(
-    async (id: string) => {
-      return db.user.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      });
+  const settings = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
     },
-    ["user-settings"],
-    {
-      revalidate: 30,
-      tags: [`user-settings-${userId}`],
-    }
-  );
-
-  const settings = await getCachedSettings(userId);
+  });
   if (!settings) {
     throw new Error("User not found");
   }
@@ -60,6 +54,10 @@ export async function updateAccountSettings(
     email?: string;
   }
 ) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+  const validatedData = updateAccountSettingsSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
@@ -69,21 +67,10 @@ export async function updateAccountSettings(
     throw new Error("Forbidden");
   }
 
-  // Validate name
-  if (data.name !== undefined && data.name.trim().length === 0) {
-    throw new Error("Name cannot be empty");
-  }
-
-  // Validate email
-  if (data.email !== undefined) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-      throw new Error("Invalid email format");
-    }
-
-    // Check if email is already taken
+  // Check if email is already taken
+  if (validatedData.email !== undefined) {
     const existingUser = await db.user.findUnique({
-      where: { email: data.email },
+      where: { email: validatedData.email },
     });
 
     if (existingUser && existingUser.id !== userId) {
@@ -94,8 +81,8 @@ export async function updateAccountSettings(
   const updated = await db.user.update({
     where: { id: userId },
     data: {
-      ...(data.name && { name: data.name }),
-      ...(data.email && { email: data.email }),
+      ...(validatedData.name && { name: validatedData.name }),
+      ...(validatedData.email && { email: validatedData.email }),
     },
   });
 
@@ -111,23 +98,21 @@ export async function updatePassword(
   currentPassword: string,
   newPassword: string
 ) {
+  // Runtime validation
+  const validatedPw = updatePasswordSchema.parse({ userId, currentPassword, newPassword });
+
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
-  if (session.user.id !== userId) {
+  if (session.user.id !== validatedPw.userId) {
     throw new Error("Forbidden");
-  }
-
-  // Validate new password
-  if (newPassword.length < 6) {
-    throw new Error("Password must be at least 6 characters");
   }
 
   // Get current password hash
   const user = await db.user.findUnique({
-    where: { id: userId },
+    where: { id: validatedPw.userId },
     select: { passwordHash: true },
   });
 
@@ -144,17 +129,17 @@ export async function updatePassword(
   }
 
   // Verify current password
-  const isValid = await compare(currentPassword, user.passwordHash);
+  const isValid = await compare(validatedPw.currentPassword, user.passwordHash);
   if (!isValid) {
     throw new Error("Current password is incorrect");
   }
 
   // Hash new password
-  const passwordHash = await hash(newPassword, 10);
+  const passwordHash = await hash(validatedPw.newPassword, 10);
 
   // Update password
   await db.user.update({
-    where: { id: userId },
+    where: { id: validatedPw.userId },
     data: { passwordHash },
   });
 

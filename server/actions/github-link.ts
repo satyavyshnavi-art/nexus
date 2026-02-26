@@ -91,6 +91,9 @@ export async function linkGitHubRepository(
  * @param projectId - Project ID
  */
 export async function unlinkGitHubRepository(projectId: string) {
+  // Runtime validation
+  z.string().uuid().parse(projectId);
+
   // 1. Auth check - allow admin and developer (consistent with canLinkGitHub)
   const session = await auth();
   if (!session?.user || (session.user.role !== "admin" && session.user.role !== "developer")) {
@@ -132,6 +135,9 @@ export async function unlinkGitHubRepository(projectId: string) {
  * @param projectId - Project ID
  */
 export async function getLinkedRepository(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

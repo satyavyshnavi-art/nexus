@@ -3,23 +3,24 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createCommentSchema } from "@/lib/validation/schemas";
 
 export async function createComment(taskId: string, content: string) {
+    // Runtime validation
+    const validated = createCommentSchema.parse({ taskId, content });
+
     const session = await auth();
 
     if (!session?.user?.id) {
         throw new Error("Unauthorized");
     }
 
-    if (!content.trim()) {
-        throw new Error("Comment content cannot be empty");
-    }
-
     const comment = await db.taskComment.create({
         data: {
-            taskId,
+            taskId: validated.taskId,
             userId: session.user.id,
-            content,
+            content: validated.content,
         },
         include: {
             user: {
@@ -38,6 +39,9 @@ export async function createComment(taskId: string, content: string) {
 }
 
 export async function getTaskComments(taskId: string) {
+    // Runtime validation
+    z.string().min(1).parse(taskId);
+
     const session = await auth();
 
     if (!session?.user) {
@@ -67,6 +71,9 @@ export async function getTaskComments(taskId: string) {
 }
 
 export async function deleteComment(commentId: string) {
+    // Runtime validation
+    z.string().min(1).parse(commentId);
+
     const session = await auth();
 
     if (!session?.user?.id) {

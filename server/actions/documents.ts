@@ -3,6 +3,8 @@
 import { db } from "@/server/db";
 import { auth } from "@/lib/auth/config";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createProjectDocumentSchema, updateProjectDocumentSchema } from "@/lib/validation/schemas";
 
 // Check if user has access to a project
 async function canAccessProject(projectId: string, userId: string, isAdmin: boolean) {
@@ -23,11 +25,14 @@ export async function createProjectDocument(data: {
     url: string;
     description?: string;
 }) {
+    // Runtime validation
+    const validated = createProjectDocumentSchema.parse(data);
+
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized");
 
     const hasAccess = await canAccessProject(
-        data.projectId,
+        validated.projectId,
         session.user.id,
         session.user.role === "admin"
     );
@@ -38,15 +43,12 @@ export async function createProjectDocument(data: {
 
     const document = await db.projectDocument.create({
         data: {
-            ...data,
+            ...validated,
             createdBy: session.user.id,
         },
     });
 
-    revalidatePath(`/projects/${data.projectId}`);
-    const { revalidateTag } = await import("next/cache");
-    // @ts-expect-error - Next.js 15 type mismatch in local environment
-    revalidateTag(`project-${data.projectId}`);
+    revalidatePath(`/projects/${validated.projectId}`);
     return document;
 }
 
@@ -58,6 +60,10 @@ export async function updateProjectDocument(
         description?: string | null;
     }
 ) {
+    // Runtime validation
+    z.string().min(1).parse(documentId);
+    const validatedData = updateProjectDocumentSchema.parse(data);
+
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized");
 
@@ -77,17 +83,17 @@ export async function updateProjectDocument(
 
     const updatedDocument = await db.projectDocument.update({
         where: { id: documentId },
-        data,
+        data: validatedData,
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
-    const { revalidateTag } = await import("next/cache");
-    // @ts-expect-error - Next.js 15 type mismatch in local environment
-    revalidateTag(`project-${existingDoc.projectId}`);
     return updatedDocument;
 }
 
 export async function deleteProjectDocument(documentId: string) {
+    // Runtime validation
+    z.string().min(1).parse(documentId);
+
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized");
 
@@ -110,8 +116,5 @@ export async function deleteProjectDocument(documentId: string) {
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
-    const { revalidateTag } = await import("next/cache");
-    // @ts-expect-error - Next.js 15 type mismatch in local environment
-    revalidateTag(`project-${existingDoc.projectId}`);
     return { success: true };
 }

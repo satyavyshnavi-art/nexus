@@ -7,6 +7,17 @@ import { classifyBugPriority } from "@/lib/ai/bug-classifier";
 import { revalidatePath } from "next/cache";
 import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
+import { waitUntil } from "@vercel/functions";
+import { z } from "zod";
+import {
+  createTaskSchema,
+  updateTaskSchema,
+  updateTaskStatusSchema,
+  createSubtaskSchema,
+  createStorySchema,
+  createTicketSchema,
+  createCommentSchema,
+} from "@/lib/validation/schemas";
 
 
 // ─── Internal helper: recalculate a ticket's status based on subtask completion ───
@@ -68,59 +79,39 @@ async function recalculateTicketStatus(ticketId: string) {
 async function canAccessTask(taskId: string, userId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
-  // Try sprint-based access first
-  const viaSprintResult = await db.task.findFirst({
+  // Single query: check if this task (or any ancestor up to 3 levels deep)
+  // belongs to a sprint in a project where the user is a member.
+  // Hierarchy is max 3 levels: Story → Ticket → Subtask.
+  const task = await db.task.findFirst({
     where: {
-      id: taskId,
-      sprint: {
-        project: {
-          members: { some: { userId } },
+      OR: [
+        // Direct: task itself is in an accessible sprint
+        {
+          id: taskId,
+          sprint: { project: { members: { some: { userId } } } },
         },
-      },
+        // Parent: task's parent is in an accessible sprint
+        {
+          id: taskId,
+          parentTask: {
+            sprint: { project: { members: { some: { userId } } } },
+          },
+        },
+        // Grandparent: task's grandparent is in an accessible sprint
+        {
+          id: taskId,
+          parentTask: {
+            parentTask: {
+              sprint: { project: { members: { some: { userId } } } },
+            },
+          },
+        },
+      ],
     },
     select: { id: true },
   });
 
-  if (viaSprintResult) return true;
-
-  // For tasks without a sprint (e.g. subtasks), walk up the parent chain
-  // to find a task that has a sprintId, then check project membership.
-  let currentTaskId: string | null = taskId;
-  const visited = new Set<string>();
-
-  while (currentTaskId) {
-    if (visited.has(currentTaskId)) break; // prevent infinite loops
-    visited.add(currentTaskId);
-
-    const lookupId: string = currentTaskId;
-    const parentInfo: { parentTaskId: string | null; sprintId: string | null } | null =
-      await db.task.findUnique({
-        where: { id: lookupId },
-        select: { parentTaskId: true, sprintId: true },
-      });
-
-    if (!parentInfo) break;
-
-    if (parentInfo.sprintId) {
-      // Found a task with a sprint — check membership via that sprint
-      const viaSprint = await db.task.findFirst({
-        where: {
-          id: lookupId,
-          sprint: {
-            project: {
-              members: { some: { userId } },
-            },
-          },
-        },
-        select: { id: true },
-      });
-      return !!viaSprint;
-    }
-
-    currentTaskId = parentInfo.parentTaskId;
-  }
-
-  return false;
+  return !!task;
 }
 
 export async function createTask(data: {
@@ -134,6 +125,9 @@ export async function createTask(data: {
   requiredRole?: string;
   labels?: string[];
 }) {
+  // Runtime validation
+  const validated = createTaskSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -143,9 +137,9 @@ export async function createTask(data: {
   let projectMembers: { userId: string }[] = [];
 
   // Verify sprint access if sprintId is provided
-  if (data.sprintId) {
+  if (validated.sprintId) {
     const sprint = await db.sprint.findUnique({
-      where: { id: data.sprintId },
+      where: { id: validated.sprintId },
       select: {
         id: true,
         projectId: true,
@@ -156,7 +150,7 @@ export async function createTask(data: {
               where: {
                 OR: [
                   { userId: session.user.id },
-                  ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                  ...(validated.assigneeId ? [{ userId: validated.assigneeId }] : []),
                 ],
               },
               select: { userId: true },
@@ -182,8 +176,8 @@ export async function createTask(data: {
     }
 
     // Check assignee is project member (if assignee specified)
-    if (data.assigneeId && !isAdmin) {
-      const assigneeIsMember = projectMembers.some(m => m.userId === data.assigneeId);
+    if (validated.assigneeId && !isAdmin) {
+      const assigneeIsMember = projectMembers.some(m => m.userId === validated.assigneeId);
       if (!assigneeIsMember) {
         throw new Error("Assignee not a project member");
       }
@@ -192,7 +186,7 @@ export async function createTask(data: {
     // No sprint — standalone task: allow any authenticated user
   }
 
-  const { pushToGitHub, ...taskData } = data;
+  const { pushToGitHub, ...taskData } = validated;
 
   // Create task
   const task = await db.task.create({
@@ -209,15 +203,20 @@ export async function createTask(data: {
 
   // Only sync to GitHub if the user opted in (async, non-blocking)
   if (pushToGitHub) {
-    syncTaskToGitHub(task.id).catch(err => {
-      console.error(`[Auto-Sync] Failed to sync new task ${task.id}:`, err);
-    });
+    waitUntil(
+      syncTaskToGitHub(task.id).catch(err => {
+        console.error(`[Auto-Sync] Failed to sync new task ${task.id}:`, err);
+      })
+    );
   }
 
   return task;
 }
 
 export async function updateTaskStatus(taskId: string, newStatus: TaskStatus, reviewerId?: string) {
+  // Runtime validation
+  const validatedStatus = updateTaskStatusSchema.parse({ taskId, newStatus, reviewerId });
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -253,9 +252,11 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus, re
 
   // Only sync to GitHub if the task is linked to a GitHub issue
   if (updatedTask.githubIssueNumber) {
-    syncTaskToGitHub(taskId).catch(err => {
-      console.error(`[Auto-Sync] Failed to sync task ${taskId} to GitHub:`, err);
-    });
+    waitUntil(
+      syncTaskToGitHub(taskId).catch(err => {
+        console.error(`[Auto-Sync] Failed to sync task ${taskId} to GitHub:`, err);
+      })
+    );
   }
 
   // Revalidate the project page to reflect the updated task status
@@ -285,6 +286,10 @@ export async function updateTask(
     estimatedDuration?: number | null;
   }
 ) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+  const validatedData = updateTaskSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -301,7 +306,7 @@ export async function updateTask(
 
   const updatedTask = await db.task.update({
     where: { id: taskId },
-    data,
+    data: validatedData,
     include: {
       sprint: {
         select: { projectId: true },
@@ -311,9 +316,11 @@ export async function updateTask(
 
   // Only sync to GitHub if the task is actually linked to a GitHub issue
   if (updatedTask.githubIssueNumber) {
-    syncTaskToGitHub(taskId).catch(err => {
-      console.error(`[Auto-Sync] Failed to sync updated task ${taskId}:`, err);
-    });
+    waitUntil(
+      syncTaskToGitHub(taskId).catch(err => {
+        console.error(`[Auto-Sync] Failed to sync updated task ${taskId}:`, err);
+      })
+    );
   }
 
   // Revalidate the project page to reflect the updated task
@@ -326,19 +333,25 @@ export async function updateTask(
 }
 
 export async function addComment(taskId: string, content: string) {
+  // Runtime validation
+  const validatedComment = createCommentSchema.parse({ taskId, content });
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
   return db.taskComment.create({
     data: {
-      taskId,
+      taskId: validatedComment.taskId,
       userId: session.user.id,
-      content,
+      content: validatedComment.content,
     },
   });
 }
 
 export async function getTaskComments(taskId: string) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -358,6 +371,9 @@ export async function getTaskComments(taskId: string) {
  * Includes parent task info, subtasks, comments count, and attachments count
  */
 export async function getTaskWithProgress(taskId: string) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -459,6 +475,9 @@ export async function getTaskWithProgress(taskId: string) {
 }
 
 export async function deleteTask(taskId: string) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -515,6 +534,10 @@ export async function createSubtask(
     priority?: TaskPriority;
   }
 ) {
+  // Runtime validation
+  z.string().min(1).parse(parentTaskId);
+  const validatedSubtask = createSubtaskSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -535,7 +558,7 @@ export async function createSubtask(
                 where: {
                   OR: [
                     { userId: session.user.id },
-                    ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                    ...(validatedSubtask.assigneeId ? [{ userId: validatedSubtask.assigneeId }] : []),
                   ],
                 },
                 select: { userId: true },
@@ -560,8 +583,8 @@ export async function createSubtask(
   }
 
   // Check assignee is project member (if specified)
-  if (data.assigneeId && !isAdmin) {
-    const assigneeIsMember = projectMembers.some(m => m.userId === data.assigneeId);
+  if (validatedSubtask.assigneeId && !isAdmin) {
+    const assigneeIsMember = projectMembers.some(m => m.userId === validatedSubtask.assigneeId);
     if (!assigneeIsMember) {
       throw new Error("Assignee not a project member");
     }
@@ -570,10 +593,10 @@ export async function createSubtask(
   // Create the subtask, inheriting sprint from parent
   const subtask = await db.task.create({
     data: {
-      title: data.title,
-      description: data.description,
-      assigneeId: data.assigneeId,
-      priority: data.priority ?? "medium",
+      title: validatedSubtask.title,
+      description: validatedSubtask.description,
+      assigneeId: validatedSubtask.assigneeId,
+      priority: validatedSubtask.priority ?? "medium",
       type: "subtask",
       sprintId: parentTask.sprintId,
       parentTaskId: parentTaskId,
@@ -594,6 +617,10 @@ export async function createSubtask(
 }
 
 export async function assignReviewer(taskId: string, reviewerId: string | null) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+  z.string().min(1).nullable().parse(reviewerId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -622,6 +649,9 @@ export async function assignReviewer(taskId: string, reviewerId: string | null) 
 }
 
 export async function getReviewTasks(userId: string) {
+  // Runtime validation
+  z.string().min(1).parse(userId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -670,6 +700,9 @@ export async function createStory(data: {
   requiredRole?: string;
   labels?: string[];
 }) {
+  // Runtime validation
+  const validated = createStorySchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -678,7 +711,7 @@ export async function createStory(data: {
 
   // Verify sprint exists and get project info
   const sprint = await db.sprint.findUnique({
-    where: { id: data.sprintId },
+    where: { id: validated.sprintId },
     select: {
       id: true,
       projectId: true,
@@ -686,8 +719,8 @@ export async function createStory(data: {
         select: {
           id: true,
           members: {
-            where: data.assigneeId
-              ? { userId: data.assigneeId }
+            where: validated.assigneeId
+              ? { userId: validated.assigneeId }
               : undefined,
             select: { userId: true },
           },
@@ -699,9 +732,9 @@ export async function createStory(data: {
   if (!sprint) throw new Error("Sprint not found");
 
   // If assignee is specified, verify they are a project member
-  if (data.assigneeId) {
+  if (validated.assigneeId) {
     const assigneeIsMember = sprint.project.members.some(
-      (m) => m.userId === data.assigneeId
+      (m) => m.userId === validated.assigneeId
     );
     if (!assigneeIsMember) {
       throw new Error("Assignee not a project member");
@@ -710,13 +743,13 @@ export async function createStory(data: {
 
   const story = await db.task.create({
     data: {
-      title: data.title,
-      description: data.description,
+      title: validated.title,
+      description: validated.description,
       type: "story",
-      sprintId: data.sprintId,
-      assigneeId: data.assigneeId,
-      requiredRole: data.requiredRole,
-      labels: data.labels ?? [],
+      sprintId: validated.sprintId,
+      assigneeId: validated.assigneeId,
+      requiredRole: validated.requiredRole,
+      labels: validated.labels ?? [],
       parentTaskId: null,
       createdBy: session.user.id,
     },
@@ -741,6 +774,9 @@ export async function createTicket(data: {
   requiredRole?: string;
   labels?: string[];
 }) {
+  // Runtime validation
+  const validated = createTicketSchema.parse(data);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -748,7 +784,7 @@ export async function createTicket(data: {
 
   // Fetch the parent story to inherit sprintId and check access
   const story = await db.task.findUnique({
-    where: { id: data.storyId },
+    where: { id: validated.storyId },
     select: {
       id: true,
       type: true,
@@ -762,7 +798,7 @@ export async function createTicket(data: {
                 where: {
                   OR: [
                     { userId: session.user.id },
-                    ...(data.assigneeId ? [{ userId: data.assigneeId }] : []),
+                    ...(validated.assigneeId ? [{ userId: validated.assigneeId }] : []),
                   ],
                 },
                 select: { userId: true },
@@ -784,31 +820,33 @@ export async function createTicket(data: {
   if (!hasAccess) throw new Error("Unauthorized");
 
   // Check assignee is project member (if specified)
-  if (data.assigneeId && !isAdmin) {
-    const assigneeIsMember = projectMembers.some(m => m.userId === data.assigneeId);
+  if (validated.assigneeId && !isAdmin) {
+    const assigneeIsMember = projectMembers.some(m => m.userId === validated.assigneeId);
     if (!assigneeIsMember) throw new Error("Assignee not a project member");
   }
 
   const ticket = await db.task.create({
     data: {
-      title: data.title,
-      description: data.description,
-      type: data.type,
-      priority: data.priority ?? "medium",
-      assigneeId: data.assigneeId,
-      requiredRole: data.requiredRole,
-      labels: data.labels ?? [],
+      title: validated.title,
+      description: validated.description,
+      type: validated.type,
+      priority: validated.priority ?? "medium",
+      assigneeId: validated.assigneeId,
+      requiredRole: validated.requiredRole,
+      labels: validated.labels ?? [],
       sprintId: story.sprintId,
-      parentTaskId: data.storyId,
+      parentTaskId: validated.storyId,
       createdBy: session.user.id,
     },
   });
 
   // Auto-classify bug priority after creation (updates DB directly)
-  if (data.type === "bug" && !data.priority && data.description) {
-    classifyBugPriority(ticket.id, data.description).catch(() => {
-      // keep default priority on failure
-    });
+  if (validated.type === "bug" && !validated.priority && validated.description) {
+    waitUntil(
+      classifyBugPriority(ticket.id, validated.description!).catch(() => {
+        // keep default priority on failure
+      })
+    );
   }
 
   const revalidateProjectId = story.sprint?.projectId;

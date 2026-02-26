@@ -8,6 +8,7 @@ import {
   updateGitHubIssue,
   closeGitHubIssue,
 } from "@/lib/github/sync";
+import { z } from "zod";
 
 /**
  * Verifies that a user is a member of a project
@@ -30,6 +31,9 @@ async function verifyProjectMembership(userId: string, projectId: string) {
  * @param taskId - Task ID to sync
  */
 export async function syncTaskToGitHub(taskId: string) {
+  // Runtime validation
+  z.string().min(1).parse(taskId);
+
   // 1. Auth check
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -172,6 +176,9 @@ export async function syncTaskToGitHub(taskId: string) {
  * @param projectId - Project ID
  */
 export async function batchSyncTasksToGitHub(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   // 1. Auth check - admin only for batch operations
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -287,6 +294,9 @@ export async function batchSyncTasksToGitHub(projectId: string) {
  * @param projectId - Project ID
  */
 export async function getProjectSyncStatus(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 

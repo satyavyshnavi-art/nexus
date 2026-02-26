@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { putObject, getDownloadUrl, getViewUrl, deleteObject } from "@/lib/storage/s3-client";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 
 async function canAccessProject(
   projectId: string,
@@ -65,6 +66,9 @@ export async function uploadProjectAttachment(formData: FormData) {
 
   if (!file || !projectId) throw new Error("Missing file or projectId");
 
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   // Check project access
   const hasAccess = await canAccessProject(
     projectId,
@@ -122,6 +126,9 @@ export async function uploadProjectAttachment(formData: FormData) {
 }
 
 export async function getProjectAttachments(projectId: string) {
+  // Runtime validation
+  z.string().min(1).parse(projectId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -144,6 +151,9 @@ export async function getProjectAttachments(projectId: string) {
 }
 
 export async function getProjectAttachmentDownloadUrl(attachmentId: string) {
+  // Runtime validation
+  z.string().min(1).parse(attachmentId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -165,6 +175,9 @@ export async function getProjectAttachmentDownloadUrl(attachmentId: string) {
 }
 
 export async function getProjectAttachmentViewUrl(attachmentId: string) {
+  // Runtime validation
+  z.string().min(1).parse(attachmentId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -185,6 +198,9 @@ export async function getProjectAttachmentViewUrl(attachmentId: string) {
 }
 
 export async function deleteProjectAttachment(attachmentId: string) {
+  // Runtime validation
+  z.string().min(1).parse(attachmentId);
+
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
