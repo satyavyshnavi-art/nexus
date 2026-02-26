@@ -15,21 +15,21 @@ interface PrioritySelectorProps {
   disabled?: boolean;
 }
 
+const priorities = [
+  { value: TaskPriority.low, label: "Low", color: "text-gray-600 dark:text-gray-400" },
+  { value: TaskPriority.medium, label: "Medium", color: "text-yellow-600 dark:text-yellow-400" },
+  { value: TaskPriority.high, label: "High", color: "text-orange-600 dark:text-orange-400" },
+  { value: TaskPriority.critical, label: "Critical", color: "text-red-600 dark:text-red-400" },
+] as const;
+
 export function PrioritySelector({
   value,
   onChange,
   disabled,
 }: PrioritySelectorProps) {
-  const priorities = [
-    { value: TaskPriority.low, label: "Low", color: "text-gray-600" },
-    { value: TaskPriority.medium, label: "Medium", color: "text-yellow-600" },
-    { value: TaskPriority.high, label: "High", color: "text-orange-600" },
-    { value: TaskPriority.critical, label: "Critical", color: "text-red-600" },
-  ];
-
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger>
+      <SelectTrigger className="bg-background">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
