@@ -19,9 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
 import { WeeklySummarySection } from "@/components/projects/weekly-summary-section";
 import { ProjectReportSection } from "@/components/projects/project-report-section";
-import { AutoSprintToggle } from "@/components/projects/auto-sprint-toggle";
 import { canCreateTasks, canLinkGitHub, canViewReports } from "@/lib/auth/permissions";
-import { ensureWeeklySprint } from "@/server/actions/auto-sprint";
 import { getWeeklySummaries } from "@/server/actions/weekly-summary";
 import { db } from "@/server/db";
 import type { UserRole } from "@prisma/client";
@@ -61,11 +59,8 @@ export default async function ProjectPage({
   const showLinkGitHub = canLinkGitHub(userRole);
   const showReports = canViewReports(userRole);
 
-  // Ensure weekly sprint if auto-sprint is enabled
-  await ensureWeeklySprint(projectId);
-
   // Parallel fetch
-  const [activeSprint, sprints, linkedRepo, currentUser, weeklySummaries, projectData] = await Promise.all([
+  const [activeSprint, sprints, linkedRepo, currentUser, weeklySummaries] = await Promise.all([
     getActiveSprint(projectId),
     getProjectSprintsCached(projectId),
     getLinkedRepository(projectId),
@@ -74,10 +69,6 @@ export default async function ProjectPage({
       select: { githubAccessToken: true },
     }),
     getWeeklySummaries(projectId),
-    db.project.findUnique({
-      where: { id: projectId },
-      select: { autoSprintEnabled: true },
-    }),
   ]);
 
   // getSprintProgress depends on activeSprint ID
@@ -325,14 +316,6 @@ export default async function ProjectPage({
 
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-4">
-          {/* Auto Sprint Toggle - admin only */}
-          {isAdmin && (
-            <AutoSprintToggle
-              projectId={projectId}
-              enabled={projectData?.autoSprintEnabled ?? false}
-            />
-          )}
-
           {/* GitHub Integration Section */}
           <Card>
             <CardHeader>
@@ -350,6 +333,7 @@ export default async function ProjectPage({
                   linkedAt={linkedRepo.linkedAt!}
                   linkedBy={linkedRepo.linkedBy!}
                   isAdmin={isAdmin}
+                  canUnlink={showLinkGitHub}
                 />
               ) : showLinkGitHub ? (
                 <div className="flex items-center justify-between p-4 border rounded-lg border-dashed">

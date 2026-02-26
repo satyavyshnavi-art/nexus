@@ -1,8 +1,9 @@
 -- AlterEnum: member -> developer/reviewer
 CREATE TYPE "UserRole_new" AS ENUM ('admin', 'developer', 'reviewer');
 ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT;
+ALTER TABLE "users" ALTER COLUMN "role" TYPE TEXT;
 UPDATE "users" SET "role" = 'developer' WHERE "role" = 'member';
-ALTER TABLE "users" ALTER COLUMN "role" TYPE "UserRole_new" USING ("role"::text::"UserRole_new");
+ALTER TABLE "users" ALTER COLUMN "role" TYPE "UserRole_new" USING ("role"::"UserRole_new");
 ALTER TYPE "UserRole" RENAME TO "UserRole_old";
 ALTER TYPE "UserRole_new" RENAME TO "UserRole";
 DROP TYPE "UserRole_old";

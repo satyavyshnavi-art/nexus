@@ -91,10 +91,10 @@ export async function linkGitHubRepository(
  * @param projectId - Project ID
  */
 export async function unlinkGitHubRepository(projectId: string) {
-  // 1. Auth check
+  // 1. Auth check - allow admin and developer (consistent with canLinkGitHub)
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    throw new Error("Unauthorized: Admin access required to unlink repositories");
+  if (!session?.user || (session.user.role !== "admin" && session.user.role !== "developer")) {
+    throw new Error("Unauthorized: Admin or developer access required to unlink repositories");
   }
 
   // 2. Verify project exists
@@ -206,11 +206,11 @@ export async function getOrgRepos(): Promise<{ repos: OrgRepo[] } | { error: str
 
   const orgName = process.env.GITHUB_ORG_NAME;
   if (!orgName) {
-    return { error: "GitHub organization not configured" };
+    return { error: "GitHub organization not configured. Please set GITHUB_ORG_NAME in environment variables." };
   }
 
   try {
-    const repos = await listOrgRepositories(orgName);
+    const repos = await listOrgRepositories(orgName, session.user.id);
     return {
       repos: repos.map((repo) => ({
         name: repo.name,

@@ -14,6 +14,7 @@ interface GitHubLinkedStatusProps {
   linkedAt: Date;
   linkedBy: string;
   isAdmin: boolean;
+  canUnlink?: boolean;
 }
 
 export function GitHubLinkedStatus({
@@ -23,7 +24,9 @@ export function GitHubLinkedStatus({
   linkedAt,
   linkedBy,
   isAdmin,
+  canUnlink,
 }: GitHubLinkedStatusProps) {
+  const showUnlink = canUnlink ?? isAdmin;
   const router = useRouter();
   const [unlinking, setUnlinking] = useState(false);
 
@@ -79,19 +82,21 @@ export function GitHubLinkedStatus({
         </div>
       </div>
 
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={handleUnlink}
-        disabled={unlinking}
-      >
-        {unlinking ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Unlink className="mr-2 h-4 w-4" />
-        )}
-        {unlinking ? "Unlinking..." : "Unlink"}
-      </Button>
+      {showUnlink && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleUnlink}
+          disabled={unlinking}
+        >
+          {unlinking ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Unlink className="mr-2 h-4 w-4" />
+          )}
+          {unlinking ? "Unlinking..." : "Unlink"}
+        </Button>
+      )}
     </div>
   );
 }

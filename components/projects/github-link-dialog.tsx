@@ -46,14 +46,20 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
     setError(null);
     setSelectedRepo(null);
 
-    getOrgRepos().then((result) => {
-      if ("error" in result) {
-        setError(result.error);
-      } else {
-        setRepos(result.repos);
-      }
-      setLoading(false);
-    });
+    getOrgRepos()
+      .then((result) => {
+        if ("error" in result) {
+          setError(result.error);
+        } else {
+          setRepos(result.repos);
+        }
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to load repositories");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [open]);
 
   async function handleLink() {

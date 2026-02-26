@@ -87,7 +87,6 @@ model Project {
   creator         User            @relation(fields: [createdBy], references: [id])
   linkedByUser    User?           @relation("GitHubLinkedBy", fields: [githubLinkedBy], references: [id])
   vertical        Vertical        @relation(fields: [verticalId], references: [id], onDelete: Cascade)
-  autoSprintEnabled Boolean         @default(false) @map("auto_sprint_enabled")
   sprints         Sprint[]
   summaries       WeeklySummary[]
 
@@ -124,7 +123,6 @@ model Sprint {
   createdBy   String       @map("created_by")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
-  autoCreated Boolean      @default(false) @map("auto_created")
   creator   User         @relation(fields: [createdBy], references: [id])
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     Task[]
