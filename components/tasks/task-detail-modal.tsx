@@ -289,7 +289,7 @@ export function TaskDetailModal({
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <div className="space-y-6">
             {/* Header with Save / Delete */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-8">
               <DialogHeader className="flex-1">
                 <DialogTitle className="sr-only">Task Details</DialogTitle>
               </DialogHeader>
