@@ -1,7 +1,7 @@
 import type { UserRole } from "@prisma/client";
 
 export function canCreateTasks(role: UserRole): boolean {
-  return role === "admin" || role === "reviewer";
+  return role === "admin" || role === "developer" || role === "reviewer";
 }
 
 export function canLinkGitHub(role: UserRole): boolean {
