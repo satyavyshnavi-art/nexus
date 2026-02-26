@@ -310,13 +310,13 @@ export function TaskDetailModal({
                   </Button>
                 )}
                 <Button
-                  size="sm"
-                  variant="destructive"
+                  size="icon"
+                  variant="ghost"
                   onClick={() => setIsDeleteDialogOpen(true)}
                   disabled={isDeleting}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
