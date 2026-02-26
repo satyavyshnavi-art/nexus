@@ -227,6 +227,12 @@ export async function deleteUser(userId: string) {
       data: { assigneeId: null },
     });
 
+    // Unassign tasks where user is reviewer
+    await tx.task.updateMany({
+      where: { reviewerId: userId },
+      data: { reviewerId: null },
+    });
+
     // Reassign created tasks to admin
     await tx.task.updateMany({
       where: { createdBy: userId },
