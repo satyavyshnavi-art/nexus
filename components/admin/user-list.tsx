@@ -109,6 +109,7 @@ export function UserList({ users }: UserListProps) {
 function UserRow({ user }: { user: UserData }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -138,6 +139,7 @@ function UserRow({ user }: { user: UserData }) {
     setIsDeleting(true);
     try {
       const result = await deleteUser(user.id);
+      setDeleteDialogOpen(false);
       toast({
         title: "User removed",
         description: `${result.name} has been removed from the system`,
@@ -219,7 +221,7 @@ function UserRow({ user }: { user: UserData }) {
             </SelectContent>
           </Select>
 
-          <AlertDialog>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
@@ -248,13 +250,21 @@ function UserRow({ user }: { user: UserData }) {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <Button
+                  variant="destructive"
                   onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isDeleting}
                 >
-                  Remove User
-                </AlertDialogAction>
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    "Remove User"
+                  )}
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
