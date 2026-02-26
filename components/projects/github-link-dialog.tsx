@@ -1,31 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
   linkGitHubRepository,
   getOrgRepos,
   type OrgRepo,
 } from "@/server/actions/github-link";
 import { toast } from "sonner";
-import { GitBranch, Loader2, Lock, Globe, Check } from "lucide-react";
+import { GitBranch, Loader2, Lock, Globe, Check, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface GitHubLinkDialogProps {
   projectId: string;
@@ -39,12 +34,24 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
   const [repos, setRepos] = useState<OrgRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<OrgRepo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredRepos = useMemo(() => {
+    if (!search.trim()) return repos;
+    const q = search.toLowerCase();
+    return repos.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q)
+    );
+  }, [repos, search]);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
     setSelectedRepo(null);
+    setSearch("");
 
     getOrgRepos()
       .then((result) => {
@@ -96,25 +103,28 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
           Link GitHub Repository
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Link GitHub Repository</DialogTitle>
           <DialogDescription>
-            Select a repository from your organization to enable task syncing as issues.
+            Select a repository from your organization to enable task syncing as
+            issues.
           </DialogDescription>
         </DialogHeader>
 
         {/* Loading state */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading repositories...</p>
+            <p className="text-sm text-muted-foreground">
+              Loading repositories...
+            </p>
           </div>
         )}
 
         {/* Error state */}
         {!loading && error && (
-          <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
             <p className="text-sm text-destructive text-center">{error}</p>
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
               Close
@@ -124,50 +134,80 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
 
         {/* Repo selector */}
         {!loading && !error && (
-          <div className="space-y-4 py-2">
-            <Command className="rounded-lg border">
-              <CommandInput placeholder="Search repositories..." />
-              <CommandList className="max-h-[250px]">
-                <CommandEmpty>No repositories found.</CommandEmpty>
-                <CommandGroup>
-                  {repos.map((repo) => (
-                    <CommandItem
-                      key={repo.fullName}
-                      value={repo.name}
-                      onSelect={() => setSelectedRepo(repo)}
-                      className="flex items-start gap-3 py-2.5"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{repo.name}</span>
-                          {repo.isPrivate ? (
-                            <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
-                          ) : (
-                            <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+          <>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search repositories..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Repo list */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[260px] overflow-y-auto divide-y">
+                {filteredRepos.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No repositories found.
+                  </div>
+                ) : (
+                  filteredRepos.map((repo) => {
+                    const isSelected =
+                      selectedRepo?.fullName === repo.fullName;
+                    return (
+                      <button
+                        key={repo.fullName}
+                        type="button"
+                        onClick={() => setSelectedRepo(repo)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent/50",
+                          isSelected && "bg-primary/10"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/30"
                           )}
-                          {selectedRepo?.fullName === repo.fullName && (
-                            <Check className="h-4 w-4 text-primary shrink-0" />
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "font-medium text-sm truncate",
+                                isSelected && "text-primary"
+                              )}
+                            >
+                              {repo.name}
+                            </span>
+                            {repo.isPrivate ? (
+                              <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                            ) : (
+                              <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                          </div>
+                          {repo.description && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {repo.description}
+                            </p>
                           )}
                         </div>
-                        {repo.description && (
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {repo.description}
-                          </p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-
-            {selectedRepo && (
-              <div className="rounded-md bg-muted p-3 text-sm">
-                Selected: <strong>{selectedRepo.fullName}</strong>
+                      </button>
+                    );
+                  })
+                )}
               </div>
-            )}
+            </div>
 
-            <div className="flex justify-end gap-2">
+            {/* Footer */}
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={() => setOpen(false)}
@@ -182,8 +222,8 @@ export function GitHubLinkDialog({ projectId }: GitHubLinkDialogProps) {
                 {linking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {linking ? "Linking..." : "Link Repository"}
               </Button>
-            </div>
-          </div>
+            </DialogFooter>
+          </>
         )}
       </DialogContent>
     </Dialog>
