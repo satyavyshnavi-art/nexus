@@ -5,12 +5,20 @@ import { db } from "@/server/db";
 import { signIn } from "@/lib/auth/config";
 import { AuthError } from "next-auth";
 
+const ALLOWED_EMAIL_DOMAINS = ["stanzasoft.com"];
+
 export async function registerUser(
   email: string,
   password: string,
   name: string
 ) {
   try {
+    // Domain restriction
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+      return { success: false, error: "Only @stanzasoft.com email addresses are allowed" };
+    }
+
     const exists = await db.user.findUnique({ where: { email } });
     if (exists) {
       return { success: false, error: "User already exists" };
@@ -38,6 +46,12 @@ export async function registerUser(
 }
 
 export async function loginUser(email: string, password: string) {
+  // Domain restriction check before attempting sign-in
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+    return { success: false, error: "Access restricted to @stanzasoft.com email addresses only" };
+  }
+
   try {
     await signIn("credentials", {
       email,

@@ -20,6 +20,7 @@ const getErrorMessage = (error: string | null): string | null => {
     OAuthAccountNotLinked: "This email is already associated with another account. Please sign in using your original method.",
     EmailSignin: "Error sending verification email. Please try again.",
     CredentialsSignin: "Invalid email or password. Please try again.",
+    DomainNotAllowed: "Access restricted to @stanzasoft.com email addresses only.",
     SessionRequired: "Please sign in to access this page.",
     Default: "An error occurred during sign-in. Please try again.",
   };

@@ -8,6 +8,14 @@ import type { UserRole } from "@prisma/client";
 import { encrypt } from "@/lib/crypto/encryption";
 import { ensureUserHasVertical } from "@/lib/auth/helpers";
 
+const ALLOWED_EMAIL_DOMAINS = ["stanzasoft.com"];
+
+function isAllowedEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const domain = email.split("@")[1]?.toLowerCase();
+  return ALLOWED_EMAIL_DOMAINS.includes(domain);
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     // GitHub OAuth provider
@@ -38,8 +46,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        const email = credentials.email as string;
+
+        // Domain restriction
+        if (!isAllowedEmail(email)) {
+          return null;
+        }
+
         const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         if (!user) return null;
@@ -69,6 +84,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     // Handle GitHub OAuth sign-in
     async signIn({ user, account, profile }) {
+      // Domain restriction for all providers
+      if (account?.provider === "github" || account?.provider === "google") {
+        if (!isAllowedEmail(user.email)) {
+          return "/login?error=DomainNotAllowed";
+        }
+      }
+
       if (account?.provider === "github") {
         try {
           // Encrypt tokens before storage
