@@ -701,7 +701,6 @@ export async function createStory(data: {
   if (!session?.user) throw new Error("Unauthorized");
 
   const isAdmin = session.user.role === "admin";
-  if (!isAdmin) throw new Error("Only admins can create stories");
 
   // Verify sprint exists and get project info
   const sprint = await db.sprint.findUnique({
