@@ -72,8 +72,7 @@ export function SprintList({
                   )}
                 </div>
               </div>
-              {userRole === "admin" && (
-                <SprintActions
+              <SprintActions
                   sprintId={sprint.id}
                   status={sprint.status}
                   sprintName={sprint.name}
@@ -83,7 +82,6 @@ export function SprintList({
                   completedTaskCount={counts?.completed ?? 0}
                   incompleteTaskCount={counts?.incomplete ?? 0}
                 />
-              )}
             </div>
           </Card>
         );

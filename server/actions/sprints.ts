@@ -17,7 +17,7 @@ export async function createSprint(data: {
   const validated = createSprintSchema.parse(data);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
@@ -52,7 +52,7 @@ export async function updateSprint(
   const validated = updateSprintSchema.parse(data);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
@@ -86,7 +86,7 @@ export async function deleteSprint(sprintId: string) {
   z.string().min(1).parse(sprintId);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
@@ -113,7 +113,7 @@ export async function activateSprint(sprintId: string) {
   z.string().min(1).parse(sprintId);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
@@ -171,7 +171,7 @@ export async function completeSprint(
   completeSprintOptionsSchema.parse(options);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     throw new Error("Unauthorized");
   }
 
