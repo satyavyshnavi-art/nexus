@@ -111,7 +111,7 @@ export async function aiGenerateSprintPlan(
   z.string().min(1).max(10000).parse(inputText);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -208,7 +208,7 @@ export async function aiConfirmSprintPlan(
   const validatedPlan = confirmedPlanSchema.parse(confirmedPlan);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -308,7 +308,7 @@ export async function aiGenerateTickets(
   z.string().min(1).max(10000).parse(inputText);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -396,7 +396,7 @@ export async function aiConfirmTickets(
   const validatedTasks = confirmedTasksArraySchema.parse(confirmedTasks);
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
 

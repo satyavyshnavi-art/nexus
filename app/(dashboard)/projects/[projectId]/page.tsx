@@ -223,7 +223,7 @@ export default async function ProjectPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isAdmin && <AiSprintButton sprintId={activeSprint.id} />}
+                  <AiSprintButton sprintId={activeSprint.id} />
                   {showCreateTask && (
                     <CreateTaskButton
                       sprintId={activeSprint.id}

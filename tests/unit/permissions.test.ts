@@ -4,6 +4,7 @@ import {
   canLinkGitHub,
   canViewReports,
   canManageSprintSettings,
+  canGenerateAISprint,
 } from "@/lib/auth/permissions";
 
 // Use string literals matching the Prisma UserRole enum values
@@ -91,26 +92,49 @@ describe("Permission Functions", () => {
     });
   });
 
+  describe("canGenerateAISprint", () => {
+    it("should return true for admin", () => {
+      expect(canGenerateAISprint("admin")).toBe(true);
+    });
+
+    it("should return true for developer", () => {
+      expect(canGenerateAISprint("developer")).toBe(true);
+    });
+
+    it("should return true for reviewer", () => {
+      expect(canGenerateAISprint("reviewer")).toBe(true);
+    });
+
+    it("should return true for all roles", () => {
+      allRoles.forEach((role) => {
+        expect(canGenerateAISprint(role)).toBe(true);
+      });
+    });
+  });
+
   describe("Permission hierarchy consistency", () => {
     it("admin should have all permissions", () => {
       expect(canCreateTasks("admin")).toBe(true);
       expect(canLinkGitHub("admin")).toBe(true);
       expect(canViewReports("admin")).toBe(true);
       expect(canManageSprintSettings("admin")).toBe(true);
+      expect(canGenerateAISprint("admin")).toBe(true);
     });
 
-    it("developer should have create, link, and report permissions but not sprint settings", () => {
+    it("developer should have create, link, report, and AI sprint permissions but not sprint settings", () => {
       expect(canCreateTasks("developer")).toBe(true);
       expect(canLinkGitHub("developer")).toBe(true);
       expect(canViewReports("developer")).toBe(true);
       expect(canManageSprintSettings("developer")).toBe(false);
+      expect(canGenerateAISprint("developer")).toBe(true);
     });
 
-    it("reviewer should only have create tasks permission", () => {
+    it("reviewer should have create tasks and AI sprint permissions", () => {
       expect(canCreateTasks("reviewer")).toBe(true);
       expect(canLinkGitHub("reviewer")).toBe(false);
       expect(canViewReports("reviewer")).toBe(false);
       expect(canManageSprintSettings("reviewer")).toBe(false);
+      expect(canGenerateAISprint("reviewer")).toBe(true);
     });
   });
 });
