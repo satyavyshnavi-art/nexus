@@ -8,6 +8,7 @@ import type { ImageInput } from "@/lib/ai/gemini";
 import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
 import { z } from "zod";
 import { confirmedPlanSchema, confirmedTasksArraySchema } from "@/lib/validation/schemas";
+import { canManageSprints } from "@/lib/auth/permissions";
 
 // --- Role Matching Helper ---
 
@@ -115,6 +116,10 @@ export async function aiGenerateSprintPlan(
     return { success: false, error: "Unauthorized" };
   }
 
+  if (!canManageSprints(session.user.role)) {
+    return { success: false, error: "Only admins can generate AI sprint plans" };
+  }
+
   // Fetch project members with designations
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -210,6 +215,10 @@ export async function aiConfirmSprintPlan(
   const session = await auth();
   if (!session?.user) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  if (!canManageSprints(session.user.role)) {
+    return { success: false, error: "Only admins can confirm AI sprint plans" };
   }
 
   const startDate = new Date();

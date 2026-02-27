@@ -26,6 +26,7 @@ interface SprintActionsProps {
   endDate: Date;
   completedTaskCount?: number;
   incompleteTaskCount?: number;
+  userRole: string;
 }
 
 export function SprintActions({
@@ -37,6 +38,7 @@ export function SprintActions({
   endDate,
   completedTaskCount = 0,
   incompleteTaskCount = 0,
+  userRole,
 }: SprintActionsProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -86,10 +88,16 @@ export function SprintActions({
     }
   };
 
+  const isAdmin = userRole === "admin";
+
   if (status === "completed") {
     return (
       <span className="text-sm text-muted-foreground">Completed</span>
     );
+  }
+
+  if (!isAdmin) {
+    return null;
   }
 
   return (

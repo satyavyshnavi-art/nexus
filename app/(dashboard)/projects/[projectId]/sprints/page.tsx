@@ -88,10 +88,12 @@ export default async function SprintsPage({
             Manage sprints for this project
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <AiPlanSprintButton projectId={projectId} />
-          <CreateSprintButton projectId={projectId} />
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <AiPlanSprintButton projectId={projectId} />
+            <CreateSprintButton projectId={projectId} />
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue={defaultTab} className="space-y-4">

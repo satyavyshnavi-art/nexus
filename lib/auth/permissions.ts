@@ -16,6 +16,10 @@ export function canManageSprintSettings(role: UserRole): boolean {
   return role === "admin";
 }
 
+export function canManageSprints(role: UserRole): boolean {
+  return role === "admin";
+}
+
 export function canGenerateAISprint(role: UserRole): boolean {
-  return role === "admin" || role === "developer" || role === "reviewer";
+  return role === "admin";
 }

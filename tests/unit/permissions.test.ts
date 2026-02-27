@@ -5,6 +5,7 @@ import {
   canViewReports,
   canManageSprintSettings,
   canGenerateAISprint,
+  canManageSprints,
 } from "@/lib/auth/permissions";
 
 // Use string literals matching the Prisma UserRole enum values
@@ -97,18 +98,36 @@ describe("Permission Functions", () => {
       expect(canGenerateAISprint("admin")).toBe(true);
     });
 
-    it("should return true for developer", () => {
-      expect(canGenerateAISprint("developer")).toBe(true);
+    it("should return false for developer", () => {
+      expect(canGenerateAISprint("developer")).toBe(false);
     });
 
-    it("should return true for reviewer", () => {
-      expect(canGenerateAISprint("reviewer")).toBe(true);
+    it("should return false for reviewer", () => {
+      expect(canGenerateAISprint("reviewer")).toBe(false);
     });
 
-    it("should return true for all roles", () => {
-      allRoles.forEach((role) => {
-        expect(canGenerateAISprint(role)).toBe(true);
-      });
+    it("should only allow admin", () => {
+      const allowed = allRoles.filter((role) => canGenerateAISprint(role));
+      expect(allowed).toEqual(["admin"]);
+    });
+  });
+
+  describe("canManageSprints", () => {
+    it("should return true for admin", () => {
+      expect(canManageSprints("admin")).toBe(true);
+    });
+
+    it("should return false for developer", () => {
+      expect(canManageSprints("developer")).toBe(false);
+    });
+
+    it("should return false for reviewer", () => {
+      expect(canManageSprints("reviewer")).toBe(false);
+    });
+
+    it("should only allow admin", () => {
+      const allowed = allRoles.filter((role) => canManageSprints(role));
+      expect(allowed).toEqual(["admin"]);
     });
   });
 
@@ -118,23 +137,26 @@ describe("Permission Functions", () => {
       expect(canLinkGitHub("admin")).toBe(true);
       expect(canViewReports("admin")).toBe(true);
       expect(canManageSprintSettings("admin")).toBe(true);
+      expect(canManageSprints("admin")).toBe(true);
       expect(canGenerateAISprint("admin")).toBe(true);
     });
 
-    it("developer should have create, link, report, and AI sprint permissions but not sprint settings", () => {
+    it("developer should have create tasks, link, report permissions but not sprint management", () => {
       expect(canCreateTasks("developer")).toBe(true);
       expect(canLinkGitHub("developer")).toBe(true);
       expect(canViewReports("developer")).toBe(true);
       expect(canManageSprintSettings("developer")).toBe(false);
-      expect(canGenerateAISprint("developer")).toBe(true);
+      expect(canManageSprints("developer")).toBe(false);
+      expect(canGenerateAISprint("developer")).toBe(false);
     });
 
-    it("reviewer should have create tasks and AI sprint permissions", () => {
+    it("reviewer should only have create tasks permission", () => {
       expect(canCreateTasks("reviewer")).toBe(true);
       expect(canLinkGitHub("reviewer")).toBe(false);
       expect(canViewReports("reviewer")).toBe(false);
       expect(canManageSprintSettings("reviewer")).toBe(false);
-      expect(canGenerateAISprint("reviewer")).toBe(true);
+      expect(canManageSprints("reviewer")).toBe(false);
+      expect(canGenerateAISprint("reviewer")).toBe(false);
     });
   });
 });

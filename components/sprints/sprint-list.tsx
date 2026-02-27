@@ -81,6 +81,7 @@ export function SprintList({
                   endDate={sprint.endDate}
                   completedTaskCount={counts?.completed ?? 0}
                   incompleteTaskCount={counts?.incomplete ?? 0}
+                  userRole={userRole}
                 />
             </div>
           </Card>

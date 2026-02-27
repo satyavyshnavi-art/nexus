@@ -6,6 +6,7 @@ import { SprintStatus, TaskStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSprintSchema, updateSprintSchema, completeSprintOptionsSchema } from "@/lib/validation/schemas";
+import { canManageSprints } from "@/lib/auth/permissions";
 
 export async function createSprint(data: {
   projectId: string;
@@ -19,6 +20,10 @@ export async function createSprint(data: {
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
+  }
+
+  if (!canManageSprints(session.user.role)) {
+    throw new Error("Only admins can create sprints");
   }
 
   if (validated.endDate < validated.startDate) {
@@ -56,6 +61,10 @@ export async function updateSprint(
     throw new Error("Unauthorized");
   }
 
+  if (!canManageSprints(session.user.role)) {
+    throw new Error("Only admins can edit sprints");
+  }
+
   if (validated.startDate && validated.endDate && validated.endDate < validated.startDate) {
     throw new Error("End date must be after start date");
   }
@@ -90,6 +99,10 @@ export async function deleteSprint(sprintId: string) {
     throw new Error("Unauthorized");
   }
 
+  if (!canManageSprints(session.user.role)) {
+    throw new Error("Only admins can delete sprints");
+  }
+
   const sprint = await db.sprint.findUnique({
     where: { id: sprintId },
     select: { id: true, projectId: true, status: true },
@@ -115,6 +128,10 @@ export async function activateSprint(sprintId: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
+  }
+
+  if (!canManageSprints(session.user.role)) {
+    throw new Error("Only admins can activate sprints");
   }
 
   // Transaction to enforce one active sprint rule
@@ -173,6 +190,10 @@ export async function completeSprint(
   const session = await auth();
   if (!session?.user) {
     throw new Error("Unauthorized");
+  }
+
+  if (!canManageSprints(session.user.role)) {
+    throw new Error("Only admins can complete sprints");
   }
 
   const result = await db.$transaction(async (tx) => {
