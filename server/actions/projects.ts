@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createProjectSchema, updateProjectSchema } from "@/lib/validation/schemas";
+import { getCached, invalidateCacheKeys } from "@/lib/cache/redis";
 
 export async function createProject(data: {
   name: string;
@@ -67,6 +68,10 @@ export async function updateProject(
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
   revalidatePath("/");
+  await invalidateCacheKeys(
+    `nexus:project:${projectId}`,
+    "nexus:team:members"
+  );
 
   return project;
 }
@@ -182,6 +187,10 @@ export async function addMemberToProject(projectId: string, userId: string) {
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
   revalidatePath("/team");
+  await invalidateCacheKeys(
+    `nexus:project:${projectId}`,
+    "nexus:team:members"
+  );
 
   return result;
 }
@@ -208,6 +217,10 @@ export async function removeMemberFromProject(projectId: string, userId: string)
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects");
   revalidatePath("/team");
+  await invalidateCacheKeys(
+    `nexus:project:${projectId}`,
+    "nexus:team:members"
+  );
 
   return result;
 }
@@ -371,6 +384,10 @@ export async function deleteProject(projectId: string) {
     revalidatePath("/");
     revalidatePath("/admin/projects");
     revalidatePath("/admin/verticals");
+    await invalidateCacheKeys(
+      `nexus:project:${projectId}`,
+      "nexus:team:members"
+    );
     return project;
   } catch (error) {
     console.error("Failed to delete project:", error);
@@ -392,40 +409,49 @@ export async function getProjectCached(
   z.string().min(1).parse(userId);
   z.string().min(1).parse(userRole);
 
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    include: {
-      vertical: true,
-      members: {
+  // Fetch project data (cached), then check auth OUTSIDE the cache
+  const project = await getCached(
+    `nexus:project:${projectId}`,
+    async () => {
+      const p = await db.project.findUnique({
+        where: { id: projectId },
         include: {
-          user: {
-            select: { id: true, name: true, email: true, designation: true },
+          vertical: true,
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, designation: true },
+              },
+            },
+          },
+          documents: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              creator: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          _count: {
+            select: { sprints: true },
           },
         },
-      },
-      documents: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          creator: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      },
-      _count: {
-        select: { sprints: true },
-      },
+      });
+      if (!p) throw new Error("Project not found");
+      return {
+        ...p,
+        githubRepoId: p.githubRepoId?.toString() || null,
+      };
     },
-  });
-  if (!project) throw new Error("Project not found");
+    300
+  );
 
+  // Auth check AFTER cache retrieval — prevents unauthorized cache poisoning
   const isAdmin = userRole === "admin";
   const isMember = project.members.some((m) => m.userId === userId);
   if (!isAdmin && !isMember) throw new Error("Unauthorized");
 
-  return {
-    ...project,
-    githubRepoId: project.githubRepoId?.toString() || null,
-  };
+  return project;
 }
 
 /**

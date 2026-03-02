@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth/config";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createProjectDocumentSchema, updateProjectDocumentSchema } from "@/lib/validation/schemas";
+import { invalidateCacheKeys } from "@/lib/cache/redis";
 
 // Check if user has access to a project
 async function canAccessProject(projectId: string, userId: string, isAdmin: boolean) {
@@ -49,6 +50,7 @@ export async function createProjectDocument(data: {
     });
 
     revalidatePath(`/projects/${validated.projectId}`);
+    await invalidateCacheKeys(`nexus:project:${validated.projectId}`);
     return document;
 }
 
@@ -87,6 +89,7 @@ export async function updateProjectDocument(
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
+    await invalidateCacheKeys(`nexus:project:${existingDoc.projectId}`);
     return updatedDocument;
 }
 
@@ -116,5 +119,6 @@ export async function deleteProjectDocument(documentId: string) {
     });
 
     revalidatePath(`/projects/${existingDoc.projectId}`);
+    await invalidateCacheKeys(`nexus:project:${existingDoc.projectId}`);
     return { success: true };
 }

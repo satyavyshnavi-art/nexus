@@ -6,6 +6,7 @@ import { UserRole, TaskStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateUserRoleSchema } from "@/lib/validation/schemas";
+import { getCached, invalidateCacheKeys } from "@/lib/cache/redis";
 
 /**
  * Get all team members with their statistics
@@ -17,71 +18,77 @@ export async function getTeamMembers() {
     throw new Error("Unauthorized");
   }
 
-  const users = await db.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      designation: true,
-      avatar: true,
-      role: true,
-      createdAt: true,
-      projectMemberships: {
-        select: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      assignedTasks: {
+  return getCached(
+    "nexus:team:members",
+    async () => {
+      const users = await db.user.findMany({
         select: {
           id: true,
-          title: true,
-          status: true,
-          priority: true,
-          type: true,
-          sprint: {
+          name: true,
+          email: true,
+          designation: true,
+          avatar: true,
+          role: true,
+          createdAt: true,
+          projectMemberships: {
             select: {
-              name: true,
-              status: true,
               project: {
                 select: {
+                  id: true,
                   name: true,
                 },
               },
             },
           },
+          assignedTasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              type: true,
+              sprint: {
+                select: {
+                  name: true,
+                  status: true,
+                  project: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
         },
         orderBy: { createdAt: "desc" },
-      },
+      });
+
+      return users.map((user) => {
+        const activeTasks = user.assignedTasks.filter(
+          (task) => task.status !== TaskStatus.done
+        ).length;
+        const completedTasks = user.assignedTasks.filter(
+          (task) => task.status === TaskStatus.done
+        ).length;
+
+        return {
+          ...user,
+          name: user.name ?? "Unknown User",
+          designation: user.designation ?? "Team Member",
+          avatar: user.avatar ?? null,
+          assignedTasks: user.assignedTasks.slice(0, 5),
+          stats: {
+            projects: user.projectMemberships?.length ?? 0,
+            activeTasks,
+            completedTasks,
+          },
+        };
+      });
     },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return users.map((user) => {
-    const activeTasks = user.assignedTasks.filter(
-      (task) => task.status !== TaskStatus.done
-    ).length;
-    const completedTasks = user.assignedTasks.filter(
-      (task) => task.status === TaskStatus.done
-    ).length;
-
-    return {
-      ...user,
-      name: user.name ?? "Unknown User",
-      designation: user.designation ?? "Team Member",
-      avatar: user.avatar ?? null,
-      assignedTasks: user.assignedTasks.slice(0, 5),
-      stats: {
-        projects: user.projectMemberships?.length ?? 0,
-        activeTasks,
-        completedTasks,
-      },
-    };
-  });
+    120
+  );
 }
 
 /**
@@ -127,32 +134,38 @@ export async function getTeamStats() {
  * Use this from server components that already have the session.
  */
 export async function getTeamStatsCached() {
-  const [totalMembers, adminCount, developerCount, reviewerCount, activeMembers] =
-    await Promise.all([
-      db.user.count(),
-      db.user.count({ where: { role: UserRole.admin } }),
-      db.user.count({ where: { role: UserRole.developer } }),
-      db.user.count({ where: { role: UserRole.reviewer } }),
-      db.user.count({
-        where: {
-          assignedTasks: {
-            some: {
-              status: {
-                in: [TaskStatus.todo, TaskStatus.progress, TaskStatus.review],
+  return getCached(
+    "nexus:team:stats",
+    async () => {
+      const [totalMembers, adminCount, developerCount, reviewerCount, activeMembers] =
+        await Promise.all([
+          db.user.count(),
+          db.user.count({ where: { role: UserRole.admin } }),
+          db.user.count({ where: { role: UserRole.developer } }),
+          db.user.count({ where: { role: UserRole.reviewer } }),
+          db.user.count({
+            where: {
+              assignedTasks: {
+                some: {
+                  status: {
+                    in: [TaskStatus.todo, TaskStatus.progress, TaskStatus.review],
+                  },
+                },
               },
             },
-          },
-        },
-      }),
-    ]);
+          }),
+        ]);
 
-  return {
-    totalMembers,
-    activeMembers,
-    adminCount,
-    developerCount,
-    reviewerCount,
-  };
+      return {
+        totalMembers,
+        activeMembers,
+        adminCount,
+        developerCount,
+        reviewerCount,
+      };
+    },
+    120
+  );
 }
 
 /**
@@ -189,6 +202,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
   revalidatePath("/");
   revalidatePath("/admin/verticals");
   revalidatePath("/admin/users");
+  await invalidateCacheKeys("nexus:team:members", "nexus:team:stats");
 
   return updated;
 }
@@ -293,6 +307,7 @@ export async function deleteUser(userId: string) {
   revalidatePath("/");
   revalidatePath("/admin/users");
   revalidatePath("/admin/verticals");
+  await invalidateCacheKeys("nexus:team:members", "nexus:team:stats");
 
   return { success: true, name: user.name || user.email };
 }

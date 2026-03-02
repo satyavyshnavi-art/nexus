@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { generateWeeklySummaryAI } from "@/lib/ai/weekly-summary";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getCached, invalidateCacheKeys } from "@/lib/cache/redis";
 
 function getCurrentWeekBounds(): { monday: Date; friday: Date } {
   const now = new Date();
@@ -98,6 +99,7 @@ export async function generateWeeklySummary(projectId: string) {
   });
 
   revalidatePath(`/projects/${projectId}`);
+  await invalidateCacheKeys(`nexus:summaries:${projectId}`);
 
   return { ...summary, nextWeekFocus: aiResult.next_week_focus };
 }
@@ -113,9 +115,14 @@ export async function getWeeklySummaries(projectId: string, limit: number = 5) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  return db.weeklySummary.findMany({
-    where: { projectId },
-    orderBy: { weekStart: "desc" },
-    take: limit,
-  });
+  return getCached(
+    `nexus:summaries:${projectId}`,
+    () =>
+      db.weeklySummary.findMany({
+        where: { projectId },
+        orderBy: { weekStart: "desc" },
+        take: limit,
+      }),
+    300
+  );
 }

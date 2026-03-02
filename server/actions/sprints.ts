@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSprintSchema, updateSprintSchema, completeSprintOptionsSchema } from "@/lib/validation/schemas";
 import { canManageSprints } from "@/lib/auth/permissions";
+import { getCached, invalidateCacheKeys } from "@/lib/cache/redis";
 
 export async function createSprint(data: {
   projectId: string;
@@ -41,6 +42,10 @@ export async function createSprint(data: {
     // Revalidate caches
     revalidatePath(`/projects/${validated.projectId}`);
     revalidatePath(`/projects/${validated.projectId}/sprints`);
+    await invalidateCacheKeys(
+      `nexus:sprints:${validated.projectId}`,
+      `nexus:sprint:active:${validated.projectId}`
+    );
 
     return sprint;
   } catch (error) {
@@ -86,6 +91,11 @@ export async function updateSprint(
 
   revalidatePath(`/projects/${sprint.projectId}`);
   revalidatePath(`/projects/${sprint.projectId}/sprints`);
+  await invalidateCacheKeys(
+    `nexus:sprints:${sprint.projectId}`,
+    `nexus:sprint:active:${sprint.projectId}`,
+    `nexus:sprint:progress:${sprintId}`
+  );
 
   return updated;
 }
@@ -117,6 +127,11 @@ export async function deleteSprint(sprintId: string) {
 
   revalidatePath(`/projects/${sprint.projectId}`);
   revalidatePath(`/projects/${sprint.projectId}/sprints`);
+  await invalidateCacheKeys(
+    `nexus:sprints:${sprint.projectId}`,
+    `nexus:sprint:active:${sprint.projectId}`,
+    `nexus:sprint:progress:${sprintId}`
+  );
 
   return { success: true };
 }
@@ -163,6 +178,10 @@ export async function activateSprint(sprintId: string) {
   // Revalidate caches
   revalidatePath(`/projects/${result.projectId}`);
   revalidatePath(`/projects/${result.projectId}/sprints`);
+  await invalidateCacheKeys(
+    `nexus:sprints:${result.projectId}`,
+    `nexus:sprint:active:${result.projectId}`
+  );
 
   return result;
 }
@@ -317,6 +336,11 @@ export async function completeSprint(
   // Revalidate caches
   revalidatePath(`/projects/${result.sprint.projectId}`);
   revalidatePath(`/projects/${result.sprint.projectId}/sprints`);
+  await invalidateCacheKeys(
+    `nexus:sprints:${result.sprint.projectId}`,
+    `nexus:sprint:active:${result.sprint.projectId}`,
+    `nexus:sprint:progress:${sprintId}`
+  );
 
   return result;
 }
@@ -328,46 +352,52 @@ export async function getActiveSprint(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const sprint = await db.sprint.findFirst({
-    where: {
-      projectId,
-      status: SprintStatus.active,
-    },
-    include: {
-      tasks: {
+  return getCached(
+    `nexus:sprint:active:${projectId}`,
+    async () => {
+      const sprint = await db.sprint.findFirst({
+        where: {
+          projectId,
+          status: SprintStatus.active,
+        },
         include: {
-          assignee: { select: { id: true, name: true, email: true } },
-          reviewer: { select: { id: true, name: true, email: true } },
-          parentTask: { select: { id: true, title: true } },
-          childTasks: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-              type: true,
+          tasks: {
+            include: {
+              assignee: { select: { id: true, name: true, email: true } },
+              reviewer: { select: { id: true, name: true, email: true } },
+              parentTask: { select: { id: true, title: true } },
+              childTasks: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  priority: true,
+                  type: true,
+                },
+                orderBy: { createdAt: "asc" },
+              },
+              _count: {
+                select: { comments: true, attachments: true, childTasks: true },
+              },
             },
             orderBy: { createdAt: "asc" },
           },
-          _count: {
-            select: { comments: true, attachments: true, childTasks: true },
-          },
         },
-        orderBy: { createdAt: "asc" },
-      },
+      });
+
+      if (!sprint) return null;
+
+      // Serialize BigInt fields for client components
+      return {
+        ...sprint,
+        tasks: sprint.tasks.map((t) => ({
+          ...t,
+          githubIssueId: t.githubIssueId?.toString() || null,
+        })),
+      };
     },
-  });
-
-  if (!sprint) return null;
-
-  // Serialize BigInt fields for client components
-  return {
-    ...sprint,
-    tasks: sprint.tasks.map((t) => ({
-      ...t,
-      githubIssueId: t.githubIssueId?.toString() || null,
-    })),
-  };
+    60
+  );
 }
 
 export async function getProjectSprints(projectId: string) {
@@ -396,15 +426,20 @@ export async function getProjectSprintsCached(projectId: string) {
   // Runtime validation
   z.string().min(1).parse(projectId);
 
-  return db.sprint.findMany({
-    where: { projectId },
-    include: {
-      _count: {
-        select: { tasks: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  return getCached(
+    `nexus:sprints:${projectId}`,
+    () =>
+      db.sprint.findMany({
+        where: { projectId },
+        include: {
+          _count: {
+            select: { tasks: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    300
+  );
 }
 
 export async function getPlannedSprints(projectId: string) {
@@ -454,49 +489,55 @@ export async function getSprintProgress(
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const sprint = await db.sprint.findUnique({
-    where: { id: sprintId },
-    include: {
-      tasks: {
-        select: {
-          id: true,
-          status: true,
-          type: true,
+  return getCached(
+    `nexus:sprint:progress:${sprintId}`,
+    async () => {
+      const sprint = await db.sprint.findUnique({
+        where: { id: sprintId },
+        include: {
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+              type: true,
+            },
+          },
         },
-      },
+      });
+
+      if (!sprint) return null;
+
+      // Only count tickets (type = "task" or "bug") for progress, not stories or subtasks
+      const tickets = sprint.tasks.filter(
+        (t) => t.type !== "story" && t.type !== "subtask"
+      );
+
+      const totalTasks = tickets.length;
+      const tasksByStatus = {
+        todo: tickets.filter((t) => t.status === "todo").length,
+        progress: tickets.filter((t) => t.status === "progress").length,
+        review: tickets.filter((t) => t.status === "review").length,
+        done: tickets.filter((t) => t.status === "done").length,
+      };
+
+      const completionPercentage =
+        totalTasks > 0
+          ? Math.round((tasksByStatus.done / totalTasks) * 100)
+          : 0;
+
+      return {
+        id: sprint.id,
+        name: sprint.name,
+        status: sprint.status,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+        totalTasks,
+        tasksByStatus,
+        completionPercentage,
+      };
     },
-  });
-
-  if (!sprint) return null;
-
-  // Only count tickets (type = "task" or "bug") for progress, not stories or subtasks
-  const tickets = sprint.tasks.filter(
-    (t) => t.type !== "story" && t.type !== "subtask"
+    60
   );
-
-  const totalTasks = tickets.length;
-  const tasksByStatus = {
-    todo: tickets.filter((t) => t.status === "todo").length,
-    progress: tickets.filter((t) => t.status === "progress").length,
-    review: tickets.filter((t) => t.status === "review").length,
-    done: tickets.filter((t) => t.status === "done").length,
-  };
-
-  const completionPercentage =
-    totalTasks > 0
-      ? Math.round((tasksByStatus.done / totalTasks) * 100)
-      : 0;
-
-  return {
-    id: sprint.id,
-    name: sprint.name,
-    status: sprint.status,
-    startDate: sprint.startDate,
-    endDate: sprint.endDate,
-    totalTasks,
-    tasksByStatus,
-    completionPercentage,
-  };
 }
 
 export interface SprintDetailData {

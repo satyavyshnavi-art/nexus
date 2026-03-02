@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
 import { verifyRepositoryAccess, createOctokitForUser, getRepository, listOrgRepositories } from "@/lib/github/client";
 import { z } from "zod";
+import { getCached, invalidateCacheKeys } from "@/lib/cache/redis";
 
 const linkRepoSchema = z.object({
   projectId: z.string().uuid(),
@@ -78,6 +79,10 @@ export async function linkGitHubRepository(
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/admin/projects`);
+  await invalidateCacheKeys(
+    `nexus:repo:${projectId}`,
+    `nexus:project:${projectId}`
+  );
 
   return {
     success: true,
@@ -126,6 +131,10 @@ export async function unlinkGitHubRepository(projectId: string) {
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/admin/projects`);
+  await invalidateCacheKeys(
+    `nexus:repo:${projectId}`,
+    `nexus:project:${projectId}`
+  );
 
   return { success: true };
 }
@@ -141,34 +150,40 @@ export async function getLinkedRepository(projectId: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: {
-      githubRepoOwner: true,
-      githubRepoName: true,
-      githubLinkedAt: true,
-      linkedByUser: {
+  return getCached(
+    `nexus:repo:${projectId}`,
+    async () => {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
         select: {
-          name: true,
-          githubUsername: true,
+          githubRepoOwner: true,
+          githubRepoName: true,
+          githubLinkedAt: true,
+          linkedByUser: {
+            select: {
+              name: true,
+              githubUsername: true,
+            },
+          },
         },
-      },
+      });
+
+      if (!project?.githubRepoOwner) {
+        return null;
+      }
+
+      return {
+        repository: `${project.githubRepoOwner}/${project.githubRepoName}`,
+        repositoryUrl: `https://github.com/${project.githubRepoOwner}/${project.githubRepoName}`,
+        owner: project.githubRepoOwner,
+        name: project.githubRepoName,
+        linkedAt: project.githubLinkedAt,
+        linkedBy: project.linkedByUser?.name || "Unknown",
+        linkedByGitHub: project.linkedByUser?.githubUsername,
+      };
     },
-  });
-
-  if (!project?.githubRepoOwner) {
-    return null;
-  }
-
-  return {
-    repository: `${project.githubRepoOwner}/${project.githubRepoName}`,
-    repositoryUrl: `https://github.com/${project.githubRepoOwner}/${project.githubRepoName}`,
-    owner: project.githubRepoOwner,
-    name: project.githubRepoName,
-    linkedAt: project.githubLinkedAt,
-    linkedBy: project.linkedByUser?.name || "Unknown",
-    linkedByGitHub: project.linkedByUser?.githubUsername,
-  };
+    600
+  );
 }
 
 /**

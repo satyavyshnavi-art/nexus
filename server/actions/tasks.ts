@@ -9,6 +9,7 @@ import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
+import { invalidateCacheKeys } from "@/lib/cache/redis";
 import {
   createTaskSchema,
   updateTaskSchema,
@@ -68,6 +69,10 @@ async function recalculateTicketStatus(ticketId: string) {
     // Revalidate the project path
     if (ticket.sprint?.projectId) {
       revalidatePath(`/projects/${ticket.sprint.projectId}`);
+      await invalidateCacheKeys(
+        `nexus:sprint:active:${ticket.sprint.projectId}`,
+        ...(ticket.sprintId ? [`nexus:sprint:progress:${ticket.sprintId}`] : [])
+      );
     }
   }
 }
@@ -193,6 +198,10 @@ export async function createTask(data: {
   // Revalidate cache immediately for instant UI update
   if (projectId) {
     revalidatePath(`/projects/${projectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${projectId}`,
+      ...(validated.sprintId ? [`nexus:sprint:progress:${validated.sprintId}`] : [])
+    );
   }
 
   // Only sync to GitHub if the user opted in (async, non-blocking)
@@ -257,6 +266,10 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus, re
   const revalidateProjectId = updatedTask.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${revalidateProjectId}`,
+      ...(updatedTask.sprintId ? [`nexus:sprint:progress:${updatedTask.sprintId}`] : [])
+    );
   }
 
   // Auto-recalculate parent ticket status if this is a subtask
@@ -321,6 +334,10 @@ export async function updateTask(
   const revalidateProjectId = updatedTask.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${revalidateProjectId}`,
+      ...(updatedTask.sprintId ? [`nexus:sprint:progress:${updatedTask.sprintId}`] : [])
+    );
   }
 
   return updatedTask;
@@ -504,6 +521,10 @@ export async function deleteTask(taskId: string) {
   const revalidateProjectId = task.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${revalidateProjectId}`,
+      ...(task.sprintId ? [`nexus:sprint:progress:${task.sprintId}`] : [])
+    );
   }
 
   // Recalculate parent ticket status if this was a subtask
@@ -602,6 +623,10 @@ export async function createSubtask(
   const revalidateProjectId = parentTask.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${revalidateProjectId}`,
+      ...(parentTask.sprintId ? [`nexus:sprint:progress:${parentTask.sprintId}`] : [])
+    );
   }
 
   // Recalculate parent ticket status after adding a new subtask
@@ -749,6 +774,10 @@ export async function createStory(data: {
   });
 
   revalidatePath(`/projects/${sprint.projectId}`);
+  await invalidateCacheKeys(
+    `nexus:sprint:active:${sprint.projectId}`,
+    `nexus:sprint:progress:${validated.sprintId}`
+  );
 
   return story;
 }
@@ -845,6 +874,10 @@ export async function createTicket(data: {
   const revalidateProjectId = story.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+    await invalidateCacheKeys(
+      `nexus:sprint:active:${revalidateProjectId}`,
+      ...(story.sprintId ? [`nexus:sprint:progress:${story.sprintId}`] : [])
+    );
   }
 
   return ticket;

@@ -6,6 +6,7 @@ import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateUserRoleSchema, updateUserProfileSchema } from "@/lib/validation/schemas";
+import { invalidateCacheKeys } from "@/lib/cache/redis";
 
 export async function getAllUsers() {
   const session = await auth();
@@ -45,6 +46,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
   revalidatePath("/admin/verticals");
   revalidatePath("/team");
   revalidatePath("/admin/users");
+  await invalidateCacheKeys("nexus:team:members", "nexus:team:stats");
 
   return updated;
 }
@@ -147,6 +149,7 @@ export async function updateUserProfile(
   revalidatePath(`/profile/${userId}`);
   revalidatePath("/team");
   revalidatePath("/");
+  await invalidateCacheKeys("nexus:team:members", "nexus:team:stats");
 
   return updated;
 }

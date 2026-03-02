@@ -23,6 +23,7 @@ import { ProjectReportSection } from "@/components/projects/project-report-secti
 import { canCreateTasks, canLinkGitHub, canViewReports } from "@/lib/auth/permissions";
 import { getWeeklySummaries } from "@/server/actions/weekly-summary";
 import { db } from "@/server/db";
+import { getCached } from "@/lib/cache/redis";
 import type { UserRole } from "@prisma/client";
 
 export default async function ProjectPage({
@@ -65,10 +66,15 @@ export default async function ProjectPage({
     getActiveSprint(projectId),
     getProjectSprintsCached(projectId),
     getLinkedRepository(projectId),
-    db.user.findUnique({
-      where: { id: session.user.id },
-      select: { githubAccessToken: true },
-    }),
+    getCached(
+      `nexus:user:github:${session.user.id}`,
+      () =>
+        db.user.findUnique({
+          where: { id: session.user.id },
+          select: { githubAccessToken: true },
+        }),
+      600
+    ),
     getWeeklySummaries(projectId),
   ]);
 

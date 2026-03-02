@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
-import { generateSprintPlan, SprintPlanOutput } from "@/lib/ai/sprint-planner";
+import { generateSprintPlan, generateTicketsForStory, SprintPlanOutput, FlatTicketsOutput } from "@/lib/ai/sprint-planner";
 import type { ImageInput } from "@/lib/ai/gemini";
 import { TaskType, TaskPriority, SprintStatus } from "@prisma/client";
 import { z } from "zod";
-import { confirmedPlanSchema, confirmedTasksArraySchema } from "@/lib/validation/schemas";
+import { confirmedPlanSchema, confirmedTasksArraySchema, confirmedTicketsForStoryArraySchema } from "@/lib/validation/schemas";
 import { canManageSprints } from "@/lib/auth/permissions";
+import { invalidateCacheKeys } from "@/lib/cache/redis";
 
 // --- Role Matching Helper ---
 
@@ -290,6 +291,10 @@ export async function aiConfirmSprintPlan(
 
     revalidatePath(`/projects/${projectId}`);
     revalidatePath(`/projects/${projectId}/sprints`);
+    await invalidateCacheKeys(
+      `nexus:sprints:${projectId}`,
+      `nexus:sprint:active:${projectId}`
+    );
 
     return data;
   } catch (error) {
@@ -470,10 +475,178 @@ export async function aiConfirmTickets(
 
     revalidatePath(`/projects/${sprint.projectId}`);
     revalidatePath(`/projects/${sprint.projectId}/sprints`);
+    await invalidateCacheKeys(
+      `nexus:sprints:${sprint.projectId}`,
+      `nexus:sprint:active:${sprint.projectId}`
+    );
 
     return data;
   } catch (error) {
     console.error("[AI Confirm Tickets] DB error:", error);
     return { success: false, error: "Failed to save generated tickets" };
+  }
+}
+
+// --- Flat Ticket Generation for Existing Story (two-step) ---
+
+export type SuggestedFlatTicket = {
+  title: string;
+  required_role: string;
+  priority: "low" | "medium" | "high" | "critical";
+  labels: string[];
+  suggested_assignees: RoleMatchResult[];
+  selected_assignee_id?: string;
+};
+
+export type GeneratedFlatTicketsPlan = {
+  tickets: SuggestedFlatTicket[];
+  members: { id: string; name: string | null; designation: string | null }[];
+};
+
+// Step 1: Generate flat tickets for an existing story
+export async function aiGenerateTicketsForStory(
+  sprintId: string,
+  storyId: string,
+  inputText: string,
+  images?: ImageInput[]
+): Promise<{ success: true; plan: GeneratedFlatTicketsPlan } | { success: false; error: string }> {
+  z.string().min(1).parse(sprintId);
+  z.string().min(1).parse(storyId);
+  z.string().min(1).max(10000).parse(inputText);
+
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  // Verify sprint exists and get projectId
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { projectId: true },
+  });
+
+  if (!sprint) {
+    return { success: false, error: "Sprint not found" };
+  }
+
+  // Verify story exists and belongs to this sprint
+  const story = await db.task.findFirst({
+    where: { id: storyId, sprintId, type: TaskType.story },
+    select: { id: true, title: true },
+  });
+
+  if (!story) {
+    return { success: false, error: "Story not found in this sprint" };
+  }
+
+  // Fetch project members
+  const project = await db.project.findUnique({
+    where: { id: sprint.projectId },
+    include: {
+      members: {
+        include: {
+          user: { select: { id: true, name: true, designation: true } },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return { success: false, error: "Project not found" };
+  }
+
+  const members = project.members.map((m) => m.user);
+
+  let aiResult: FlatTicketsOutput;
+  try {
+    aiResult = await generateTicketsForStory(story.title, inputText, members, images);
+  } catch (error) {
+    console.error("[AI Generate Tickets For Story] error:", error);
+    const message = error instanceof Error ? error.message : "AI generation failed";
+    return { success: false, error: message };
+  }
+
+  const tickets: SuggestedFlatTicket[] = aiResult.tickets.map((ticket) => ({
+    title: ticket.title,
+    required_role: ticket.required_role,
+    priority: ticket.priority,
+    labels: ticket.labels,
+    suggested_assignees: matchRoleToMembers(ticket.required_role, members),
+  }));
+
+  return {
+    success: true,
+    plan: { tickets, members },
+  };
+}
+
+// Step 2: Confirm flat tickets under the story
+export type ConfirmedFlatTicket = {
+  title: string;
+  required_role: string;
+  priority: "low" | "medium" | "high" | "critical";
+  labels: string[];
+  assignee_id?: string;
+};
+
+export async function aiConfirmTicketsForStory(
+  sprintId: string,
+  storyId: string,
+  confirmedTickets: ConfirmedFlatTicket[]
+): Promise<{ success: true; taskCount: number } | { success: false; error: string }> {
+  z.string().min(1).parse(sprintId);
+  z.string().min(1).parse(storyId);
+  const validatedTickets = confirmedTicketsForStoryArraySchema.parse(confirmedTickets);
+
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  // Verify sprint + story
+  const sprint = await db.sprint.findUnique({
+    where: { id: sprintId },
+    select: { projectId: true },
+  });
+
+  if (!sprint) {
+    return { success: false, error: "Sprint not found" };
+  }
+
+  const story = await db.task.findFirst({
+    where: { id: storyId, sprintId, type: TaskType.story },
+    select: { id: true },
+  });
+
+  if (!story) {
+    return { success: false, error: "Story not found in this sprint" };
+  }
+
+  try {
+    const ticketData = validatedTickets.map((ticket) => ({
+      sprintId,
+      title: ticket.title,
+      type: TaskType.task,
+      parentTaskId: storyId,
+      priority: ticket.priority as TaskPriority,
+      requiredRole: ticket.required_role,
+      labels: ticket.labels,
+      assigneeId: ticket.assignee_id || undefined,
+      createdBy: session.user.id,
+    }));
+
+    await db.task.createMany({ data: ticketData });
+
+    revalidatePath(`/projects/${sprint.projectId}`);
+    revalidatePath(`/projects/${sprint.projectId}/sprints`);
+    await invalidateCacheKeys(
+      `nexus:sprints:${sprint.projectId}`,
+      `nexus:sprint:active:${sprint.projectId}`
+    );
+
+    return { success: true, taskCount: ticketData.length };
+  } catch (error) {
+    console.error("[AI Confirm Tickets For Story] DB error:", error);
+    return { success: false, error: "Failed to save tickets" };
   }
 }
