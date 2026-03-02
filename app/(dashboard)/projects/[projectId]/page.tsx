@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
 import { Calendar, Users, LayoutDashboard, ListTodo, Settings, FileText, BarChart3 } from "lucide-react";
+import { EditProjectButton } from "@/components/projects/edit-project-button";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
@@ -77,6 +78,13 @@ export default async function ProjectPage({
     : null;
   const userHasGitHub = !!currentUser?.githubAccessToken;
 
+  // Extract stories for AI Generate Tickets selector
+  const sprintStories = activeSprint
+    ? activeSprint.tasks
+        .filter((t) => t.type === "story")
+        .map((t) => ({ id: t.id, title: t.title }))
+    : [];
+
   // Filter to show tickets on the board (exclude stories and subtasks)
   const boardTickets = activeSprint
     ? activeSprint.tasks.filter(
@@ -102,7 +110,14 @@ export default async function ProjectPage({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent pb-1">{project.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent pb-1">{project.name}</h1>
+            {isAdmin && (
+              <EditProjectButton
+                project={{ id: project.id, name: project.name, description: project.description }}
+              />
+            )}
+          </div>
           <p className="text-muted-foreground text-lg mt-1">{project.description}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="px-2 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium">
@@ -223,7 +238,7 @@ export default async function ProjectPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <AiSprintButton sprintId={activeSprint.id} />
+                  <AiSprintButton sprintId={activeSprint.id} stories={sprintStories} />
                   {showCreateTask && (
                     <CreateTaskButton
                       sprintId={activeSprint.id}

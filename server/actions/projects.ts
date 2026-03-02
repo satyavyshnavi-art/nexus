@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createProjectSchema } from "@/lib/validation/schemas";
+import { createProjectSchema, updateProjectSchema } from "@/lib/validation/schemas";
 
 export async function createProject(data: {
   name: string;
@@ -44,6 +44,31 @@ export async function createProject(data: {
   revalidatePath(`/admin/verticals/${validated.verticalId}`);
 
   return { id: project.id, name: project.name };
+}
+
+export async function updateProject(
+  projectId: string,
+  data: { name?: string; description?: string | null }
+) {
+  z.string().min(1).parse(projectId);
+  const validated = updateProjectSchema.parse(data);
+
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  const project = await db.project.update({
+    where: { id: projectId },
+    data: validated,
+    select: { id: true, name: true, verticalId: true },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/admin/projects");
+  revalidatePath("/");
+
+  return project;
 }
 
 export async function getProjectsByVertical(verticalId: string) {

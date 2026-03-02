@@ -128,6 +128,19 @@ export const createProjectSchema = z.object({
   initialMemberIds: z.array(z.string().min(1)).optional(),
 });
 
+export const updateProjectSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Project name is required")
+    .max(100, "Project name must be less than 100 characters")
+    .optional(),
+  description: z
+    .string()
+    .max(500, "Description must be less than 500 characters")
+    .nullable()
+    .optional(),
+});
+
 // ─── Comment validation ───
 
 export const commentSchema = z.object({
@@ -243,6 +256,17 @@ export const confirmedPlanSchema = z.object({
 });
 
 export const confirmedTasksArraySchema = z.array(confirmedTaskSchema);
+
+// Flat ticket schema for adding tickets under an existing story
+const confirmedFlatTicketSchema = z.object({
+  title: z.string().min(1).max(255),
+  required_role: z.string().max(100),
+  priority: z.enum(["low", "medium", "high", "critical"]),
+  labels: z.array(z.string().max(100)),
+  assignee_id: z.string().optional(),
+});
+
+export const confirmedTicketsForStoryArraySchema = z.array(confirmedFlatTicketSchema);
 
 export const aiGenerateSprintPlanSchema = z.object({
   projectId: idSchema,
