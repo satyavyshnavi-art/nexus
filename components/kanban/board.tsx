@@ -17,7 +17,7 @@ import {
 import { Task, TaskStatus, User } from "@prisma/client";
 import { Column } from "./column";
 import { TaskCard } from "./task-card";
-import { updateTaskStatus, createSubtask } from "@/server/actions/tasks";
+import { updateTaskStatus, createSubtask, deleteTask } from "@/server/actions/tasks";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { getRoleColor, getRoleDotColor } from "@/lib/utils/role-colors";
-import { LayoutGrid, Users, X, Eye } from "lucide-react";
+import { LayoutGrid, Users, X, Eye, CheckSquare, Trash2, Loader2 } from "lucide-react";
 
 const TaskDetailModal = dynamic(
   () => import("@/components/tasks/task-detail-modal").then((mod) => mod.TaskDetailModal),
@@ -87,6 +87,49 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
   const [roleFilters, setRoleFilters] = useState<Set<string>>(new Set());
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [pendingReviewTask, setPendingReviewTask] = useState<{ id: string; oldStatus: TaskStatus } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const toggleSelectMode = () => {
+    setSelectMode((prev) => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const toggleTaskSelect = (taskId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredTasks.map((t) => t.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} ticket${selectedIds.size > 1 ? "s" : ""}? This cannot be undone.`)) return;
+
+    setIsDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteTask(id)));
+      toast.success(`${selectedIds.size} ticket${selectedIds.size > 1 ? "s" : ""} deleted`);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to delete some tickets");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -359,62 +402,108 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
 
   return (
     <>
-      {/* Toolbar: View Toggle + Role Filters */}
-      {uniqueRoles.length > 0 && (
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          {/* View toggle */}
-          <div className="flex items-center border rounded-lg overflow-hidden">
+      {/* Select mode action bar */}
+      {selectMode && (
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border bg-muted/50">
+          <CheckSquare className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectedIds.size === filteredTasks.length ? deselectAll : selectAll}>
+            {selectedIds.size === filteredTasks.length ? "Deselect All" : "Select All"}
+          </Button>
+          <div className="flex-1" />
+          {selectedIds.size > 0 && (
             <Button
-              variant={viewMode === "status" ? "default" : "ghost"}
+              variant="destructive"
               size="sm"
-              className="rounded-none h-8 text-xs"
-              onClick={() => setViewMode("status")}
+              className="h-7 text-xs"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
             >
-              <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-              Status
+              {isDeleting ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+              )}
+              Delete {selectedIds.size}
             </Button>
-            <Button
-              variant={viewMode === "role" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-none h-8 text-xs"
-              onClick={() => setViewMode("role")}
-            >
-              <Users className="h-3.5 w-3.5 mr-1" />
-              Roles
-            </Button>
-          </div>
-
-          {/* Role filters */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {uniqueRoles.map((role) => {
-              const colors = getRoleColor(role);
-              const isActive = roleFilters.has(role);
-              return (
-                <button
-                  key={role}
-                  onClick={() => toggleRoleFilter(role)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all ${isActive
-                    ? `${colors.bg} ${colors.text} ${colors.border} ring-1 ring-offset-1`
-                    : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
-                    }`}
-                >
-                  <div className={`h-2 w-2 rounded-full ${getRoleDotColor(role)}`} />
-                  {role}
-                </button>
-              );
-            })}
-            {roleFilters.size > 0 && (
-              <button
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-3 w-3" />
-                Clear
-              </button>
-            )}
-          </div>
+          )}
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={toggleSelectMode}>
+            Cancel
+          </Button>
         </div>
       )}
+
+      {/* Toolbar: View Toggle + Role Filters */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {/* Select mode toggle */}
+        <Button
+          variant={selectMode ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={toggleSelectMode}
+        >
+          <CheckSquare className="h-3.5 w-3.5 mr-1" />
+          Select
+        </Button>
+
+        {/* View toggle */}
+        {uniqueRoles.length > 0 && (
+          <>
+            <div className="flex items-center border rounded-lg overflow-hidden">
+              <Button
+                variant={viewMode === "status" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none h-8 text-xs"
+                onClick={() => setViewMode("status")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                Status
+              </Button>
+              <Button
+                variant={viewMode === "role" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none h-8 text-xs"
+                onClick={() => setViewMode("role")}
+              >
+                <Users className="h-3.5 w-3.5 mr-1" />
+                Roles
+              </Button>
+            </div>
+
+            {/* Role filters */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {uniqueRoles.map((role) => {
+                const colors = getRoleColor(role);
+                const isActive = roleFilters.has(role);
+                return (
+                  <button
+                    key={role}
+                    onClick={() => toggleRoleFilter(role)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all ${isActive
+                      ? `${colors.bg} ${colors.text} ${colors.border} ring-1 ring-offset-1`
+                      : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+                      }`}
+                  >
+                    <div className={`h-2 w-2 rounded-full ${getRoleDotColor(role)}`} />
+                    {role}
+                  </button>
+                );
+              })}
+              {roleFilters.size > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {viewMode === "status" ? (
         /* --- Status View (default Kanban) --- */
@@ -440,6 +529,9 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
                   projectLinked={projectLinked}
                   userHasGitHub={userHasGitHub}
                   isDragging={isDragging}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onTaskSelect={toggleTaskSelect}
                 />
               );
             })}
