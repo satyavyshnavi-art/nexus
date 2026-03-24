@@ -20,6 +20,9 @@ import {
   AlertCircle,
   FileText,
   Upload,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -112,8 +115,32 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
     if (file) handleFileSelect(file);
   };
 
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<ExtractedTicket | null>(null);
+
   const removeTicket = (index: number) => {
     setTickets((prev) => prev.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setEditForm(null);
+    }
+  };
+
+  const startEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditForm({ ...tickets[index] });
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setEditForm(null);
+  };
+
+  const saveEdit = () => {
+    if (editingIndex === null || !editForm) return;
+    setTickets((prev) => prev.map((t, i) => (i === editingIndex ? editForm : t)));
+    setEditingIndex(null);
+    setEditForm(null);
   };
 
   const handleImport = async () => {
@@ -251,53 +278,112 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
                     key={index}
                     className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{ticket.title}</p>
-                        {ticket.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {ticket.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                              typeColors[ticket.type] || typeColors.task
-                            }`}
+                    {editingIndex === index && editForm ? (
+                      /* Edit mode */
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editForm.title}
+                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                          className="w-full text-sm font-medium bg-background border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Ticket title"
+                        />
+                        <textarea
+                          value={editForm.description || ""}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          className="w-full text-xs bg-background border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                          rows={2}
+                          placeholder="Description (optional)"
+                        />
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={editForm.type}
+                            onChange={(e) => setEditForm({ ...editForm, type: e.target.value as ExtractedTicket["type"] })}
+                            className="text-xs bg-background border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            {ticket.type}
-                          </span>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                              priorityColors[ticket.priority] || priorityColors.medium
-                            }`}
+                            <option value="task">Task</option>
+                            <option value="bug">Bug</option>
+                            <option value="story">Story</option>
+                          </select>
+                          <select
+                            value={editForm.priority}
+                            onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as ExtractedTicket["priority"] })}
+                            className="text-xs bg-background border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            {ticket.priority}
-                          </span>
-                          {ticket.requiredRole && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
-                              {ticket.requiredRole}
-                            </span>
-                          )}
-                          {ticket.labels?.map((label) => (
-                            <span
-                              key={label}
-                              className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground"
-                            >
-                              {label}
-                            </span>
-                          ))}
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                          </select>
+                          <div className="flex-1" />
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={saveEdit}>
+                            <Check className="h-3.5 w-3.5 text-green-600" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={cancelEdit}>
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeTicket(index)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    ) : (
+                      /* View mode */
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{ticket.title}</p>
+                          {ticket.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {ticket.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                typeColors[ticket.type] || typeColors.task
+                              }`}
+                            >
+                              {ticket.type}
+                            </span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                priorityColors[ticket.priority] || priorityColors.medium
+                              }`}
+                            >
+                              {ticket.priority}
+                            </span>
+                            {ticket.requiredRole && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
+                                {ticket.requiredRole}
+                              </span>
+                            )}
+                            {ticket.labels?.map((label) => (
+                              <span
+                                key={label}
+                                className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => startEdit(index)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeTicket(index)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
