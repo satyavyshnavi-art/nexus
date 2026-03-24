@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { parseDocumentForTickets, bulkCreateTickets } from "@/server/actions/bulk-import";
+import { bulkCreateTickets } from "@/server/actions/bulk-import";
 import type { ExtractedTicket } from "@/lib/ai/ticket-extractor";
 import { toast } from "sonner";
 import {
@@ -64,11 +64,16 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
     setIsParsing(true);
 
     try {
-      // Send file to server for parsing (handles PDF, DOCX, etc.)
+      // Send file to API route for parsing (handles PDF, DOCX, etc.)
       const formData = new FormData();
       formData.append("file", file);
 
-      const result = await parseDocumentForTickets(formData);
+      const response = await fetch("/api/import-tickets", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
 
       if (!result.success) {
         toast.error("Failed to extract tickets", { description: result.error });

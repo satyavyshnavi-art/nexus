@@ -3,72 +3,8 @@
 import { auth } from "@/lib/auth/config";
 import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
-import { extractTicketsFromDocument, type ExtractedTicket } from "@/lib/ai/ticket-extractor";
+import { type ExtractedTicket } from "@/lib/ai/ticket-extractor";
 import { TaskType, TaskPriority } from "@prisma/client";
-
-async function extractTextFromFile(formData: FormData): Promise<string> {
-  const file = formData.get("file") as File;
-  if (!file) throw new Error("No file provided");
-
-  const fileName = file.name.toLowerCase();
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  // PDF
-  if (fileName.endsWith(".pdf")) {
-    const pdfParseModule = await import("pdf-parse");
-    const pdfParse = (pdfParseModule as any).default || pdfParseModule;
-    const result = await pdfParse(buffer);
-    return result.text;
-  }
-
-  // DOCX
-  if (fileName.endsWith(".docx")) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
-  }
-
-  // DOC (older format) — try mammoth, fall back to raw text
-  if (fileName.endsWith(".doc")) {
-    try {
-      const mammoth = await import("mammoth");
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value;
-    } catch {
-      return buffer.toString("utf-8");
-    }
-  }
-
-  // Text-based files (.txt, .csv, .md, etc.)
-  return buffer.toString("utf-8");
-}
-
-export async function parseDocumentForTickets(
-  formData: FormData
-): Promise<{ success: true; tickets: ExtractedTicket[] } | { success: false; error: string }> {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
-    const documentText = await extractTextFromFile(formData);
-
-    if (!documentText.trim()) {
-      return { success: false, error: "Could not extract text from file. Try a .txt or .csv file." };
-    }
-
-    // Limit document size to ~50K chars to avoid AI token limits
-    const trimmedText = documentText.slice(0, 50000);
-
-    const result = await extractTicketsFromDocument(trimmedText);
-    return { success: true, tickets: result.tickets };
-  } catch (error) {
-    console.error("Failed to parse document:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to parse document",
-    };
-  }
-}
 
 export async function bulkCreateTickets(
   sprintId: string,
