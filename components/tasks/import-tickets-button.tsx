@@ -50,6 +50,9 @@ export function ImportTicketsButton({ sprintId, projectLinked }: ImportTicketsBu
     setIsParsing(false);
     setIsImporting(false);
     setFileName("");
+    setSelected(new Set());
+    setEditingIndex(null);
+    setEditForm(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -119,9 +122,44 @@ export function ImportTicketsButton({ sprintId, projectLinked }: ImportTicketsBu
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<ExtractedTicket | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (index: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === tickets.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(tickets.map((_, i) => i)));
+    }
+  };
+
+  const deleteSelected = () => {
+    setTickets((prev) => prev.filter((_, i) => !selected.has(i)));
+    setSelected(new Set());
+    if (editingIndex !== null && selected.has(editingIndex)) {
+      setEditingIndex(null);
+      setEditForm(null);
+    }
+  };
 
   const removeTicket = (index: number) => {
     setTickets((prev) => prev.filter((_, i) => i !== index));
+    setSelected((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i < index) next.add(i);
+        else if (i > index) next.add(i - 1);
+      });
+      return next;
+    });
     if (editingIndex === index) {
       setEditingIndex(null);
       setEditForm(null);
@@ -269,16 +307,42 @@ export function ImportTicketsButton({ sprintId, projectLinked }: ImportTicketsBu
           {/* Step 2: Review */}
           {step === "review" && (
             <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <FileText className="h-4 w-4" />
-                <span>From: {fileName}</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  <span>From: {fileName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={tickets.length > 0 && selected.size === tickets.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300"
+                    />
+                    Select all
+                  </label>
+                  {selected.size > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs"
+                      onClick={deleteSelected}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      Delete {selected.size}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {tickets.map((ticket, index) => (
                   <div
                     key={index}
-                    className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                    className={`border rounded-lg p-3 transition-colors ${
+                      selected.has(index) ? "bg-accent/70 border-primary/30" : "hover:bg-accent/50"
+                    }`}
                   >
                     {editingIndex === index && editForm ? (
                       /* Edit mode */
@@ -328,7 +392,13 @@ export function ImportTicketsButton({ sprintId, projectLinked }: ImportTicketsBu
                       </div>
                     ) : (
                       /* View mode */
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(index)}
+                          onChange={() => toggleSelect(index)}
+                          className="rounded border-gray-300 mt-1 flex-shrink-0"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{ticket.title}</p>
                           {ticket.description && (
