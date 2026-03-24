@@ -5,10 +5,13 @@ import { db } from "@/server/db";
 import { revalidatePath } from "next/cache";
 import { type ExtractedTicket } from "@/lib/ai/ticket-extractor";
 import { TaskType, TaskPriority } from "@prisma/client";
+import { syncTaskToGitHub } from "@/server/actions/github-sync";
+import { waitUntil } from "@vercel/functions";
 
 export async function bulkCreateTickets(
   sprintId: string,
-  tickets: ExtractedTicket[]
+  tickets: ExtractedTicket[],
+  pushToGitHub?: boolean
 ): Promise<{ success: true; count: number } | { success: false; error: string }> {
   try {
     const session = await auth();
@@ -56,6 +59,19 @@ export async function bulkCreateTickets(
         })
       )
     );
+
+    // Sync to GitHub if requested (async, non-blocking)
+    if (pushToGitHub) {
+      waitUntil(
+        Promise.all(
+          created.map((task) =>
+            syncTaskToGitHub(task.id).catch((err) => {
+              console.error(`[Bulk Import] Failed to sync task ${task.id} to GitHub:`, err);
+            })
+          )
+        )
+      );
+    }
 
     revalidatePath(`/projects`);
 

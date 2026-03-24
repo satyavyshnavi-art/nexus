@@ -28,16 +28,18 @@ import { useRouter } from "next/navigation";
 
 interface ImportTicketsButtonProps {
   sprintId: string;
+  projectLinked?: boolean;
 }
 
 type Step = "upload" | "review" | "importing";
 
-export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
+export function ImportTicketsButton({ sprintId, projectLinked }: ImportTicketsButtonProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("upload");
   const [isParsing, setIsParsing] = useState(false);
   const [tickets, setTickets] = useState<ExtractedTicket[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [pushToGitHub, setPushToGitHub] = useState(false);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -150,7 +152,7 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
     setStep("importing");
 
     try {
-      const result = await bulkCreateTickets(sprintId, tickets);
+      const result = await bulkCreateTickets(sprintId, tickets, pushToGitHub);
 
       if (!result.success) {
         toast.error("Import failed", { description: result.error });
@@ -395,14 +397,27 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
                 )}
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t mt-4">
-                <Button variant="outline" onClick={reset}>
-                  Upload Different File
-                </Button>
-                <Button onClick={handleImport} disabled={tickets.length === 0}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Import {tickets.length} Ticket{tickets.length !== 1 ? "s" : ""}
-                </Button>
+              <div className="pt-4 border-t mt-4 space-y-3">
+                {projectLinked && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pushToGitHub}
+                      onChange={(e) => setPushToGitHub(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">Push tickets to GitHub as issues</span>
+                  </label>
+                )}
+                <div className="flex justify-between items-center">
+                  <Button variant="outline" onClick={reset}>
+                    Upload Different File
+                  </Button>
+                  <Button onClick={handleImport} disabled={tickets.length === 0}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Import {tickets.length} Ticket{tickets.length !== 1 ? "s" : ""}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

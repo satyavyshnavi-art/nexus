@@ -244,7 +244,7 @@ export default async function ProjectPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ImportTicketsButton sprintId={activeSprint.id} />
+                  <ImportTicketsButton sprintId={activeSprint.id} projectLinked={!!(project.githubRepoOwner && project.githubRepoName)} />
                   <AiSprintButton sprintId={activeSprint.id} stories={sprintStories} />
                   <CreateTaskButton
                     sprintId={activeSprint.id}
