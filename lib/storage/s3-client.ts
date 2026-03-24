@@ -1,15 +1,25 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({
-  region: process.env.STORAGE_REGION || "auto",
-  endpoint: process.env.STORAGE_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.STORAGE_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY!,
-  },
-  forcePathStyle: true, // Needed for Supabase/MinIO
-});
+let _s3: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!_s3) {
+    if (!process.env.STORAGE_ENDPOINT || !process.env.STORAGE_ACCESS_KEY_ID || !process.env.STORAGE_SECRET_ACCESS_KEY) {
+      throw new Error("Storage environment variables are not configured (STORAGE_ENDPOINT, STORAGE_ACCESS_KEY_ID, STORAGE_SECRET_ACCESS_KEY)");
+    }
+    _s3 = new S3Client({
+      region: process.env.STORAGE_REGION || "auto",
+      endpoint: process.env.STORAGE_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
+        secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY,
+      },
+      forcePathStyle: true, // Needed for Supabase/MinIO
+    });
+  }
+  return _s3;
+}
 
 export async function getUploadUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
@@ -18,16 +28,19 @@ export async function getUploadUrl(key: string, contentType: string) {
     ContentType: contentType,
   });
 
-  return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+  return getSignedUrl(getS3Client(), command, { expiresIn: 3600 }); // 1 hour
 }
 
-export async function getDownloadUrl(key: string) {
+export async function getDownloadUrl(key: string, fileName?: string) {
   const command = new GetObjectCommand({
     Bucket: process.env.STORAGE_BUCKET_NAME,
     Key: key,
+    ResponseContentDisposition: fileName
+      ? `attachment; filename="${fileName}"`
+      : "attachment",
   });
 
-  return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+  return getSignedUrl(getS3Client(), command, { expiresIn: 3600 }); // 1 hour
 }
 
 export async function getViewUrl(key: string) {
@@ -36,7 +49,7 @@ export async function getViewUrl(key: string) {
     Key: key,
   });
 
-  return getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+  return getSignedUrl(getS3Client(), command, { expiresIn: 3600 }); // 1 hour
 }
 
 export async function putObject(key: string, body: Buffer, contentType: string) {
@@ -48,7 +61,7 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
     ContentDisposition: "inline",
   });
 
-  return s3.send(command);
+  return getS3Client().send(command);
 }
 
 export async function getObject(key: string): Promise<Buffer> {
@@ -57,7 +70,7 @@ export async function getObject(key: string): Promise<Buffer> {
     Key: key,
   });
 
-  const response = await s3.send(command);
+  const response = await getS3Client().send(command);
   const stream = response.Body as NodeJS.ReadableStream;
   const chunks: Uint8Array[] = [];
   for await (const chunk of stream) {
@@ -72,7 +85,7 @@ export async function deleteObject(key: string) {
     Key: key,
   });
 
-  return s3.send(command);
+  return getS3Client().send(command);
 }
 
 export function getPublicUrl(key: string) {
