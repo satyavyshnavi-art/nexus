@@ -189,18 +189,19 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
           {/* Step 1: Upload */}
           {step === "upload" && (
             <div className="space-y-4 py-4">
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                  isParsing ? "border-muted cursor-wait" : "hover:border-primary"
+              <label
+                htmlFor="import-tickets-file"
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors block ${
+                  isParsing ? "border-muted cursor-wait" : "hover:border-primary cursor-pointer"
                 }`}
-                onClick={() => !isParsing && fileInputRef.current?.click()}
               >
                 <input
+                  id="import-tickets-file"
                   ref={fileInputRef}
                   type="file"
                   accept=".txt,.csv,.md,.pdf,.doc,.docx"
                   onChange={handleInputChange}
-                  className="hidden"
+                  className="sr-only"
                   disabled={isParsing}
                 />
                 {isParsing ? (
@@ -224,7 +225,7 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
                     </p>
                   </div>
                 )}
-              </div>
+              </label>
 
               <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-2">
                 <p className="font-medium text-foreground">How it works:</p>
