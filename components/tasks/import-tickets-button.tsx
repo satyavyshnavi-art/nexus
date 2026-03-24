@@ -54,9 +54,9 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
   };
 
   const handleFileSelect = useCallback(async (file: File) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 4 * 1024 * 1024; // 4MB (Vercel serverless limit)
     if (file.size > maxSize) {
-      toast.error("File too large", { description: "Maximum file size is 10MB" });
+      toast.error("File too large", { description: "Maximum file size is 4MB" });
       return;
     }
 
@@ -72,6 +72,21 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
         method: "POST",
         body: formData,
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMsg = `Server error (${response.status})`;
+        try {
+          const err = JSON.parse(text);
+          errorMsg = err.error || errorMsg;
+        } catch {
+          // Response was not JSON (e.g., "Request Entity Too Large")
+          if (text.length < 200) errorMsg = text;
+        }
+        toast.error("Failed to extract tickets", { description: errorMsg });
+        setIsParsing(false);
+        return;
+      }
 
       const result = await response.json();
 
@@ -204,7 +219,7 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
                       Click to upload a document
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      .txt, .csv, .md, .pdf, .doc, .docx (max 10MB)
+                      .txt, .csv, .md, .pdf, .doc, .docx (max 4MB)
                     </p>
                   </div>
                 )}

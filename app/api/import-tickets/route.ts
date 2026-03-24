@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { extractTicketsFromDocument } from "@/lib/ai/ticket-extractor";
 
+// Allow up to 60 seconds for AI processing
+export const maxDuration = 60;
+
 async function extractTextFromFile(file: File): Promise<string> {
   const fileName = file.name.toLowerCase();
   const buffer = Buffer.from(await file.arrayBuffer());
