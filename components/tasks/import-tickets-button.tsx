@@ -53,24 +53,6 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
     setTimeout(reset, 200);
   };
 
-  const extractText = async (file: File): Promise<string> => {
-    // For text-based files, read directly
-    if (
-      file.type === "text/plain" ||
-      file.type === "text/csv" ||
-      file.type === "text/markdown" ||
-      file.name.endsWith(".md") ||
-      file.name.endsWith(".txt") ||
-      file.name.endsWith(".csv")
-    ) {
-      return file.text();
-    }
-
-    // For other file types (PDF, DOCX), read as text — best effort
-    // The AI can usually handle raw text extraction
-    return file.text();
-  };
-
   const handleFileSelect = useCallback(async (file: File) => {
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
@@ -82,17 +64,11 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
     setIsParsing(true);
 
     try {
-      const text = await extractText(file);
+      // Send file to server for parsing (handles PDF, DOCX, etc.)
+      const formData = new FormData();
+      formData.append("file", file);
 
-      if (!text.trim()) {
-        toast.error("Could not read file", {
-          description: "The file appears to be empty or in an unsupported format. Try a .txt or .csv file.",
-        });
-        setIsParsing(false);
-        return;
-      }
-
-      const result = await parseDocumentForTickets(text);
+      const result = await parseDocumentForTickets(formData);
 
       if (!result.success) {
         toast.error("Failed to extract tickets", { description: result.error });
@@ -103,7 +79,9 @@ export function ImportTicketsButton({ sprintId }: ImportTicketsButtonProps) {
       setTickets(result.tickets);
       setStep("review");
     } catch (error) {
-      toast.error("Failed to process file");
+      toast.error("Failed to process file", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     } finally {
       setIsParsing(false);
     }
