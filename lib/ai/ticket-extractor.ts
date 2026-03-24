@@ -35,13 +35,15 @@ Rules:
 Respond with ONLY valid JSON matching the schema.`;
 
 export async function extractTicketsFromDocument(
-  documentText: string
+  documentText: string,
+  images?: { mimeType: string; data: string }[]
 ): Promise<ExtractionResult> {
   const userPrompt = `Extract all tickets/tasks from this document:\n\n---\n${documentText}\n---\n\nReturn JSON with a "tickets" array. Each ticket needs: title, description, type (task|bug|story), priority (low|medium|high|critical), requiredRole (optional), labels (optional array).`;
 
   return generateStructuredOutput(
     SYSTEM_PROMPT,
     userPrompt,
-    extractionResultSchema
+    extractionResultSchema,
+    images
   );
 }

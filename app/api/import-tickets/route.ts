@@ -5,40 +5,6 @@ import { extractTicketsFromDocument } from "@/lib/ai/ticket-extractor";
 // Allow up to 60 seconds for AI processing
 export const maxDuration = 60;
 
-async function extractTextFromFile(file: File): Promise<string> {
-  const fileName = file.name.toLowerCase();
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  // PDF
-  if (fileName.endsWith(".pdf")) {
-    const pdfParseModule = await import("pdf-parse");
-    const pdfParse = (pdfParseModule as any).default || pdfParseModule;
-    const result = await pdfParse(buffer);
-    return result.text;
-  }
-
-  // DOCX
-  if (fileName.endsWith(".docx")) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
-  }
-
-  // DOC (older format)
-  if (fileName.endsWith(".doc")) {
-    try {
-      const mammoth = await import("mammoth");
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value;
-    } catch {
-      return buffer.toString("utf-8");
-    }
-  }
-
-  // Text-based files
-  return buffer.toString("utf-8");
-}
-
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -53,7 +19,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
 
-    const documentText = await extractTextFromFile(file);
+    const fileName = file.name.toLowerCase();
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // For PDFs — send directly to Gemini as inline data (Gemini reads PDFs natively)
+    if (fileName.endsWith(".pdf")) {
+      const base64 = buffer.toString("base64");
+      const result = await extractTicketsFromDocument(
+        "Extract all tickets from the attached PDF document.",
+        [{ mimeType: "application/pdf", data: base64 }]
+      );
+      return NextResponse.json({ success: true, tickets: result.tickets });
+    }
+
+    // For DOCX — use mammoth to extract text
+    let documentText: string;
+    if (fileName.endsWith(".docx")) {
+      const mammoth = await import("mammoth");
+      const result = await mammoth.extractRawText({ buffer });
+      documentText = result.value;
+    } else if (fileName.endsWith(".doc")) {
+      try {
+        const mammoth = await import("mammoth");
+        const result = await mammoth.extractRawText({ buffer });
+        documentText = result.value;
+      } catch {
+        documentText = buffer.toString("utf-8");
+      }
+    } else {
+      // Text-based files (.txt, .csv, .md)
+      documentText = buffer.toString("utf-8");
+    }
 
     if (!documentText.trim()) {
       return NextResponse.json({
