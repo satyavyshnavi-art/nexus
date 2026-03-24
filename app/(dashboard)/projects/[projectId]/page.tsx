@@ -10,6 +10,7 @@ import { CreateTaskButton } from "@/components/tasks/create-task-button";
 import { AiSprintButton } from "@/components/sprints/ai-sprint-button";
 import { Calendar, Users, LayoutDashboard, ListTodo, Settings, FileText, BarChart3 } from "lucide-react";
 import { EditProjectButton } from "@/components/projects/edit-project-button";
+import { ImportTicketsButton } from "@/components/tasks/import-tickets-button";
 import Link from "next/link";
 import { TaskListView } from "@/components/tasks/task-list-view";
 import { GitHubLinkDialog } from "@/components/projects/github-link-dialog";
@@ -20,7 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SprintProgress } from "@/components/projects/sprint-progress";
 import { WeeklySummarySection } from "@/components/projects/weekly-summary-section";
 import { ProjectReportSection } from "@/components/projects/project-report-section";
-import { canCreateTasks, canLinkGitHub, canViewReports } from "@/lib/auth/permissions";
+import { canLinkGitHub, canViewReports } from "@/lib/auth/permissions";
 import { getWeeklySummaries } from "@/server/actions/weekly-summary";
 import { db } from "@/server/db";
 import { getCached } from "@/lib/cache/redis";
@@ -57,7 +58,6 @@ export default async function ProjectPage({
   }
 
   const userRole = session.user.role as UserRole;
-  const showCreateTask = canCreateTasks(userRole);
   const showLinkGitHub = canLinkGitHub(userRole);
   const showReports = canViewReports(userRole);
 
@@ -244,14 +244,13 @@ export default async function ProjectPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <ImportTicketsButton sprintId={activeSprint.id} />
                   <AiSprintButton sprintId={activeSprint.id} stories={sprintStories} />
-                  {showCreateTask && (
-                    <CreateTaskButton
-                      sprintId={activeSprint.id}
-                      projectMembers={project.members.map((m) => m.user)}
-                      projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
-                    />
-                  )}
+                  <CreateTaskButton
+                    sprintId={activeSprint.id}
+                    projectMembers={project.members.map((m) => m.user)}
+                    projectLinked={!!(project.githubRepoOwner && project.githubRepoName)}
+                  />
                 </div>
               </div>
 
@@ -289,7 +288,7 @@ export default async function ProjectPage({
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">All Tasks</h2>
-            {activeSprint && showCreateTask && (
+            {activeSprint && (
               <CreateTaskButton
                 sprintId={activeSprint.id}
                 projectMembers={project.members.map((m) => m.user)}
