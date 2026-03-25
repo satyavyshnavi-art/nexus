@@ -498,7 +498,15 @@ export async function deleteTask(taskId: string) {
     where: { id: taskId },
     include: {
       sprint: {
-        select: { projectId: true },
+        select: {
+          projectId: true,
+          project: {
+            select: {
+              githubRepoOwner: true,
+              githubRepoName: true,
+            },
+          },
+        },
       },
       // Check project membership for permission
       creator: { select: { id: true } },
@@ -510,6 +518,21 @@ export async function deleteTask(taskId: string) {
   // Check permissions: Admin, Project Member, or Task Creator?
   const hasAccess = await canAccessTask(taskId, session.user.id, isAdmin);
   if (!hasAccess) throw new Error("Unauthorized");
+
+  // Delete the GitHub issue before deleting the task (if synced)
+  // Must await — task is deleted after this, so async would race
+  if (task.githubIssueNumber) {
+    const project = task.sprint?.project;
+    if (project?.githubRepoOwner && project?.githubRepoName) {
+      const { deleteGitHubIssue } = await import("@/lib/github/sync");
+      try {
+        await deleteGitHubIssue(session.user.id, taskId, project.githubRepoOwner, project.githubRepoName);
+      } catch (err) {
+        console.error(`[GitHub Sync] Failed to delete issue for deleted task ${taskId}:`, err);
+        // Don't block deletion if GitHub delete fails
+      }
+    }
+  }
 
   // Capture parentTaskId before deletion for recalculation
   const parentTaskId = task.parentTaskId;

@@ -13,12 +13,14 @@ import { AiSprintForm } from "./ai-sprint-form";
 
 interface AiSprintModalProps {
   sprintId: string;
+  stories: { id: string; title: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function AiSprintModal({
   sprintId,
+  stories,
   open,
   onOpenChange,
 }: AiSprintModalProps) {
@@ -43,16 +45,17 @@ export function AiSprintModal({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === "review" ? "Review Generated Tickets" : "AI Sprint Planning"}
+            {step === "review" ? "Review Generated Tickets" : "AI Generate Tickets"}
           </DialogTitle>
           <DialogDescription>
             {step === "review"
-              ? "Review and edit the AI-generated stories and tasks before adding them to your sprint."
-              : "Let AI generate user stories and tasks based on your feature description. Powered by Google Gemini."}
+              ? "Review and edit the AI-generated tickets before adding them to your sprint."
+              : "Select a story and describe what you need. AI will generate actionable tickets under that story."}
           </DialogDescription>
         </DialogHeader>
         <AiSprintForm
           sprintId={sprintId}
+          stories={stories}
           onSuccess={handleSuccess}
           onCancel={() => handleOpenChange(false)}
           onStepChange={setStep}

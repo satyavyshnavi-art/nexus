@@ -10,8 +10,10 @@ import { getRoleColor } from "@/lib/utils/role-colors";
 import type {
   GeneratedSprintPlan,
   GeneratedTicketsPlan,
+  GeneratedFlatTicketsPlan,
   SuggestedTask,
   SuggestedSubtask,
+  SuggestedFlatTicket,
 } from "@/server/actions/ai-sprint";
 import {
   ChevronDown,
@@ -26,32 +28,43 @@ import {
   Tag,
 } from "lucide-react";
 
-interface SprintPlanReviewProps {
-  plan: GeneratedSprintPlan | GeneratedTicketsPlan;
-  onConfirm: (editedPlan: {
-    sprint_name: string;
-    duration_days: number;
-    tasks: {
+type ConfirmPlanPayload = {
+  sprint_name: string;
+  duration_days: number;
+  tasks: {
+    title: string;
+    category: string;
+    required_role: string;
+    labels: string[];
+    priority: "low" | "medium" | "high" | "critical";
+    assignee_id?: string;
+    subtasks: {
       title: string;
-      category: string;
       required_role: string;
-      labels: string[];
       priority: "low" | "medium" | "high" | "critical";
       assignee_id?: string;
-      subtasks: {
-        title: string;
-        required_role: string;
-        priority: "low" | "medium" | "high" | "critical";
-        assignee_id?: string;
-      }[];
     }[];
-  }) => void;
+  }[];
+};
+
+type ConfirmFlatTicketsPayload = {
+  title: string;
+  required_role: string;
+  priority: "low" | "medium" | "high" | "critical";
+  labels: string[];
+  assignee_id?: string;
+}[];
+
+type SprintPlanReviewProps = {
+  plan: GeneratedSprintPlan | GeneratedTicketsPlan | GeneratedFlatTicketsPlan;
+  onConfirm?: (editedPlan: ConfirmPlanPayload) => void;
+  onConfirmFlatTickets?: (tickets: ConfirmFlatTicketsPayload) => void;
   onBack: () => void;
   isConfirming: boolean;
-  mode?: "sprint" | "tickets";
+  mode?: "sprint" | "tickets" | "flat-tickets";
   confirmButtonText?: string;
   confirmingText?: string;
-}
+};
 
 const ROLES = ["UI", "Backend", "QA", "DevOps", "Full-Stack", "Design", "Data", "Mobile"];
 const PRIORITIES = ["low", "medium", "high", "critical"] as const;
@@ -66,17 +79,38 @@ const priorityColors: Record<string, string> = {
 export function SprintPlanReview({
   plan,
   onConfirm,
+  onConfirmFlatTickets,
   onBack,
   isConfirming,
   mode = "sprint",
   confirmButtonText = "Confirm & Create Sprint",
   confirmingText = "Creating...",
 }: SprintPlanReviewProps) {
+  const isFlatTicketsMode = mode === "flat-tickets";
   const isTicketsMode = mode === "tickets";
   const sprintPlan = plan as GeneratedSprintPlan;
   const [sprintName, setSprintName] = useState(isTicketsMode ? "" : sprintPlan.sprint_name);
   const [durationDays, setDurationDays] = useState(isTicketsMode ? 14 : sprintPlan.duration_days);
-  const [tasks, setTasks] = useState<SuggestedTask[]>(plan.tasks);
+
+  // For flat-tickets mode, convert SuggestedFlatTicket[] to SuggestedTask[] for reuse
+  const initialTasks = useMemo<SuggestedTask[]>(() => {
+    if (isFlatTicketsMode) {
+      const flatPlan = plan as GeneratedFlatTicketsPlan;
+      return flatPlan.tickets.map((t) => ({
+        title: t.title,
+        category: "Tickets",
+        required_role: t.required_role,
+        labels: t.labels,
+        priority: t.priority,
+        subtasks: [],
+        suggested_assignees: t.suggested_assignees,
+        selected_assignee_id: t.selected_assignee_id,
+      }));
+    }
+    return (plan as GeneratedSprintPlan | GeneratedTicketsPlan).tasks;
+  }, [plan, isFlatTicketsMode]);
+
+  const [tasks, setTasks] = useState<SuggestedTask[]>(initialTasks);
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -222,7 +256,20 @@ export function SprintPlanReview({
   }, [tasks]);
 
   const handleConfirm = () => {
-    onConfirm({
+    if (isFlatTicketsMode && onConfirmFlatTickets) {
+      onConfirmFlatTickets(
+        tasks.map((task) => ({
+          title: task.title,
+          required_role: task.required_role,
+          priority: task.priority,
+          labels: task.labels,
+          assignee_id: task.selected_assignee_id,
+        }))
+      );
+      return;
+    }
+
+    onConfirm?.({
       sprint_name: sprintName,
       duration_days: durationDays,
       tasks: tasks.map((task) => ({
@@ -260,7 +307,7 @@ export function SprintPlanReview({
           </div>
         )}
         <div className="flex items-center gap-3 flex-wrap">
-          {!isTicketsMode && (
+          {!isTicketsMode && !isFlatTicketsMode && (
             <div className="flex items-center gap-1.5">
               <Label className="text-xs text-muted-foreground">Duration</Label>
               <Input
@@ -274,9 +321,13 @@ export function SprintPlanReview({
               <span className="text-xs text-muted-foreground">days</span>
             </div>
           )}
-          <span className="text-sm text-muted-foreground">{categories.length} categories</span>
-          <span className="text-sm text-muted-foreground">{totalTasks} tasks</span>
-          <span className="text-sm text-muted-foreground">{totalSubtasks} subtasks</span>
+          {!isFlatTicketsMode && (
+            <span className="text-sm text-muted-foreground">{categories.length} categories</span>
+          )}
+          <span className="text-sm text-muted-foreground">{totalTasks} {isFlatTicketsMode ? "tickets" : "tasks"}</span>
+          {!isFlatTicketsMode && (
+            <span className="text-sm text-muted-foreground">{totalSubtasks} subtasks</span>
+          )}
         </div>
       </div>
 
@@ -287,112 +338,142 @@ export function SprintPlanReview({
         </div>
       )}
 
-      {/* Tasks grouped by Category */}
+      {/* Tasks */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Tasks by Category</h4>
+          <h4 className="text-sm font-medium">{isFlatTicketsMode ? "Tickets" : "Tasks by Category"}</h4>
         </div>
-        <div className="space-y-2">
-          {categories.map((category) => {
-            const group = tasksByCategory.get(category)!;
-            const isCollapsed = collapsedCategories.has(category);
 
-            return (
-              <div key={category} className="border rounded-lg overflow-hidden">
-                {/* Category header */}
-                <div className="flex items-center gap-2 p-3 bg-muted/30">
-                  <button
-                    type="button"
-                    onClick={() => toggleCategory(category)}
-                    className="shrink-0 p-0.5 hover:bg-muted rounded"
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
+        {isFlatTicketsMode ? (
+          /* Flat ticket list — no categories or subtasks */
+          <div className="border rounded-lg overflow-hidden">
+            <div className="divide-y">
+              {tasks.map((task, index) => (
+                <FlatTicketRow
+                  key={index}
+                  task={task}
+                  members={plan.members}
+                  onUpdate={(field, value) => updateTask(index, field, value)}
+                  onRemove={() => removeTask(index)}
+                />
+              ))}
+            </div>
+            <div className="px-3 py-2 border-t bg-muted/20">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => addTask("Tickets")}
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add Ticket
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Category-grouped task list */
+          <div className="space-y-2">
+            {categories.map((category) => {
+              const group = tasksByCategory.get(category)!;
+              const isCollapsed = collapsedCategories.has(category);
 
-                  <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium flex-1">{category}</span>
+              return (
+                <div key={category} className="border rounded-lg overflow-hidden">
+                  {/* Category header */}
+                  <div className="flex items-center gap-2 p-3 bg-muted/30">
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category)}
+                      className="shrink-0 p-0.5 hover:bg-muted rounded"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
 
-                  {/* Task count badge */}
-                  <Badge variant="secondary" className="text-[10px] shrink-0">
-                    {group.tasks.length} tasks
-                  </Badge>
-                </div>
+                    <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium flex-1">{category}</span>
 
-                {/* Tasks */}
-                {!isCollapsed && (
-                  <div className="border-t">
-                    <div className="divide-y">
-                      {group.tasks.map((task, groupTaskIdx) => {
-                        const globalIndex = group.indices[groupTaskIdx];
-                        const isTaskExpanded = expandedTasks.has(globalIndex);
-
-                        return (
-                          <div key={globalIndex}>
-                            <TaskRow
-                              task={task}
-                              members={plan.members}
-                              isExpanded={isTaskExpanded}
-                              hasSubtasks={task.subtasks.length > 0}
-                              onToggle={() => toggleTask(globalIndex)}
-                              onUpdate={(field, value) =>
-                                updateTask(globalIndex, field, value)
-                              }
-                              onRemove={() => removeTask(globalIndex)}
-                            />
-                            {/* Subtasks */}
-                            {isTaskExpanded && (
-                              <div className="border-t bg-muted/5">
-                                <div className="divide-y">
-                                  {task.subtasks.map((subtask, subtaskIndex) => (
-                                    <SubtaskRow
-                                      key={subtaskIndex}
-                                      subtask={subtask}
-                                      members={plan.members}
-                                      onUpdate={(field, value) =>
-                                        updateSubtask(globalIndex, subtaskIndex, field, value)
-                                      }
-                                      onRemove={() => removeSubtask(globalIndex, subtaskIndex)}
-                                    />
-                                  ))}
-                                </div>
-                                <div className="px-3 py-1.5 pl-16 border-t bg-muted/10">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => addSubtask(globalIndex)}
-                                    className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
-                                  >
-                                    <Plus className="h-2.5 w-2.5 mr-1" />
-                                    Add Subtask
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="px-3 py-2 pl-9 border-t bg-muted/20">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addTask(category)}
-                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Task
-                      </Button>
-                    </div>
+                    {/* Task count badge */}
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {group.tasks.length} tasks
+                    </Badge>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+
+                  {/* Tasks */}
+                  {!isCollapsed && (
+                    <div className="border-t">
+                      <div className="divide-y">
+                        {group.tasks.map((task, groupTaskIdx) => {
+                          const globalIndex = group.indices[groupTaskIdx];
+                          const isTaskExpanded = expandedTasks.has(globalIndex);
+
+                          return (
+                            <div key={globalIndex}>
+                              <TaskRow
+                                task={task}
+                                members={plan.members}
+                                isExpanded={isTaskExpanded}
+                                hasSubtasks={task.subtasks.length > 0}
+                                onToggle={() => toggleTask(globalIndex)}
+                                onUpdate={(field, value) =>
+                                  updateTask(globalIndex, field, value)
+                                }
+                                onRemove={() => removeTask(globalIndex)}
+                              />
+                              {/* Subtasks */}
+                              {isTaskExpanded && (
+                                <div className="border-t bg-muted/5">
+                                  <div className="divide-y">
+                                    {task.subtasks.map((subtask, subtaskIndex) => (
+                                      <SubtaskRow
+                                        key={subtaskIndex}
+                                        subtask={subtask}
+                                        members={plan.members}
+                                        onUpdate={(field, value) =>
+                                          updateSubtask(globalIndex, subtaskIndex, field, value)
+                                        }
+                                        onRemove={() => removeSubtask(globalIndex, subtaskIndex)}
+                                      />
+                                    ))}
+                                  </div>
+                                  <div className="px-3 py-1.5 pl-16 border-t bg-muted/10">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => addSubtask(globalIndex)}
+                                      className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Plus className="h-2.5 w-2.5 mr-1" />
+                                      Add Subtask
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="px-3 py-2 pl-9 border-t bg-muted/20">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addTask(category)}
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Task
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Action buttons */}
@@ -624,6 +705,95 @@ function SubtaskRow({
         title="Remove subtask"
       >
         <Trash2 className="h-2.5 w-2.5" />
+      </Button>
+    </div>
+  );
+}
+
+// --- Flat Ticket Row (no subtask expand, simpler layout) ---
+
+function FlatTicketRow({
+  task,
+  members,
+  onUpdate,
+  onRemove,
+}: {
+  task: SuggestedTask;
+  members: { id: string; name: string | null; designation: string | null }[];
+  onUpdate: (field: string, value: string | number) => void;
+  onRemove: () => void;
+}) {
+  const topSuggestion = task.suggested_assignees[0];
+  const defaultAssignee =
+    task.selected_assignee_id ||
+    (topSuggestion?.confidence === "high" ? topSuggestion.userId : "unassigned");
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-background">
+      {/* Editable title */}
+      <Input
+        value={task.title}
+        onChange={(e) => onUpdate("title", e.target.value)}
+        className="h-7 text-sm flex-1 bg-transparent border-transparent hover:border-input focus:border-input"
+      />
+
+      {/* Role select */}
+      <select
+        value={task.required_role}
+        onChange={(e) => onUpdate("required_role", e.target.value)}
+        className="h-7 text-[11px] border rounded px-1 bg-background shrink-0"
+      >
+        {ROLES.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+
+      {/* Priority select */}
+      <select
+        value={task.priority}
+        onChange={(e) => onUpdate("priority", e.target.value)}
+        className="h-7 text-[11px] border rounded px-1 bg-background capitalize shrink-0"
+      >
+        {PRIORITIES.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
+
+      {/* Assignee dropdown */}
+      <select
+        value={defaultAssignee}
+        onChange={(e) => onUpdate("selected_assignee_id", e.target.value === "unassigned" ? "" : e.target.value)}
+        className="h-7 text-[11px] border rounded px-1 bg-background max-w-[120px] truncate shrink-0"
+      >
+        <option value="unassigned">Unassigned</option>
+        {task.suggested_assignees.map((suggestion) => (
+          <option key={suggestion.userId} value={suggestion.userId}>
+            {suggestion.name}
+            {suggestion.confidence === "high"
+              ? " ★"
+              : suggestion.confidence === "medium"
+              ? " ☆"
+              : ""}
+          </option>
+        ))}
+        {members
+          .filter((m) => !task.suggested_assignees.some((s) => s.userId === m.id))
+          .map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name || "Unknown"}
+            </option>
+          ))}
+      </select>
+
+      {/* Remove ticket */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+        title="Remove ticket"
+      >
+        <Trash2 className="h-3 w-3" />
       </Button>
     </div>
   );

@@ -7,9 +7,10 @@ import { Sparkles } from "lucide-react";
 
 interface AiSprintButtonProps {
   sprintId: string;
+  stories: { id: string; title: string }[];
 }
 
-export function AiSprintButton({ sprintId }: AiSprintButtonProps) {
+export function AiSprintButton({ sprintId, stories }: AiSprintButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -18,7 +19,7 @@ export function AiSprintButton({ sprintId }: AiSprintButtonProps) {
         <Sparkles className="h-4 w-4 mr-2" />
         AI Generate Tickets
       </Button>
-      <AiSprintModal sprintId={sprintId} open={open} onOpenChange={setOpen} />
+      <AiSprintModal sprintId={sprintId} stories={stories} open={open} onOpenChange={setOpen} />
     </>
   );
 }

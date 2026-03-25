@@ -2,7 +2,6 @@ import { TaskType, TaskPriority, TaskStatus } from "@prisma/client";
 import { Octokit } from "@octokit/rest";
 import { createOctokitForUser, createSystemOctokit } from "./client";
 import { db } from "@/server/db";
-import { getObject } from "@/lib/storage/s3-client";
 
 /**
  * Gets an Octokit instance with fallback: user token → system token
@@ -45,55 +44,20 @@ function generateLabels(task: {
 }
 
 /**
- * Uploads an image attachment to the GitHub repo and returns the raw URL
+ * Gets the base URL for the Nexus app (used for image serving API routes)
  */
-async function uploadImageToGitHubRepo(
-  octokit: Octokit,
-  owner: string,
-  repo: string,
-  taskId: string,
-  attachment: { s3Key: string; fileName: string }
-): Promise<string | null> {
-  try {
-    const buffer = await getObject(attachment.s3Key);
-    const content = buffer.toString("base64");
-    const safeName = attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `.nexus/attachments/${taskId}/${safeName}`;
-
-    // Check if file already exists (to get its sha for update)
-    let sha: string | undefined;
-    try {
-      const { data } = await octokit.rest.repos.getContent({ owner, repo, path });
-      if (!Array.isArray(data) && "sha" in data) {
-        sha = data.sha;
-      }
-    } catch {
-      // File doesn't exist yet — that's fine
-    }
-
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path,
-      message: `chore(nexus): attach screenshot for task ${taskId}`,
-      content,
-      sha,
-    });
-
-    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-  } catch (error) {
-    console.error(`[GitHub Sync] Failed to upload image ${attachment.fileName}:`, error);
-    return null;
-  }
+function getAppBaseUrl(): string {
+  return process.env.NEXTAUTH_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000";
 }
 
 /**
- * Fetches image attachments for a task, uploads them to GitHub, and returns a markdown section
+ * Builds a screenshots markdown section using Nexus API image URLs.
+ * Uses /api/attachments/[id]/image route which serves images directly,
+ * so GitHub's camo proxy can fetch them (works for both public and private repos).
  */
 async function buildScreenshotsSection(
-  octokit: Octokit,
-  owner: string,
-  repo: string,
   taskId: string
 ): Promise<string> {
   const attachments = await db.taskAttachment.findMany({
@@ -106,15 +70,11 @@ async function buildScreenshotsSection(
 
   if (imageAttachments.length === 0) return "";
 
-  const imageLines: string[] = [];
-  for (const att of imageAttachments) {
-    const rawUrl = await uploadImageToGitHubRepo(octokit, owner, repo, taskId, att);
-    if (rawUrl) {
-      imageLines.push(`![${att.fileName}](${rawUrl})`);
-    }
-  }
-
-  if (imageLines.length === 0) return "";
+  const baseUrl = getAppBaseUrl();
+  const imageLines = imageAttachments.map((att) => {
+    const imageUrl = `${baseUrl}/api/attachments/${att.id}/image`;
+    return `![${att.fileName}](${imageUrl})`;
+  });
 
   return ["", "**Screenshots:**", ...imageLines].join("\n");
 }
@@ -205,10 +165,8 @@ export async function createGitHubIssue(
 
   bodyParts.push(`**Task ID:** \`${task.id}\``);
 
-  // Upload image attachments to GitHub repo and append to body
-  const screenshotsSection = await buildScreenshotsSection(
-    octokit, repoOwner, repoName, taskId
-  );
+  // Build image attachments section using Nexus API URLs
+  const screenshotsSection = await buildScreenshotsSection(taskId);
 
   const body = bodyParts.join("\n") + screenshotsSection;
 
@@ -287,10 +245,8 @@ export async function updateGitHubIssue(
   bodyParts.push(`**Nexus Status:** \`${task.status}\``);
   bodyParts.push(`**Last synced:** ${new Date().toISOString()}`);
 
-  // Upload image attachments to GitHub repo and append to body
-  const screenshotsSection = await buildScreenshotsSection(
-    octokit, repoOwner, repoName, taskId
-  );
+  // Build image attachments section using Nexus API URLs
+  const screenshotsSection = await buildScreenshotsSection(taskId);
 
   const body = bodyParts.join("\n") + screenshotsSection;
 
@@ -377,5 +333,66 @@ export async function closeGitHubIssue(
       throw new Error("GitHub issue not found. It may have been deleted.");
     }
     throw new Error(`Failed to close GitHub issue: ${error.message}`);
+  }
+}
+
+/**
+ * Deletes a GitHub issue permanently (used when task is deleted from Nexus).
+ * Uses GraphQL API since REST API doesn't support issue deletion.
+ * Requires admin permissions on the repo.
+ */
+export async function deleteGitHubIssue(
+  userId: string,
+  taskId: string,
+  repoOwner: string,
+  repoName: string
+) {
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    select: { githubIssueNumber: true },
+  });
+
+  if (!task || !task.githubIssueNumber) {
+    throw new Error("Task is not synced to GitHub");
+  }
+
+  const octokit = await getOctokitWithFallback(userId);
+
+  try {
+    // First get the issue's node_id (needed for GraphQL deletion)
+    const { data: issue } = await octokit.rest.issues.get({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: task.githubIssueNumber,
+    });
+
+    // Delete via GraphQL
+    await octokit.graphql(
+      `mutation($issueId: ID!) {
+        deleteIssue(input: { issueId: $issueId }) {
+          repository {
+            name
+          }
+        }
+      }`,
+      { issueId: issue.node_id }
+    );
+  } catch (error: any) {
+    if (error.status === 404) {
+      // Issue already gone — that's fine
+      return;
+    }
+    // If GraphQL delete fails (e.g. no admin perms), fall back to closing
+    console.error(`[GitHub Sync] Failed to delete issue, falling back to close:`, error.message);
+    try {
+      await octokit.rest.issues.update({
+        owner: repoOwner,
+        repo: repoName,
+        issue_number: task.githubIssueNumber!,
+        state: "closed",
+      });
+    } catch {
+      // Best effort — don't block task deletion
+    }
   }
 }

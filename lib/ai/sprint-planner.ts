@@ -32,6 +32,21 @@ const SprintPlanSchema = z.object({
 
 export type SprintPlanOutput = z.infer<typeof SprintPlanSchema>;
 
+// --- Flat ticket generation (for adding tickets under an existing story) ---
+
+const FlatTicketItemSchema = z.object({
+  title: z.string().max(120),
+  required_role: z.string().default("Full-Stack"),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+  labels: z.array(z.string()).default([]),
+});
+
+const FlatTicketsOutputSchema = z.object({
+  tickets: z.array(FlatTicketItemSchema),
+});
+
+export type FlatTicketsOutput = z.infer<typeof FlatTicketsOutputSchema>;
+
 export async function generateSprintPlan(
   inputText: string,
   teamMembers?: { id: string; name: string | null; designation: string | null }[],
@@ -117,6 +132,74 @@ If reference images are provided, analyze them for UI layout and requirements to
     systemPrompt,
     `Create a complete sprint plan for the following:\n\n${inputText}`,
     SprintPlanSchema,
+    images
+  );
+}
+
+export async function generateTicketsForStory(
+  storyTitle: string,
+  inputText: string,
+  teamMembers?: { id: string; name: string | null; designation: string | null }[],
+  images?: ImageInput[]
+): Promise<FlatTicketsOutput> {
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    throw new Error(
+      "GOOGLE_AI_API_KEY is not configured. Please add it to your .env file to use AI features."
+    );
+  }
+
+  const teamContext = teamMembers?.length
+    ? `\n\nTeam members and their designations:\n${teamMembers
+        .map((m) => `- ${m.name || "Unknown"}: ${m.designation || "Unspecified"}`)
+        .join("\n")}\n\nConsider the team's designations when assigning required_role to tickets.`
+    : "";
+
+  const systemPrompt = `You are a sprint planning assistant. Given a user story and additional context, generate concrete, actionable tickets (work items) that implement the story.
+
+**Important:** You are generating FLAT tickets — no stories, no subtasks. Each ticket is a standalone work item that belongs under the given story.
+
+You MUST respond with valid JSON matching this exact schema:
+{
+  "tickets": [
+    {
+      "title": "Actionable ticket title (max 120 chars)",
+      "required_role": "Backend",
+      "priority": "high",
+      "labels": ["api", "authentication"]
+    }
+  ]
+}
+
+Rules:
+- Generate 3-15 tickets depending on complexity
+- Ticket titles should describe HOW (technical implementation), not WHAT (user-facing value)
+- Each ticket should be a concrete, independent work item a developer can pick up
+- All titles must be under 120 characters
+- Be concise and actionable
+- Do NOT include any text outside the JSON object
+
+Role Classification:
+- required_role MUST be one of: ${VALID_ROLES.join(", ")}
+- Classify each ticket by the primary role needed:
+  - UI: Frontend components, styling, layouts, client-side logic
+  - Backend: APIs, server logic, database queries, authentication
+  - QA: Testing, test plans, quality assurance
+  - DevOps: CI/CD, deployment, infrastructure, monitoring
+  - Full-Stack: Tasks spanning both frontend and backend
+  - Design: UI/UX design, wireframes, prototypes
+  - Data: Data modeling, analytics, reporting
+  - Mobile: Mobile-specific development
+
+Labels & Priority:
+- labels: Short keyword tags based on the ticket domain (e.g. "authentication", "api", "database", "ui", "testing")
+- priority: "low" | "medium" | "high" | "critical" — based on business impact and dependencies
+
+If reference images are provided, analyze them for UI layout and requirements to inform your ticket breakdown.${teamContext}`;
+
+  return generateStructuredOutput(
+    systemPrompt,
+    `Story: "${storyTitle}"\n\nAdditional context and requirements:\n${inputText}`,
+    FlatTicketsOutputSchema,
     images
   );
 }

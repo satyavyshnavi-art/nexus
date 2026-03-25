@@ -111,7 +111,10 @@ export function TaskForm({
           const fd = new FormData();
           fd.append("file", file);
           fd.append("taskId", task.id);
-          await uploadAttachment(fd);
+          const uploadResult = await uploadAttachment(fd);
+          if (!uploadResult.success) {
+            toast({ title: "Upload failed", description: uploadResult.error, variant: "destructive" });
+          }
         }
 
         // Now sync to GitHub with screenshots included

@@ -70,6 +70,7 @@ export function AttachmentsList({ taskId }: AttachmentsListProps) {
               key={attachment.id}
               attachment={attachment}
               onDelete={handleAttachmentChanged}
+              onRename={handleAttachmentChanged}
             />
           ))}
         </div>

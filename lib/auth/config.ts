@@ -235,6 +235,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.role = user.role as UserRole;
           token.designation = user.designation;
         }
+      } else if (token.sub) {
+        // Refresh role from DB on every request so role changes take effect immediately
+        const dbUser = await db.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, designation: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.designation = dbUser.designation;
+        }
       }
       return token;
     },
