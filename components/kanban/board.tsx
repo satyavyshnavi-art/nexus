@@ -30,7 +30,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { getRoleColor, getRoleDotColor } from "@/lib/utils/role-colors";
-import { LayoutGrid, Users, X, Eye } from "lucide-react";
+import { LayoutGrid, Users, X, Eye, Filter } from "lucide-react";
 
 const TaskDetailModal = dynamic(
   () => import("@/components/tasks/task-detail-modal").then((mod) => mod.TaskDetailModal),
@@ -85,6 +85,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("status");
   const [roleFilters, setRoleFilters] = useState<Set<string>>(new Set());
+  const [priorityFilters, setPriorityFilters] = useState<Set<string>>(new Set());
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [pendingReviewTask, setPendingReviewTask] = useState<{ id: string; oldStatus: TaskStatus } | null>(null);
   const sensors = useSensors(
@@ -123,13 +124,17 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     return Array.from(roles).sort();
   }, [tasks]);
 
-  // Filtered tasks based on role filter
+  // Filtered tasks based on role + priority filters
   const filteredTasks = useMemo(() => {
-    if (roleFilters.size === 0) return tasks;
-    return tasks.filter(
-      (t) => t.requiredRole && roleFilters.has(t.requiredRole)
-    );
-  }, [tasks, roleFilters]);
+    let result = tasks;
+    if (roleFilters.size > 0) {
+      result = result.filter((t) => t.requiredRole && roleFilters.has(t.requiredRole));
+    }
+    if (priorityFilters.size > 0) {
+      result = result.filter((t) => priorityFilters.has(t.priority));
+    }
+    return result;
+  }, [tasks, roleFilters, priorityFilters]);
 
   const toggleRoleFilter = (role: string) => {
     setRoleFilters((prev) => {
@@ -140,7 +145,19 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     });
   };
 
-  const clearFilters = () => setRoleFilters(new Set());
+  const togglePriorityFilter = (priority: string) => {
+    setPriorityFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(priority)) next.delete(priority);
+      else next.add(priority);
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setRoleFilters(new Set());
+    setPriorityFilters(new Set());
+  };
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -409,18 +426,49 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
                   </button>
                 );
               })}
-              {roleFilters.size > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                  Clear
-                </button>
-              )}
             </div>
           </>
         )}
+
+        {/* Separator */}
+        {uniqueRoles.length > 0 && <div className="h-6 w-px bg-border" />}
+
+        {/* Priority filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          {(["critical", "high", "medium", "low"] as const).map((priority) => {
+            const isActive = priorityFilters.has(priority);
+            const config: Record<string, { dot: string; activeBg: string; activeText: string; activeBorder: string }> = {
+              critical: { dot: "bg-red-500", activeBg: "bg-red-500/10", activeText: "text-red-700 dark:text-red-400", activeBorder: "border-red-500/30" },
+              high: { dot: "bg-orange-500", activeBg: "bg-orange-500/10", activeText: "text-orange-700 dark:text-orange-400", activeBorder: "border-orange-500/30" },
+              medium: { dot: "bg-yellow-500", activeBg: "bg-yellow-500/10", activeText: "text-yellow-700 dark:text-yellow-400", activeBorder: "border-yellow-500/30" },
+              low: { dot: "bg-blue-500", activeBg: "bg-blue-500/10", activeText: "text-blue-700 dark:text-blue-400", activeBorder: "border-blue-500/30" },
+            };
+            const c = config[priority];
+            return (
+              <button
+                key={priority}
+                onClick={() => togglePriorityFilter(priority)}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all capitalize ${isActive
+                  ? `${c.activeBg} ${c.activeText} ${c.activeBorder} ring-1 ring-offset-1`
+                  : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+                  }`}
+              >
+                <div className={`h-2 w-2 rounded-full ${c.dot}`} />
+                {priority}
+              </button>
+            );
+          })}
+          {(roleFilters.size > 0 || priorityFilters.size > 0) && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3 w-3" />
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       {viewMode === "status" ? (
