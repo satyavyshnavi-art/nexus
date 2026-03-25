@@ -57,9 +57,6 @@ interface TaskCardProps {
   userHasGitHub?: boolean;
   isDragging?: boolean;
   isOverlay?: boolean;
-  selectMode?: boolean;
-  selected?: boolean;
-  onSelectToggle?: (taskId: string) => void;
 }
 
 const priorityConfig = {
@@ -76,7 +73,7 @@ const typeConfig: Record<string, { icon: typeof BookOpen; label: string; color: 
   subtask: { icon: CheckSquare, label: "Subtask", color: "text-slate-600 dark:text-slate-400" },
 };
 
-export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragging = false, isOverlay = false, selectMode = false, selected = false, onSelectToggle }: TaskCardProps) {
+export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragging = false, isOverlay = false }: TaskCardProps) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
@@ -101,11 +98,6 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (selectMode && onSelectToggle) {
-      e.stopPropagation();
-      onSelectToggle(task.id);
-      return;
-    }
     if (!isSelfDragging && onClick) {
       e.stopPropagation();
       onClick();
@@ -189,28 +181,15 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
       <Card
         className={`
           task-card p-4 mb-3
-          ${selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
+          cursor-grab active:cursor-grabbing
           transition-all duration-150 ease-out
           ${!isDragging ? "hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/40" : ""}
           ${isOverlay ? "shadow-2xl ring-2 ring-primary/40 border-primary/30" : "shadow-sm"}
-          ${isOverdue && !selected ? "ring-2 ring-red-400/60 border-red-300 dark:border-red-500/40" : ""}
-          ${selected ? "ring-2 ring-primary border-primary/50 bg-primary/5" : ""}
+          ${isOverdue ? "ring-2 ring-red-400/60 border-red-300 dark:border-red-500/40" : ""}
         `}
         onClick={handleClick}
       >
         <div className="space-y-3">
-          {/* Select Checkbox */}
-          {selectMode && (
-            <div className="flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onSelectToggle?.(task.id); }} onPointerDown={(e) => e.stopPropagation()}>
-              <div className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40 hover:border-primary"}`}>
-                {selected && (
-                  <svg className="h-3 w-3 text-primary-foreground" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground">Select</span>
-            </div>
-          )}
-
           {/* Story Badge */}
           {task.parentTask && (
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">

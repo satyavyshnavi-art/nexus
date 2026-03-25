@@ -30,9 +30,6 @@ interface ColumnProps {
   projectLinked?: boolean;
   userHasGitHub?: boolean;
   isDragging?: boolean;
-  selectMode?: boolean;
-  selectedIds?: Set<string>;
-  onTaskSelect?: (taskId: string) => void;
 }
 
 const columnConfig = {
@@ -70,7 +67,7 @@ const columnConfig = {
   },
 };
 
-export const Column = memo(function Column({ status, title, tasks, onTaskClick, onSubtaskToggle, onSubtaskAdd, projectLinked = false, userHasGitHub = false, isDragging = false, selectMode = false, selectedIds, onTaskSelect }: ColumnProps) {
+export const Column = memo(function Column({ status, title, tasks, onTaskClick, onSubtaskToggle, onSubtaskAdd, projectLinked = false, userHasGitHub = false, isDragging = false }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const config = columnConfig[status];
   const StatusIcon = config.icon;
@@ -144,9 +141,6 @@ export const Column = memo(function Column({ status, title, tasks, onTaskClick, 
                   onSubtaskToggle={onSubtaskToggle}
                   onSubtaskAdd={onSubtaskAdd}
                   isDragging={isDragging}
-                  selectMode={selectMode}
-                  selected={selectedIds?.has(task.id) ?? false}
-                  onSelectToggle={onTaskSelect}
                 />
               ))
             )}
