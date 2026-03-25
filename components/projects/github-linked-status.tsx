@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { unlinkGitHubRepository } from "@/server/actions/github-link";
+import { resyncAllTasksToGitHub } from "@/server/actions/github-sync";
 import { toast } from "sonner";
-import { GitBranch, ExternalLink, Unlink, Loader2 } from "lucide-react";
+import { GitBranch, ExternalLink, Unlink, Loader2, RefreshCw } from "lucide-react";
 
 interface GitHubLinkedStatusProps {
   projectId: string;
@@ -29,6 +30,7 @@ export function GitHubLinkedStatus({
   const showUnlink = canUnlink ?? isAdmin;
   const router = useRouter();
   const [unlinking, setUnlinking] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
 
   async function handleUnlink() {
     const confirmed = window.confirm(
@@ -82,21 +84,51 @@ export function GitHubLinkedStatus({
         </div>
       </div>
 
-      {showUnlink && (
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleUnlink}
-          disabled={unlinking}
-        >
-          {unlinking ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Unlink className="mr-2 h-4 w-4" />
-          )}
-          {unlinking ? "Unlinking..." : "Unlink"}
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setResyncing(true);
+              try {
+                const result = await resyncAllTasksToGitHub(projectId);
+                toast.success(`Re-synced ${result.synced} issue${result.synced !== 1 ? "s" : ""} to GitHub`, {
+                  description: result.failed > 0 ? `${result.failed} failed` : undefined,
+                });
+                router.refresh();
+              } catch (error: any) {
+                toast.error("Re-sync failed", { description: error.message });
+              } finally {
+                setResyncing(false);
+              }
+            }}
+            disabled={resyncing}
+          >
+            {resyncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            {resyncing ? "Re-syncing..." : "Re-sync All"}
+          </Button>
+        )}
+        {showUnlink && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleUnlink}
+            disabled={unlinking}
+          >
+            {unlinking ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Unlink className="mr-2 h-4 w-4" />
+            )}
+            {unlinking ? "Unlinking..." : "Unlink"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

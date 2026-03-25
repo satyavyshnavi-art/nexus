@@ -290,6 +290,96 @@ export async function batchSyncTasksToGitHub(projectId: string) {
 }
 
 /**
+ * Re-syncs all already-synced tasks in a project to GitHub (updates issue body with latest data).
+ * Useful when image URLs or task details change and need to be pushed to GitHub.
+ * @param projectId - Project ID
+ */
+export async function resyncAllTasksToGitHub(projectId: string) {
+  z.string().min(1).parse(projectId);
+
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized: Admin access required for bulk re-sync");
+  }
+
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      githubRepoOwner: true,
+      githubRepoName: true,
+      githubLinkedBy: true,
+    },
+  });
+
+  if (!project) throw new Error("Project not found");
+  if (!project.githubRepoOwner || !project.githubRepoName) {
+    throw new Error("Project is not linked to a GitHub repository");
+  }
+
+  // Get all tasks that have a GitHub issue number
+  const tasks = await db.task.findMany({
+    where: {
+      sprint: { projectId },
+      githubIssueNumber: { not: null },
+    },
+    select: { id: true, title: true },
+  });
+
+  if (tasks.length === 0) {
+    return { success: true, synced: 0, failed: 0, message: "No synced tasks found to re-sync" };
+  }
+
+  // Determine which user's token to use
+  let syncUserId = session.user.id;
+  const currentUser = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { githubAccessToken: true },
+  });
+
+  if (!currentUser?.githubAccessToken && project.githubLinkedBy) {
+    const linker = await db.user.findUnique({
+      where: { id: project.githubLinkedBy },
+      select: { githubAccessToken: true },
+    });
+    if (linker?.githubAccessToken) {
+      syncUserId = project.githubLinkedBy;
+    }
+  }
+
+  let synced = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const task of tasks) {
+    try {
+      await updateGitHubIssue(
+        syncUserId,
+        task.id,
+        project.githubRepoOwner,
+        project.githubRepoName
+      );
+      synced++;
+      // Rate limiting: 1 second delay between syncs
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (error: any) {
+      failed++;
+      errors.push(`"${task.title}": ${error.message}`);
+    }
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+
+  return {
+    success: true,
+    synced,
+    failed,
+    total: tasks.length,
+    errors: errors.slice(0, 5),
+  };
+}
+
+/**
  * Gets sync status and recent logs for a project
  * @param projectId - Project ID
  */
