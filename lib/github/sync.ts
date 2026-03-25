@@ -47,9 +47,9 @@ function generateLabels(task: {
  * Gets the base URL for the Nexus app (used for image serving API routes)
  */
 function getAppBaseUrl(): string {
-  return process.env.NEXTAUTH_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "http://localhost:3000";
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return "http://localhost:3000";
 }
 
 /**
