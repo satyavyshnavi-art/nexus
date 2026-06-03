@@ -29,7 +29,10 @@ export default async function DashboardPage() {
     isAdmin ? Promise.resolve([]) : getUserProjectsCached(session.user.id, false),
     isAdmin ? getVerticalsWithProjects() : Promise.resolve([]),
     isAdmin ? getTeamStatsCached() : Promise.resolve(null),
-  ]);
+  ]).catch((error) => {
+    console.error("Dashboard data fetch error:", error);
+    throw error;
+  });
 
   // Flatten all projects from verticals for admin dropdown
   const allProjects = isAdmin

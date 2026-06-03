@@ -59,6 +59,13 @@ interface KanbanBoardProps {
 
 const VALID_STATUSES: TaskStatus[] = ["todo", "progress", "review", "done"];
 
+const priorityFilterConfig: Record<string, { dot: string; activeBg: string; activeText: string; activeBorder: string }> = {
+  critical: { dot: "bg-red-500", activeBg: "bg-red-500/10", activeText: "text-red-700 dark:text-red-400", activeBorder: "border-red-500/30" },
+  high: { dot: "bg-orange-500", activeBg: "bg-orange-500/10", activeText: "text-orange-700 dark:text-orange-400", activeBorder: "border-orange-500/30" },
+  medium: { dot: "bg-yellow-500", activeBg: "bg-yellow-500/10", activeText: "text-yellow-700 dark:text-yellow-400", activeBorder: "border-yellow-500/30" },
+  low: { dot: "bg-blue-500", activeBg: "bg-blue-500/10", activeText: "text-blue-700 dark:text-blue-400", activeBorder: "border-blue-500/30" },
+};
+
 const columns = [
   { status: "todo" as TaskStatus, title: "To Do" },
   { status: "progress" as TaskStatus, title: "In Progress" },
@@ -107,12 +114,11 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     });
     // Also update the selected task if it's currently open, so the modal
     // shows the latest data (e.g. newly added subtasks, status changes)
-    if (selectedTask) {
-      const updated = initialTasks.find((t) => t.id === selectedTask.id);
-      if (updated) {
-        setSelectedTask(updated);
-      }
-    }
+    setSelectedTask((prev) => {
+      if (!prev) return prev;
+      const updated = initialTasks.find((t) => t.id === prev.id);
+      return updated || prev;
+    });
   }, [initialTasks]);
 
   // Get unique roles from tasks
@@ -136,28 +142,28 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
     return result;
   }, [tasks, roleFilters, priorityFilters]);
 
-  const toggleRoleFilter = (role: string) => {
+  const toggleRoleFilter = useCallback((role: string) => {
     setRoleFilters((prev) => {
       const next = new Set(prev);
       if (next.has(role)) next.delete(role);
       else next.add(role);
       return next;
     });
-  };
+  }, []);
 
-  const togglePriorityFilter = (priority: string) => {
+  const togglePriorityFilter = useCallback((priority: string) => {
     setPriorityFilters((prev) => {
       const next = new Set(prev);
       if (next.has(priority)) next.delete(priority);
       else next.add(priority);
       return next;
     });
-  };
+  }, []);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setRoleFilters(new Set());
     setPriorityFilters(new Set());
-  };
+  }, []);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -438,13 +444,7 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           {(["critical", "high", "medium", "low"] as const).map((priority) => {
             const isActive = priorityFilters.has(priority);
-            const config: Record<string, { dot: string; activeBg: string; activeText: string; activeBorder: string }> = {
-              critical: { dot: "bg-red-500", activeBg: "bg-red-500/10", activeText: "text-red-700 dark:text-red-400", activeBorder: "border-red-500/30" },
-              high: { dot: "bg-orange-500", activeBg: "bg-orange-500/10", activeText: "text-orange-700 dark:text-orange-400", activeBorder: "border-orange-500/30" },
-              medium: { dot: "bg-yellow-500", activeBg: "bg-yellow-500/10", activeText: "text-yellow-700 dark:text-yellow-400", activeBorder: "border-yellow-500/30" },
-              low: { dot: "bg-blue-500", activeBg: "bg-blue-500/10", activeText: "text-blue-700 dark:text-blue-400", activeBorder: "border-blue-500/30" },
-            };
-            const c = config[priority];
+            const c = priorityFilterConfig[priority];
             return (
               <button
                 key={priority}

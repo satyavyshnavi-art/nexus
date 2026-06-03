@@ -47,6 +47,7 @@ export const createTaskSchema = z.object({
   title: titleSchema,
   description: descriptionSchema,
   type: z.nativeEnum(TaskType),
+  priority: z.nativeEnum(TaskPriority).optional(),
   assigneeId: optionalId,
   parentTaskId: optionalId,
   pushToGitHub: z.boolean().optional(),

@@ -118,6 +118,7 @@ export async function createTask(data: {
   title: string;
   description?: string;
   type: TaskType;
+  priority?: TaskPriority;
   assigneeId?: string;
   parentTaskId?: string;
   pushToGitHub?: boolean;

@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   BookOpen,
   CheckSquare,
@@ -73,7 +73,7 @@ const typeConfig: Record<string, { icon: typeof BookOpen; label: string; color: 
   subtask: { icon: CheckSquare, label: "Subtask", color: "text-slate-600 dark:text-slate-400" },
 };
 
-export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragging = false, isOverlay = false }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragging = false, isOverlay = false }: TaskCardProps) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
   const [togglingSubtask, setTogglingSubtask] = useState<string | null>(null);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
@@ -415,4 +415,4 @@ export function TaskCard({ task, onClick, onSubtaskToggle, onSubtaskAdd, isDragg
       </Card>
     </div>
   );
-}
+});

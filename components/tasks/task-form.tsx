@@ -101,6 +101,7 @@ export function TaskForm({
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
+        priority: formData.priority,
         assigneeId: formData.assigneeId,
         pushToGitHub: hasImages ? false : pushToGitHub,
       });
