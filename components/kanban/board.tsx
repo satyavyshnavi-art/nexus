@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   DndContext,
@@ -84,11 +84,24 @@ type ViewMode = "status" | "role";
 
 export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked = false, userHasGitHub = false }: KanbanBoardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [autoOpenedTaskId, setAutoOpenedTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const taskId = searchParams.get("task");
+    if (!taskId || taskId === autoOpenedTaskId) return;
+    const match = tasks.find((t) => t.id === taskId);
+    if (!match) return;
+    setSelectedTask(match);
+    setIsDetailModalOpen(true);
+    setAutoOpenedTaskId(taskId);
+  }, [searchParams, tasks, autoOpenedTaskId]);
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("status");
   const [roleFilters, setRoleFilters] = useState<Set<string>>(new Set());
