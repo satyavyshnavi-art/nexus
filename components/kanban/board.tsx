@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -90,17 +90,18 @@ export function KanbanBoard({ initialTasks, projectMembers = [], projectLinked =
   const [isDragging, setIsDragging] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [autoOpenedTaskId, setAutoOpenedTaskId] = useState<string | null>(null);
+  const autoOpenedRef = useRef(false);
 
   useEffect(() => {
+    if (autoOpenedRef.current) return;
     const taskId = searchParams.get("task");
-    if (!taskId || taskId === autoOpenedTaskId) return;
+    if (!taskId) return;
     const match = tasks.find((t) => t.id === taskId);
     if (!match) return;
     setSelectedTask(match);
     setIsDetailModalOpen(true);
-    setAutoOpenedTaskId(taskId);
-  }, [searchParams, tasks, autoOpenedTaskId]);
+    autoOpenedRef.current = true;
+  }, [searchParams, tasks]);
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("status");
