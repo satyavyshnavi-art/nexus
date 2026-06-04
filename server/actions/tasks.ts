@@ -7,6 +7,7 @@ import { classifyBugPriority } from "@/lib/ai/bug-classifier";
 import { revalidatePath } from "next/cache";
 import { calculateTaskProgress } from "@/lib/utils/task-progress";
 import { syncTaskToGitHub } from "@/server/actions/github-sync";
+import { notifyReviewerAssigned } from "@/lib/email/reviewer-assigned";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { invalidateCacheKeys } from "@/lib/cache/redis";
@@ -276,6 +277,16 @@ export async function updateTaskStatus(taskId: string, newStatus: TaskStatus, re
   // Auto-recalculate parent ticket status if this is a subtask
   if (updatedTask.type === "subtask" && updatedTask.parentTaskId) {
     await recalculateTicketStatus(updatedTask.parentTaskId);
+  }
+
+  if (newStatus === "review" && reviewerId) {
+    waitUntil(
+      notifyReviewerAssigned({
+        taskId,
+        reviewerId,
+        actingUserId: session.user.id,
+      })
+    );
   }
 
   return updatedTask;
@@ -686,6 +697,16 @@ export async function assignReviewer(taskId: string, reviewerId: string | null) 
   const revalidateProjectId = updatedTask.sprint?.projectId;
   if (revalidateProjectId) {
     revalidatePath(`/projects/${revalidateProjectId}`);
+  }
+
+  if (reviewerId) {
+    waitUntil(
+      notifyReviewerAssigned({
+        taskId,
+        reviewerId,
+        actingUserId: session.user.id,
+      })
+    );
   }
 
   return updatedTask;
